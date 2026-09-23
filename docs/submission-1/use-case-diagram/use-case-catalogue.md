@@ -149,15 +149,7 @@ Operator participation in UC-I02 and UC-I03 is inherited through UC-I01.
 | INC-08 | UC-W02 — Run a What-if Simulation | UC-S07 — Evaluate Scenario Impact |
 | INC-09 | UC-W02 — Run a What-if Simulation | UC-S08 — Generate Coordination Recommendations |
 
-### 4.3 Extend Relationships
-
-| ID | Extending use case (source) | Base use case (target) | Condition |
-| --- | --- | --- | --- |
-| EXT-01 | UC-X01 — View Alternative Hubs | UC-R03 — Reserve a Shared Vehicle | The selected vehicle cannot be reserved at confirmation, and the Student requests other Hubs with suitable shared vehicles. |
-| EXT-02 | UC-X01 — View Alternative Hubs | UC-P01 — Reserve a Parking Space | The selected Hub cannot allocate parking for the requested interval, and the Student requests alternative Hubs. |
-| EXT-03 | UC-R08 — Report a Vehicle Problem | UC-R05 — Return a Shared Vehicle | The Student chooses to report a vehicle problem during the return process. |
-
-### 4.4 Generalization Relationships
+### 4.3 Generalization Relationships
 
 | ID | Specialized use case (source) | General use case (target) |
 | --- | --- | --- |
