@@ -49,9 +49,11 @@ Protected operations require an authenticated session and the appropriate permis
 
 **Actor:** Student.
 
+Parking arrival and departure times are selected from available time points, spaced 15 minutes apart by default. One reservation covers a continuous parking interval across all consecutive slots between the selected times.
+
 | ID | Use case | Description |
 | --- | --- | --- |
-| UC-P01 | Reserve a Parking Space | Select a Hub, parking interval, and vehicle information. Check capacity for the requested interval and confirm the booking without overbooking. If capacity is unavailable, allow the Student to request alternative Hubs. |
+| UC-P01 | Reserve a Parking Space | Select a Hub, provide vehicle information, and select arrival and departure times from the available time points. Display availability for the entire selected interval and a request summary before the Student confirms. Recheck capacity at confirmation and create one reservation for the whole interval without overbooking or partial allocation. If capacity is unavailable, allow the Student to request alternative Hubs. |
 | UC-P02 | Submit a Private-EV Charging Request | Submit the vehicle, Hub, expected arrival/departure times, and charging needs. Validate and record the request for scheduling. Acceptance of a request does not guarantee a confirmed charging slot. |
 | UC-P03 | View My Parking and Charging Bookings | View the Student's parking reservations and charging requests, including Hub, time interval, status, and assigned charging schedule where available. Distinguish pending requests from confirmed allocations. |
 | UC-P04 | Cancel a Parking Reservation | Cancel an eligible reservation belonging to the Student and release its reserved capacity. Apply the cancellation policy to any dependent charging request. An active parking session must be ended through checkout. |
@@ -116,7 +118,7 @@ Protected operations require an authenticated session and the appropriate permis
 | ID | Use case | Description |
 | --- | --- | --- |
 | UC-S01 | Check Vehicle Availability | Check the selected vehicle's operating condition and relevant commitments, accounting for the requesting Student's valid reservation when applicable. Return an availability decision and reason. |
-| UC-S02 | Check Parking Availability | Check capacity for the selected Hub and parking interval against occupancy, overlapping reservations, and unavailable spaces. Return an availability decision and reason. |
+| UC-S02 | Check Parking Availability | Check capacity for every slot in the selected Hub's requested parking interval against occupancy, overlapping reservations, and unavailable spaces. Sufficient capacity must be available in all covered slots; if even one slot lacks capacity, the whole request cannot be fulfilled. Return an availability decision and reason. |
 | UC-S03 | Validate Redistribution Feasibility | Check vehicle eligibility, source/destination suitability, conflicting commitments, and destination capacity. Return a feasibility decision and any rejection reasons. |
 | UC-S04 | Prioritize Charging Requests | Prioritize eligible requests using battery levels, upcoming usage requirements, and the configured tie-breaking policy. |
 | UC-S05 | Allocate Charging Slots | Assign available charging points and time intervals without violating capacity or existing commitments. Identify unallocated requests and the reasons they cannot be scheduled. |
