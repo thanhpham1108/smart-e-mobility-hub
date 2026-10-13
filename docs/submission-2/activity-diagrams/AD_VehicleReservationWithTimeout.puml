@@ -1,0 +1,78 @@
+@startuml
+title Reserve A Shared Vehicle And Handle 15-Minute Timeout
+|User|
+start
+:Select An Available Shared Vehicle;
+:Click Reserve Vehicle;
+|System|
+:Request Latest Vehicle Status;
+|Database|
+:Retrieve Latest Vehicle Status;
+|System|
+:Recheck Vehicle Availability;
+:Check For Incompatible Concurrent Reservations;
+if (Vehicle Available And No Reservation Conflict?) then (Yes)
+  :Display Reservation Information;
+  |User|
+  :Confirm Reservation;
+  |System|
+  :Create Reservation;
+  |Database|
+  :Save Reservation;
+  :Update Vehicle Allocation And Status;
+  |System|
+  :Display Reservation Confirmation;
+  :Start 15-Minute Pickup Countdown;
+  :Monitor Pickup Deadline And Reservation Events;
+  if (Pickup Requested Before 15 Minutes?) then (Yes)
+    |User|
+    :Open Valid Vehicle Reservation;
+    :Request To Pick Up Vehicle;
+    |System|
+    :Stop Pickup Countdown;
+    :Proceed To Vehicle Pickup;
+    stop
+  else (No)
+    if (Cancellation Requested Before 15 Minutes?) then (Yes)
+      |User|
+      :Open Existing Vehicle Reservation;
+      :Click Cancel Reservation;
+      |System|
+      :Request Reservation;
+      |Database|
+      :Retrieve Reservation;
+      |System|
+      :Verify Reservation Ownership And Cancellation Eligibility;
+      :Display Cancellation Confirmation Request;
+      |User|
+      :Confirm Cancellation;
+      |System|
+      :Cancel Reservation;
+      |Database|
+      :Save Cancelled Reservation Status;
+      :Release Vehicle Allocation According To Current State;
+      |System|
+      :Stop Pickup Countdown;
+      :Display Cancellation Confirmation;
+      stop
+    else (No)
+      |System|
+      :Wait Until 15-Minute Deadline;
+      :Check Pickup Deadline And Reservation Status;
+      |Database|
+      :Retrieve Current Reservation And Rental Status;
+      |System|
+      if (Reservation Still Active And Rental Not Started?) then (Yes)
+        :Automatically Cancel Reservation;
+        |Database|
+        :Save Cancelled Reservation Status;
+        :Release Vehicle Allocation According To Current State;
+        |System|
+        :Display Reservation Expiration;
+      endif
+      stop
+    endif
+  endif
+endif
+stop
+@enduml

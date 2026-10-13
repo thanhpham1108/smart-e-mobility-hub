@@ -1,0 +1,116 @@
+@startuml SD_ReturnSharedVehicle
+
+title SD_ReturnSharedVehicle - Return A Shared Vehicle
+
+autonumber
+hide footbox
+
+actor "Student" as Student
+boundary "Mobile / Web Interface" as UI
+control "RentalController" as Controller
+entity "Reservation" as Reservation
+entity "Vehicle" as Vehicle
+entity "Hub" as Hub
+database "Rental Database" as DB
+boundary "Vehicle Lock Gateway" as LockGateway
+
+Student -> UI : Select Return Vehicle At Destination Hub
+UI -> Controller : Request Return Details(Student Id, Vehicle Id, Hub Id)
+Controller -> DB : Retrieve Active Rental And Assigned Vehicle(Student Id, Vehicle Id)
+DB --> Controller : Active Rental And Vehicle / Not Found
+
+alt Matching Active Rental Found
+    Controller -> Reservation : Verify Rental Ownership And Active Status
+    Reservation --> Controller : Rental Validation Result
+
+    alt Rental Valid And Vehicle Matches
+        Controller -> DB : Retrieve Destination Hub And Parking Information(Hub Id)
+        DB --> Controller : Hub And Parking Records / Retrieval Failure
+
+        alt Hub And Parking Information Retrieved
+            loop For Each Candidate Parking Space
+                Controller -> Hub : Check Parking Space Availability And Return Eligibility
+                Hub --> Controller : Parking Space Validation Result
+            end
+
+            alt Destination Hub Valid And Parking Space Available
+                Controller --> UI : Display Return Details And Available Parking Space
+                UI --> Student : Show Return Confirmation
+
+                opt Student Reports Vehicle Problem
+                    Student -> UI : Enter Vehicle Problem Description
+                    UI -> Controller : Submit Vehicle Problem(Student Id, Vehicle Id, Description)
+                    Controller -> DB : Validate Rental Context And Save Incident Report
+                    DB --> Controller : Incident Saved / Report Failure
+                    Controller --> UI : Return Incident Submission Result
+                    UI --> Student : Display Incident Submission Status
+                end
+
+                Student -> UI : Confirm Vehicle Return
+                UI -> Controller : Confirm Vehicle Return(Student Id, Vehicle Id, Hub Id, Parking Space Id)
+                Controller -> DB : Recheck Active Rental And Reserve Return Parking Space
+                DB --> Controller : Revalidation Result
+
+                alt Rental And Parking Space Still Valid
+                    Controller -> LockGateway : Lock Vehicle(Vehicle Id)
+                    LockGateway --> Controller : Physical Lock Result
+
+                    alt Physical Lock Successful
+                        Controller -> Reservation : Calculate Trip Duration And Distance
+                        Reservation --> Controller : Trip Duration And Distance
+                        Controller -> Vehicle : Determine Resulting Operational Condition
+                        Vehicle --> Controller : Vehicle Condition
+                        Controller -> Reservation : Complete Rental With Trip Details
+                        Reservation --> Controller : Completed Rental Data
+                        Controller -> Vehicle : Update Location To Destination Hub
+                        Vehicle --> Controller : Updated Vehicle Location
+                        Controller -> Hub : Update Parking Occupancy(Parking Space Id)
+                        Hub --> Controller : Updated Parking Occupancy
+
+                        alt Vehicle Operational
+                            Controller -> Vehicle : Set Status To AVAILABLE
+                            Vehicle --> Controller : Updated Vehicle Status
+                        else Vehicle Faulted Or Unsuitable
+                            Controller -> Vehicle : Set Status To UNAVAILABLE
+                            Vehicle --> Controller : Updated Vehicle Status
+                        end
+
+                        Controller -> DB : Save Rental, Vehicle And Hub Updates In One Transaction
+                        alt Transaction Committed
+                            DB --> Controller : Return Completed And Changes Saved
+                            Controller --> UI : Return Trip Summary And Confirmation
+                            UI --> Student : Display Return Success, Distance And Duration
+                        else Return Save Failure
+                            DB --> Controller : Transaction Rolled Back
+                            Controller -> DB : Record Return Processing Error
+                            Controller --> UI : Return Save Failure And Support Instructions
+                            UI --> Student : Display Return Not Completed And Contact Support
+                        end
+                    else Physical Lock Failed
+                        Controller -> DB : Release Temporary Parking Allocation
+                        DB --> Controller : Allocation Released
+                        Controller --> UI : Return Vehicle Lock Failure
+                        UI --> Student : Display Lock Failure And Return Not Completed
+                    end
+                else Rental Invalid Or Parking Space No Longer Available
+                    Controller --> UI : Reject Return With Current Status
+                    UI --> Student : Display Return Unavailable Or Select Another Space
+                end
+            else Destination Hub Invalid Or No Available Parking Space
+                Controller --> UI : Return Hub Or Parking Unavailable
+                UI --> Student : Display Invalid Hub Or No Parking Capacity
+            end
+        else Hub Or Parking Information Retrieval Failed
+            Controller --> UI : Return Location Validation Failure
+            UI --> Student : Display Return Location Unavailable
+        end
+    else Rental Invalid Or Vehicle Does Not Match
+        Controller --> UI : Reject Return Request
+        UI --> Student : Display Rental Validation Failure
+    end
+else No Matching Active Rental Or Retrieval Failed
+    Controller --> UI : Return Active Rental Not Found Or Unavailable
+    UI --> Student : Display Return Not Allowed
+end
+
+@enduml
