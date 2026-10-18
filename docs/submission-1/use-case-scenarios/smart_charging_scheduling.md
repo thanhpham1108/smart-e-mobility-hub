@@ -6,11 +6,11 @@
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Use-case ID**       | UC-C01                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | **Use-case name**     | View the Charging Queue and Schedule                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| **Use-case overview** | To provide the Operator with information about pending charging requests, their priority scores, assigned charging points, planned charging intervals, and requests that cannot currently be scheduled.                                                                                                                                                                                                                                                         |
+| **Use-case overview** | To provide the Operator with information about pending charging requests arranged in First-Come, First-Served (FCFS) order, their submission timestamps, assigned charging points, planned charging intervals, and requests that cannot currently be scheduled.                                                                                                                                                                                               |
 | **Actors**            | Operator(Secondary actor :  Student)                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | **Preconditions**     | 1. The system is running.<br>2. The Operator is authenticated and has permission to access the Smart Charging Scheduler.<br>3. Charging requests are available in the database.<br>4. Charging-point information is available.                                                                                                                                                                                                                                  |
 | **Trigger**           | The Operator clicks the **“Charging Queue & Schedule”** button.                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **Steps**             | 1. The system retrieves current charging requests.<br>2. The system retrieves the current status of charging points.<br>3. The system retrieves the current charging schedule.<br>4. The system retrieves the priority score of each pending request.<br>5. The system displays the charging queue and schedule.<br>6. The system displays requests that cannot currently be scheduled and their reasons.<br>7. The Operator reviews the displayed information. |
+| **Steps**             | 1. The system retrieves current charging requests.<br>2. The system retrieves the current status of charging points.<br>3. The system retrieves the current charging schedule.<br>4. The system arranges pending requests in First-Come, First-Served (FCFS) order based on arrival timestamp.<br>5. The system displays the charging queue and schedule.<br>6. The system displays requests that cannot currently be scheduled and their reasons.<br>7. The Operator reviews the displayed information. |
 | **Post-conditions**   | The current charging queue, schedule, charging-point allocation, and unscheduled requests are displayed to the Operator. No scheduling data is modified.                                                                                                                                                                                                                                                                                                        |
 | **Exception flow**    | 1. The system cannot retrieve charging requests or schedule data.<br>2. The system cannot retrieve the latest charging-point status.<br>3. The system displays an appropriate error or unavailable-status message and does not present incomplete data as current.                                                                                                                                                                                              |
 
@@ -21,8 +21,8 @@
 3. **System:** Retrieves all active and pending charging requests.
 4. **System:** Retrieves the latest charging-point status.
 5. **System:** Retrieves the current charging schedule.
-6. **System:** Retrieves the priority score associated with each pending charging request.
-7. **System:** displays the charging queue, including the request status and priority.
+6. **System:** Retrieves the submission timestamp associated with each pending charging request.
+7. **System:** displays the charging queue in First-Come, First-Served (FCFS) order, including the request status and arrival timestamp.
 8. **System:** displays the current schedule, including the assigned charging point and planned charging interval.
 9. **System:** displays requests that are currently unscheduled and the reason why they could not be scheduled.
 10. **Operator:** Reviews the charging queue and schedule.
@@ -69,11 +69,11 @@
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Use-case ID**       | UC-C02                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | **Use-case name**     | Generate a Charging Schedule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Use-case overview** | To automatically generate or refresh a feasible charging schedule based on current battery levels, upcoming vehicle usage requirements, charging capacity, and available charging resources.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Use-case overview** | To automatically generate or refresh a feasible charging schedule using a First-Come, First-Served (FCFS) policy based on request arrival timestamps, charging duration requirements, and available charging resources.                                                                                                                                                                                                                                                       |
 | **Actors**            | Operator; Smart Charging Scheduler System                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Preconditions**     | 1. The system is running.<br>2. The Operator is authenticated and authorized to generate a schedule.<br>3. At least one active charging request exists.<br>4. Charging-point status and charging capacity information are available.<br>5. Required scheduling information is available.                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | **Trigger**           | The Operator clicks the **“Generate Charging Schedule”** or **“Refresh Schedule”** button.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| **Steps**             | 1. The system retrieves active charging requests.<br>2. The system retrieves battery levels and upcoming vehicle usage requirements.<br>3. The system retrieves available charging points and their capacities.<br>4. The system executes **<<include>> Prioritize Charging Requests**.<br>5. The system calculates a priority score for each request.<br>6. The system executes **<<include>> Allocate Charging Slots**.<br>7. The system assigns feasible charging points and time intervals without conflicts.<br>8. The system identifies requests that cannot be scheduled.<br>9. The system saves the generated schedule.<br>10. The system displays the generated schedule and unscheduled requests. |
+| **Steps**             | 1. The system retrieves active charging requests.<br>2. The system retrieves request arrival timestamps and required charging durations.<br>3. The system retrieves available charging points and their capacities.<br>4. The system arranges pending requests in First-Come, First-Served (FCFS) order based on arrival timestamp.<br>5. The system executes **<<include>> Allocate Charging Slots**.<br>6. The system assigns feasible charging points and time intervals without conflicts in arrival order.<br>7. The system identifies requests that cannot be scheduled.<br>8. The system saves the generated schedule.<br>9. The system displays the generated schedule and unscheduled requests. |
 | **Post-conditions**   | A valid charging schedule is generated and stored. Charging allocations do not overlap on the same charging point. Requests that cannot be scheduled are marked as unscheduled with a reason.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | **Exception flow**    | 1. Charging-point information cannot be retrieved.<br>2. Required vehicle data cannot be retrieved.<br>3. The scheduling process times out.<br>4. The generated schedule cannot be saved to the database.<br>5. The system keeps the previous valid schedule unchanged if one exists.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
@@ -82,22 +82,20 @@
 1. **Operator:** Clicks **Generate Charging Schedule**.
 2. **System:** Verifies the Operator's permission.
 3. **System:** Retrieves all active charging requests.
-4. **System:** retrieves the current battery level and next required usage time for each request.
+4. **System:** retrieves the submission timestamp and required charging duration for each request.
 5. **System:** retrieves available charging points and their charging capacities.
 6. **System:** validates the retrieved scheduling data.
-7. **System:** executes **<<include>> Prioritize Charging Requests**.
-8. **System:** calculates a priority score for each charging request based on the agreed business rules.
-9. **System:** orders the requests according to their calculated priority.
-10. **System:** executes **<<include>> Allocate Charging Slots**.
-11. **System:** checks available charging points and available time intervals.
-12. **System:** assigns a feasible charging point and time interval to the highest-priority request.
-13. **System:** checks that the allocation does not conflict with an existing allocation.
-14. **System:** checks that the charging interval satisfies the request's required usage time.
-15. **System:** repeats Steps 12–14 for the remaining requests.
-16. **System:** marks requests that cannot receive a valid allocation as **Unscheduled**.
-17. **System:** saves the generated schedule.
-18. **System:** displays the generated schedule and unscheduled requests.
-19. **Operator:** Reviews the generated schedule.
+7. **System:** orders active charging requests in First-Come, First-Served (FCFS) sequence based on their submission timestamp.
+8. **System:** executes **<<include>> Allocate Charging Slots**.
+9. **System:** checks available charging points and available time intervals.
+10. **System:** assigns a feasible charging point and time interval to the earliest-arrived request.
+11. **System:** checks that the allocation does not conflict with an existing allocation.
+12. **System:** checks that the charging interval satisfies the request's required usage time.
+13. **System:** repeats Steps 10–12 for the remaining requests in FCFS order.
+14. **System:** marks requests that cannot receive a valid allocation as **Unscheduled**.
+15. **System:** saves the generated schedule.
+16. **System:** displays the generated schedule and unscheduled requests.
+17. **Operator:** Reviews the generated schedule.
 
 ### Alternative Flow
 
@@ -110,7 +108,7 @@
 
 **A2. Insufficient Charging Time**
 
-1. At Step 14, the System determines that the available time before the vehicle's next required usage is insufficient.
+1. At Step 12, the System determines that the available time before the vehicle's next required usage is insufficient.
 2. The System does not allocate a charging slot.
 3. The System marks the request as **Unscheduled**.
 4. The System records **Insufficient Charging Time** as the reason.
@@ -118,18 +116,17 @@
 
 **A3. No Available Charging Point**
 
-1. At Step 12, the System cannot find a suitable available charging point.
+1. At Step 10, the System cannot find a suitable available charging point.
 2. The System marks the request as **Unscheduled**.
 3. The System records **No Available Charging Point** as the reason.
 4. The System continues processing the remaining requests.
 
-**A4. Requests Have Equal Priority**
+**A4. Requests Arrive with Identical Timestamps**
 
-1. At Step 9, two or more requests have the same priority score.
-2. The System applies the predefined tie-breaking rule.
-3. The request with the earlier required usage time is processed first.
-4. If the required usage times are also equal, the earlier-created request is processed first.
-5. The System continues with slot allocation.
+1. At Step 7, two or more requests share the exact same submission timestamp.
+2. The System applies the secondary tie-breaking rule based on Request ID ordering.
+3. The request with the earlier Request ID is processed first.
+4. The System continues with slot allocation in FCFS order.
 
 ### Exception Flow
 
@@ -167,11 +164,11 @@
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Use-case ID**       | UC-C03                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Use-case name**     | Adjust a Charging Schedule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Use-case overview** | To allow the Operator to manually modify permitted scheduling decisions, such as charging priority, charging interval, or charging-point assignment, while ensuring that the modified schedule remains valid.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Use-case overview** | To allow the Operator to manually modify permitted scheduling decisions, such as queue sequence, charging interval, or charging-point assignment, while ensuring that the modified schedule remains valid.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | **Actors**            | Operator                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Preconditions**     | 1. The system is running.<br>2. The Operator is authenticated and authorized to modify schedules.<br>3. A current charging schedule exists.<br>4. Charging-point status information is available.<br>5. The selected charging request is eligible for manual adjustment.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Trigger**           | The Operator selects a charging request and clicks the **“Adjust Schedule”** button.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| **Steps**             | 1. The system retrieves the selected charging request and its current schedule.<br>2. The system displays the current priority, charging point, start time, and end time.<br>3. The Operator modifies one or more permitted scheduling attributes.<br>4. The Operator clicks **“Save Adjustment”**.<br>5. The system validates the requested changes.<br>6. The system checks whether the selected charging point is operational and available.<br>7. The system checks whether the new charging interval conflicts with another allocation.<br>8. The system checks the basic scheduling constraints.<br>9. If all validations pass, the system saves the modification.<br>10. The system displays the updated schedule. |
+| **Steps**             | 1. The system retrieves the selected charging request and its current schedule.<br>2. The system displays the current queue position, charging point, start time, and end time.<br>3. The Operator modifies one or more permitted scheduling attributes.<br>4. The Operator clicks **“Save Adjustment”**.<br>5. The system validates the requested changes.<br>6. The system checks whether the selected charging point is operational and available.<br>7. The system checks whether the new charging interval conflicts with another allocation.<br>8. The system checks the basic scheduling constraints.<br>9. If all validations pass, the system saves the modification.<br>10. The system displays the updated schedule. |
 | **Post-conditions**   | The requested schedule modification is saved only if all validation rules pass. The resulting schedule does not assign a faulty/unavailable charging point or create a conflicting charging allocation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Exception flow**    | 1. Charging-point status cannot be retrieved.<br>2. The database cannot save the modification.<br>3. Another scheduling operation modifies the same schedule before the adjustment is saved.<br>4. The original valid schedule remains unchanged if the adjustment cannot be safely applied.                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
@@ -179,7 +176,7 @@
 
 1. **Operator:** Selects a charging request from the current schedule.
 2. **System:** Retrieves the current scheduling information.
-3. **System:** displays the current priority, charging point, start time, and end time.
+3. **System:** displays the current queue position, charging point, start time, and end time.
 4. **Operator:** Changes the required scheduling information.
 5. **Operator:** Clicks **Save Adjustment**.
 6. **System:** validates the requested changes.
@@ -193,13 +190,12 @@
 
 ### Alternative Flow
 
-**A1. Operator Changes Only Priority**
+**A1. Operator Adjusts Queue Sequence**
 
-1. At Step 4, the Operator changes only the priority.
-2. The System validates the new priority value.
-3. The System saves the new priority.
-4. The System updates the queue order.
-5. The existing charging allocation remains unchanged.
+1. At Step 4, the Operator modifies the queue sequence of a pending request.
+2. The System validates the new queue position.
+3. The System updates the queue order.
+4. The existing charging allocation remains unchanged.
 
 **A2. Operator Changes Charging Interval**
 
