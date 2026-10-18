@@ -6,10 +6,11 @@
 | --- | --- | --- |
 | ACT-01 | Student | Finds Hubs and vehicles, manages a personal profile, rents shared vehicles, reports vehicle problems, and manages private-EV parking and charging requests. |
 | ACT-02 | Operator | Monitors the Hub network, coordinates vehicle redistribution, handles incidents, manages charging schedules, and evaluates What-if Simulations. |
+| ACT-03 | External Telemetry Provider | An external IoT system or gateway that supplies vehicle telemetry, parking-occupancy observations, and charging-point/session status. A simulator may fulfil this role in the MVP. |
 
 ## 2. Use Cases
 
-Protected operations require an authenticated session and the appropriate permissions. Sign In establishes the session; Sign Out requires an active session.
+Protected Student and Operator operations require an authenticated session and the appropriate permissions. Sign In establishes the session; Sign Out requires an active session. External Telemetry Provider interactions require a verified source authorized to report on the relevant resources; they do not use the Student/Operator Sign In or Sign Out flows.
 
 ### 2.1 Shared Authentication
 
@@ -113,6 +114,20 @@ Parking arrival and departure times are selected from available time points, spa
 | UC-W04 | Review Coordination Recommendations | View recommended redistribution, charging adjustments, or redirection to alternative Hubs and their expected effects. Reviewing a recommendation does not apply it to live operations. |
 | UC-W05 | Compare What-if Scenarios | Compare completed runs or a scenario against a baseline using consistent measures. Display differences in snapshots, assumptions, and time horizons that affect comparability. |
 
+### 2.10 External IoT & Telemetry
+
+**Actor:** External Telemetry Provider.
+
+These use cases describe the complete system's interactions with an external IoT provider, independently of whether the MVP uses physical devices or simulated inputs. Incoming observations are reconciled with existing bookings, sessions, and operational restrictions. What-if Simulation events remain separate from live operational telemetry.
+
+| ID | Use case | Description |
+| --- | --- | --- |
+| UC-T01 | Update Vehicle Telemetry | Receive identified, timestamped vehicle location, battery level, and operational-condition data. Verify the source, validate the update, and apply fresh observations without overwriting rental/reservation commitments. Fault reports create or update an incident for Operator handling and restrict new allocations. Duplicate or stale events must not repeat effects or replace newer state. |
+| UC-T02 | Update Parking Occupancy | Receive identified, timestamped parking-occupancy observations for a Hub or parking space. Reconcile observed occupancy with parking sessions and reservations without double-counting; expose discrepancies for Operator review. Observations do not confirm check-in/checkout or cancel reserved capacity. Reject invalid or stale observations. |
+| UC-T03 | Update Charging-Point Status | Receive identified, timestamped charging-point condition and, where applicable, charging-session progress or start/stop events. Reconcile verified events with the assigned point, session, and schedule. Faults restrict new allocations and identify affected sessions/allocations for Operator handling. Release eligible capacity only after the relevant state is confirmed; an idle report alone does not cancel a future allocation. |
+
+Detailed scenarios: [External IoT & Telemetry](../use-case-scenarios/external_iot.md).
+
 ## 3. Supporting Use Cases
 
 | ID | Use case | Description |
@@ -134,8 +149,11 @@ Parking arrival and departure times are selected from available time points, spa
 | --- | --- |
 | ACT-01 — Student | UC-A01–UC-A02; UC-H01–UC-H03; UC-R01–UC-R08; UC-P01–UC-P07; UC-X01 |
 | ACT-02 — Operator | UC-A01–UC-A02; UC-F01–UC-F05; UC-I01; UC-C01–UC-C03; UC-W01–UC-W05 |
+| ACT-03 — External Telemetry Provider | UC-T01–UC-T03 |
 
 Operator participation in UC-I02 and UC-I03 is inherited through UC-I01.
+
+UC-T01–UC-T03 supply operational data used by Student and Operator use cases. Fault evidence from UC-T01 or UC-T03 can create or update an incident for later handling through UC-I02 or UC-I03. This event-driven handoff is not an include or extend relationship: receiving telemetry does not execute the Operator's incident-handling flow. Timed stale-data detection remains an internal requirement rather than an additional actor.
 
 ### 4.2 Include Relationships
 
