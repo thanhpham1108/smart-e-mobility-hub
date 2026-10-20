@@ -1,0 +1,128 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam titleFontSize 20
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 24
+skinparam BoxPadding 12
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ActivationBorderColor #42566B
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  ParticipantFontColor #172B4D
+  ActorBorderColor #42566B
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+  GroupHeaderFontColor #172B4D
+  DividerBackgroundColor #E8F1FA
+  DividerBorderColor #8295A8
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+hide footbox
+title UC-P03 - View My Parking and Charging Bookings
+actor Student as ST
+boundary "Student Portal" as UI
+control "Booking Query Service" as SVC
+entity "Mobility Records" as DATA
+
+note over ST,DATA
+  Preconditions: Student is signed in; existing bookings are not required.
+  Service calls use the signed-in Student's identity.
+end note
+
+ST -> UI: Open My Parking and Charging Bookings
+activate UI #D8EAFE
+UI -> SVC: Get my bookings (filter)
+activate SVC #D8EEDC
+SVC -> SVC: Verify current session
+activate SVC #D8EEDC
+SVC --> SVC: Session valid / expired
+deactivate SVC
+alt session expired
+SVC -> SVC: Prepare authentication-required result
+activate SVC #D8EEDC
+SVC --> SVC: No personal data retrieved
+deactivate SVC
+else session valid
+SVC -> DATA: Find reservations, sessions and charging requests owned by studentId
+activate DATA #E2E7ED
+DATA --> SVC: Matching records / empty result / retrieval error
+deactivate DATA
+end
+SVC --> UI: List result or access / retrieval error
+deactivate SVC
+alt session expired
+UI --> ST: Sign in before reloading; do not reveal personal data
+else session valid but retrieval failed
+UI --> ST: Report read error, not no bookings; retained data is not refreshed
+else query succeeded with no matches
+UI --> ST: Show valid empty state; leave or start a separate use case
+else query succeeded with matching records
+UI --> ST: Show Hub, vehicle, intervals, statuses and existing charging allocations
+end
+deactivate UI
+break session expired, retrieval failed or no matching records
+note over ST,DATA
+  End this list query. Authentication, retry, filter changes or new use cases are separate attempts.
+end note
+end
+ST -> UI: Open a record, change filter / refresh, or close
+activate UI #D8EAFE
+alt Student changes filter, refreshes or closes
+UI --> ST: Start a fresh list query, or close without changes
+else Student selects a record
+UI -> SVC: Get current owned details (recordRef)
+activate SVC #D8EEDC
+SVC -> SVC: Recheck current session
+activate SVC #D8EEDC
+SVC --> SVC: Session valid / expired
+deactivate SVC
+opt session valid
+SVC -> DATA: Find owned record and latest linked parking / charging details
+activate DATA #E2E7ED
+DATA --> SVC: Current details / missing or inaccessible / retrieval error
+deactivate DATA
+opt current owned details retrieved
+SVC -> SVC: Derive permitted actions from current state
+activate SVC #D8EEDC
+SVC --> SVC: Current actions; Active charging cannot use UC-P05
+deactivate SVC
+end
+end
+SVC --> UI: Current details and actions / access or retrieval error
+deactivate SVC
+alt session expired
+UI --> ST: Sign in before reloading; do not reveal details
+else record missing or inaccessible
+UI --> ST: Generic unavailable message; return to refreshed owned-record list
+else retrieval failed
+UI --> ST: Offer retry; mark retained details as not refreshed
+else current owned details retrieved
+UI --> ST: Show latest details and actions; distinguish Pending, Scheduled and Active
+end
+end
+deactivate UI
+note over ST,DATA
+  Returning to the list or refreshing starts a new query with current access checks.
+  A request that has become Active cannot be cancelled through UC-P05.
+  Read-only: no booking, session, request or allocation changes.
+end note
+
+legend bottom left
+  Thin rectangle: execution of a responsibility; nested rectangle: nested execution
+  Solid arrow: request / action   |   Dashed arrow: returned result
+  Activation ends before waiting for Student input. Read guards top to bottom.
+  critical: required consistency boundary; updates are all-or-none as noted
+endlegend
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

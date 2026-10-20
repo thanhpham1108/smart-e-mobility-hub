@@ -1,0 +1,217 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam titleFontSize 20
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 24
+skinparam BoxPadding 12
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ActivationBorderColor #42566B
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  ParticipantFontColor #172B4D
+  ActorBorderColor #42566B
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+  GroupHeaderFontColor #172B4D
+  DividerBackgroundColor #E8F1FA
+  DividerBorderColor #8295A8
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+hide footbox
+title UC-P07 - Check Out a Private EV
+actor Student as ST
+boundary "Student Portal" as UI
+control "Parking Service" as SVC
+entity "Mobility Records" as DATA
+control "Charging Service" as CHG
+participant "Charging Adapter\n(IoT or Simulator)" as DEVICE
+note over ST,DATA
+  Preconditions: Student is signed in and has a parking-session reference.
+  Service calls use the signed-in Student's identity.
+end note
+
+ST -> UI: Check out private EV
+activate UI #D8EAFE
+UI -> SVC: Get checkout context (sessionRef, vehicle)
+activate SVC #D8EEDC
+SVC -> DATA: Load owned matching parking session and latest linked charging state
+activate DATA #E2E7ED
+DATA --> SVC: Current context / already closed / invalid or unavailable / retrieval error
+deactivate DATA
+SVC --> UI: Checkout context, existing completion or explicit error
+deactivate SVC
+alt missing, not owned or vehicle mismatch
+UI --> ST: Generic unavailable session; no occupancy change
+else already checked out
+UI --> ST: Show existing completion result; do not release resources again
+else current parking or charging state unverifiable
+UI --> ST: No checkout or release; retry after current data is available
+else verified Active parking with Active charging
+UI --> ST: Charging must stop before checkout; ask Student whether to stop
+else verified Active parking without Active charging
+UI --> ST: Proceed to latest checkout summary
+end
+deactivate UI
+break invalid or unverifiable context, or already checked out
+note over ST,DEVICE
+  End this attempt without a new checkout or release.
+end note
+end
+opt linked charging is Active
+ST -> UI: Accept or decline charging stop
+activate UI #D8EAFE
+alt Student declines stop
+UI --> ST: End attempt with parking still Active
+else Student accepts stop
+UI -> CHG: Stop linked charging (sessionRef)
+activate CHG #D8EEDC
+CHG -> CHG: Verify session and ownership
+activate CHG #D8EEDC
+CHG --> CHG: Access valid / invalid
+deactivate CHG
+alt access invalid
+CHG -> CHG: Prepare authentication-required / denied result
+activate CHG #D8EEDC
+CHG --> CHG: No stop command requested
+deactivate CHG
+else access valid
+CHG -> DEVICE: Request charging stop (chargingSessionRef)
+activate DEVICE #FFE3BF
+DEVICE --> CHG: Command accepted / rejected
+deactivate DEVICE
+note over CHG,DEVICE
+  Command acknowledgement alone does NOT confirm charging stopped.
+end note
+opt command accepted
+... Wait for confirmed stopped state or failure/timeout ...
+opt stopped state confirmed
+DEVICE -> DEVICE: Observe confirmed stopped state
+activate DEVICE #FFE3BF
+DEVICE ->> CHG: Charging stopped (sessionRef, final battery / energy)
+activate CHG #D8EEDC
+deactivate DEVICE
+CHG -> DATA: Record Completed if target met; otherwise Interrupted
+activate DATA #E2E7ED
+DATA --> CHG: Final charging state recorded / persistence error
+deactivate DATA
+deactivate CHG
+end
+end
+end
+CHG --> UI: Stop outcome: confirmed final state / access invalid / failed / unconfirmed
+deactivate CHG
+alt final charging state confirmed
+UI --> ST: Charging ended; reload summary before departure confirmation
+else access invalid, stop failed or final state unconfirmed
+UI --> ST: Parking stays Active; point not treated as free; restore access / seek assistance
+end
+end
+deactivate UI
+end
+break stop required and declined, denied, failed or still unconfirmed
+note over ST,DEVICE
+  No checkout. Resume only after access and charging state are resolved.
+end note
+end
+UI -> UI: Refresh checkout view
+activate UI #D8EAFE
+UI -> SVC: Reload latest checkout summary
+activate SVC #D8EEDC
+SVC -> DATA: Reload owned parking and linked charging states and allocations
+activate DATA #E2E7ED
+DATA --> SVC: Current states and summary version / already closed / inaccessible / retrieval error
+deactivate DATA
+SVC --> UI: Current checkout summary / state or access error
+deactivate SVC
+alt visit already closed
+UI --> ST: Show existing completion result; no second release
+else latest state unavailable, inaccessible or charging Active again
+UI --> ST: No checkout; resolve state/access and repeat stop flow if charging is Active
+else owned Active parking verified with no Active charging
+UI --> ST: Review departure, unused Pending/Scheduled requests and all releases
+end
+deactivate UI
+break visit already closed, latest state unavailable, inaccessible or charging Active again
+note over ST,DEVICE
+  Reload context in a new attempt. Any confirmed charging stop remains effective.
+end note
+end
+ST -> UI: Confirm departure or cancel checkout
+activate UI #D8EAFE
+alt Student declines, edits or abandons
+UI --> ST: Parking stays Active; any confirmed charging stop remains effective
+else Student confirms
+UI -> SVC: Confirm departure (sessionRef, summaryVersion, operationRef)
+activate SVC #D8EEDC
+SVC -> SVC: Recheck session and permission
+activate SVC #D8EEDC
+SVC --> SVC: Current access result
+deactivate SVC
+alt session expired or permission denied
+SVC -> SVC: Prepare authentication-required / access-denied result
+activate SVC #D8EEDC
+SVC --> SVC: No update attempted
+deactivate SVC
+else session valid and permission granted
+critical Final state check and complete checkout together
+SVC -> DATA: Close owned visit only if charging is not Active and\ncurrent consequences match confirmed summary
+activate DATA #E2E7ED
+note over SVC,DATA
+  One update: session Closed; reservation Completed; actual unrounded departure;
+  unused Pending/Scheduled requests Cancelled. Release occupied parking, ALL remaining
+  parking holds (including early-departure remainder) and remaining charging allocations once.
+  Preserve completed charging history. Serialize against charging start and dependent changes.
+  Already closed returns the existing result without another release.
+end note
+DATA --> SVC: Completed / already closed / charging Active / summary changed / verification error / save failure
+deactivate DATA
+end
+opt update outcome uncertain / response lost
+SVC -> DATA: Find original checkout result (operationRef, studentId)
+activate DATA #E2E7ED
+DATA --> SVC: Original result / still unknown
+deactivate DATA
+end
+end
+SVC --> UI: Operation outcome and accessible current details
+deactivate SVC
+alt access invalid
+UI --> ST: Sign in if permitted; reload current records and confirm again
+else outcome still unknown
+UI --> ST: Outcome unconfirmed; retain operationRef and resolve original result before retry
+else save failed
+UI --> ST: Report failure; no partial update; retry after reload and revalidation
+else charging became Active or cancellation consequences changed
+UI --> ST: No checkout; repeat stop flow if needed, reload summary and confirm departure again
+else current state unverifiable or record no longer accessible
+UI --> ST: No checkout/release; resolve state or access before retrying
+else checkout completed or already closed
+UI --> ST: Show Closed session, Completed reservation, departure and charging outcomes
+end
+end
+deactivate UI
+note over ST,DATA
+  With no linked charging, checkout affects only parking.
+  Failure or cancellation of checkout NEVER restarts charging confirmed stopped.
+  An uncertain checkout result must be reconciled before retrying.
+end note
+
+legend bottom left
+  Thin rectangle: execution of a responsibility; nested rectangle: nested execution
+  Solid arrow: request / action   |   Dashed arrow: returned result
+  Activation ends before waiting for Student input. Read guards top to bottom.
+  critical: required consistency boundary; updates are all-or-none as noted
+endlegend
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml
