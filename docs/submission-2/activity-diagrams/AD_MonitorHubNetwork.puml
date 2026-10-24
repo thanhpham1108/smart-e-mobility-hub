@@ -1,0 +1,38 @@
+@startuml AD_MonitorHubNetwork
+title UC-F01 - Monitor Hub Network and Surface Automatic Alerts
+|Operator|
+start
+:Open Operator Dashboard;
+|System / Controller|
+:Check Operator permission;
+if (Authorized?) then (yes)
+  |Database|
+  fork
+    :Read Hub capacities and parking occupancy;
+  fork again
+    :Read vehicle distribution and commitments;
+  fork again
+    :Read charging status and open incidents;
+  end fork
+  |System / Controller|
+  if (Required data available?) then (yes)
+    :Calculate KPIs and data freshness;
+    if (Hub imbalance or capacity risk?) then (yes)
+      :Include existing FR-NI-06 alert;
+    else (no)
+      :Show normal resource state;
+    endif
+    if (Any observation stale?) then (yes)
+      :Mark affected values stale (FR-NI-03);
+    endif
+    :Render Network Map, KPIs and incidents;
+    |Operator|
+    :Review Hub and vehicle status;
+  else (no)
+    :Show unavailable status with last timestamp;
+  endif
+else (no)
+  :Show access denied;
+endif
+stop
+@enduml

@@ -1,0 +1,43 @@
+@startuml SD_AutomaticVehicleFault
+title FR-NI-01/02/07 - Automatic vehicle-fault handling
+hide footbox
+autonumber
+actor "External Telemetry Provider\n(or mock timer)" as Source
+boundary "Telemetry Gateway" as G
+control "TelemetryController" as C
+entity "VehicleRepository" as V
+entity "IncidentRepository" as I
+entity "AssignmentRepository" as A
+entity "AlertStore" as L
+
+Source -> G: Send vehicle ID, timestamp, condition, battery
+G -> C: ingestTelemetry(event)
+C -> V: Load vehicle and latest accepted timestamp
+V --> C: Current state and timestamp
+alt Invalid ID, missing fields, duplicate or stale event
+  C --> G: Reject or ignore with reason
+else Valid newer event
+  C -> V: Apply observation and freshness timestamp
+  opt Fault or ineligible condition reported
+    C -> V: Restrict new allocations
+    C -> I: Find equivalent open vehicle incident
+    alt Equivalent incident exists
+      I --> C: Existing ticket
+      C -> I: Append new evidence once
+    else No equivalent incident exists
+      I --> C: None
+      C -> I: Create Reported ticket
+    end
+    C -> A: Find incomplete assignments containing vehicle
+    loop Each affected assignment
+      C -> A: Mark AtRisk with conflict reason
+    end
+    C -> L: Publish fault and assignment alerts
+  end
+  C --> G: Accepted state and incident reference
+end
+note over C,L
+No Operator click is required. Repeated fault events do not create
+duplicate open tickets or confirm physical redistribution.
+end note
+@enduml

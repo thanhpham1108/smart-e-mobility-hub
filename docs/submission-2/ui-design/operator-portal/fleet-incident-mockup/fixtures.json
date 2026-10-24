@@ -1,0 +1,34 @@
+{
+  "configuration": {
+    "staleAfterMinutes": 15,
+    "lowVehicleThreshold": 5,
+    "capacityWarningPercent": 85
+  },
+  "hubs": [
+    { "id": "metro", "name": "Ga Metro ĐHQG", "shortName": "Metro Station", "zone": "Transit gateway", "capacity": 48, "occupied": 39, "availableVehicles": 22, "chargingActive": 4, "chargingTotal": 6, "ageMinutes": 2, "mapX": 27, "mapY": 39 },
+    { "id": "ktx-a", "name": "KTX Khu A", "shortName": "Dormitory A", "zone": "Residential", "capacity": 44, "occupied": 35, "availableVehicles": 6, "chargingActive": 3, "chargingTotal": 5, "ageMinutes": 4, "mapX": 61, "mapY": 26 },
+    { "id": "ktx-b", "name": "KTX Khu B", "shortName": "Dormitory B", "zone": "Residential", "capacity": 40, "occupied": 34, "availableVehicles": 3, "chargingActive": 2, "chargingTotal": 4, "ageMinutes": 3, "mapX": 75, "mapY": 58 },
+    { "id": "hcmut", "name": "Trường ĐH Bách Khoa", "shortName": "HCMUT Campus", "zone": "University", "capacity": 52, "occupied": 40, "availableVehicles": 9, "chargingActive": 3, "chargingTotal": 5, "ageMinutes": 18, "mapX": 37, "mapY": 74 }
+  ],
+  "vehicles": [
+    { "id": "EV-008", "type": "E-bike", "hubId": "metro", "battery": 54, "status": "Faulted", "assignmentId": null, "activeRental": false, "pendingReservations": 1 },
+    { "id": "EV-014", "type": "E-scooter", "hubId": "metro", "battery": 78, "status": "Assigned", "assignmentId": "RO-204", "activeRental": false, "pendingReservations": 0 },
+    { "id": "EV-017", "type": "E-bike", "hubId": "metro", "battery": 83, "status": "Available", "assignmentId": null, "activeRental": false, "pendingReservations": 0 },
+    { "id": "EV-019", "type": "E-scooter", "hubId": "metro", "battery": 68, "status": "Available", "assignmentId": null, "activeRental": false, "pendingReservations": 0 },
+    { "id": "EV-020", "type": "E-bike", "hubId": "metro", "battery": 65, "status": "Reserved", "assignmentId": null, "activeRental": false, "pendingReservations": 1 },
+    { "id": "EV-021", "type": "E-bike", "hubId": "ktx-a", "battery": 43, "status": "Faulted", "assignmentId": null, "activeRental": false, "pendingReservations": 0 },
+    { "id": "EV-031", "type": "E-scooter", "hubId": "ktx-a", "battery": 91, "status": "Available", "assignmentId": null, "activeRental": false, "pendingReservations": 0 }
+  ],
+  "orders": [
+    { "id": "RO-204", "sourceId": "metro", "destinationId": "ktx-b", "vehicleIds": ["EV-014"], "arrivedIds": [], "status": "Assigned", "createdAt": "2026-10-24T09:20:00+07:00", "riskReason": null }
+  ],
+  "incidents": [
+    { "id": "INC-041", "vehicleId": "EV-008", "hubId": "metro", "title": "Motor controller error", "source": "Vehicle telemetry", "severity": "High", "status": "Reported", "reportedAt": "2026-10-24T10:42:00+07:00", "description": "Controller fault reported by the mock IoT stream. Vehicle is restricted from new allocation.", "repairComplete": false, "action": "Awaiting inspection" },
+    { "id": "INC-039", "vehicleId": "EV-021", "hubId": "ktx-a", "title": "Brake sensor fault", "source": "Student report", "severity": "Medium", "status": "InRepair", "reportedAt": "2026-10-24T08:15:00+07:00", "description": "Student reported abnormal brake response after returning the vehicle.", "repairComplete": false, "action": "Technician inspection in progress" }
+  ],
+  "alerts": [
+    { "id": "ALT-01", "kind": "warning", "title": "Vehicle shortage", "detail": "KTX Khu B has 3 available vehicles", "hubId": "ktx-b", "requirement": "FR-NI-06" },
+    { "id": "ALT-02", "kind": "danger", "title": "Vehicle failure", "detail": "EV-008 restricted · INC-041", "hubId": "metro", "requirement": "FR-NI-02" },
+    { "id": "ALT-03", "kind": "warning", "title": "Status requires verification", "detail": "HCMUT Campus updated 18 min ago", "hubId": "hcmut", "requirement": "FR-NI-03" }
+  ]
+}
