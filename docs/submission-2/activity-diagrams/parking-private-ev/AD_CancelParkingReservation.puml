@@ -1,0 +1,171 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title
+UC-P04 - Cancel a Parking Reservation
+<size:12>Preconditions: Student is signed in and has a parking reservation reference.</size>
+<size:12>Ownership and cancellation eligibility are checked during the flow.</size>
+end title
+
+|Actor|
+|System|
+|Database|
+|Actor|
+start
+:Select Cancel Parking Reservation;
+|Actor|
+repeat
+  |System|
+|Database|
+:Retrieve reservation within this Student's scope,\ndeadline and current dependents;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, reservation state, deadline and dependent states;
+
+:Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
+if () then ([overdue Confirmed records])
+  |Database|
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nPending/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  |System|
+  if () then ([cleanup failed, unknown or Active conflict])
+    :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;
+    stop
+  else ([cleanup confirmed or state changed])
+  endif
+  |Database|
+  :Reload current records after expiry decision;
+  |System|
+  if () then ([reload unavailable])
+    :Report current state unavailable; retry later;
+    stop
+  else ([reload succeeded])
+  endif
+else ([no overdue Confirmed records])
+endif
+  endif
+  if () then ([missing or not owned])
+    :Reject without disclosing protected details;\nreturn to personal bookings;
+    stop
+  else ([record accessible])
+  endif
+  if () then ([already Cancelled])
+    :Display existing cancellation result; release\nnothing again;
+    stop
+  else ([not Cancelled])
+  endif
+  :Check Confirmed, not checked in and\nserverNow < expiresAt;
+  if () then ([cancellation not permitted])
+    :Reject and display current state; if checked\nin, direct to UC-P07;
+    stop
+  else ([cancellation permitted])
+  endif
+|Database|
+:Retrieve linked charging requests and allocations;
+|System|
+
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, reservation state, deadline and dependent states;
+  endif
+  :Display cancellation summary and consequences;
+  |Actor|
+  :Review summary and confirm or decline\ncancellation;
+  if () then ([cancellation declined])
+    :Leave this attempt without applying changes;
+    stop
+  else ([cancellation confirmed])
+  endif
+  |System|
+  :Check current sign-in session;
+  if () then ([session expired])
+    :Request sign-in and preserve current input;\nafter sign-in, reload reservation and\ndependents, then confirm again;
+    stop
+  else ([session valid])
+  endif
+|Database|
+:Reload owned reservation, deadline, dependent\nrequests and allocations;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, reservation state, deadline and dependent states;
+  endif
+  if () then ([already Cancelled])
+    :Display original result; no second release;
+    stop
+  else ([not Cancelled])
+  endif
+  if () then ([parking or dependent not cancellable])
+    :Stop combined cancellation; show current\nstates; resolve active parking/charging\nthrough its own flow;
+    stop
+  else ([all still cancellable])
+  endif
+  if () then ([consequences changed])
+    :Refresh linked request details; require\nconfirmation of new consequences;
+  else ([consequences unchanged])
+|Database|
+:Guarded atomic cancellation: recheck ownership,\nConfirmed status, now < expiresAt and reviewed\ndependents; cancel parking and Pending/Scheduled\nrequests; release all remaining holds and future\nallocations ONCE;
+|System|
+
+    if () then ([confirmation response lost])
+|Database|
+:Retrieve the original operation's result; do not\nrepeat the update;
+|System|
+    else ([confirmation response received])
+    endif
+    if () then ([outcome still unknown])
+      :Show result as unconfirmed; reconcile the\noriginal result before any retry;
+      stop
+    else ([outcome known])
+    endif
+    if () then ([save failed])
+      :Report save failure; no partial updates; offer\nretry after revalidation and confirmation;
+      stop
+    else ([update result available])
+    endif
+    if () then ([guard rejected or summary changed])
+:Reconcile overdue parking via FR-NI-13 if needed;\nshow current state; reload summary and require\nconfirmation again;
+      stop
+    else ([cancellation confirmed or already cancelled])
+    endif
+    :Display Cancelled parking reservation and\nresulting linked request statuses;
+    stop
+  endif
+|Actor|
+repeat while ( ) is ([review updated summary]) not ([leave])
+stop
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

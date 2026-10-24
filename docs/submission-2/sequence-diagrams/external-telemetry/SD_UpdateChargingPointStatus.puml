@@ -1,0 +1,205 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam titleFontSize 20
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 24
+skinparam BoxPadding 12
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ActivationBorderColor #42566B
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  ParticipantFontColor #172B4D
+  ActorBorderColor #42566B
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+  GroupHeaderFontColor #172B4D
+  DividerBackgroundColor #E8F1FA
+  DividerBorderColor #8295A8
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+hide footbox
+title UC-T03 - Update Charging-Point Status
+actor "External Telemetry System\n(Provider / ACT-03)" as P
+boundary "Telemetry API / Adapter" as API
+control "TelemetryController" as C
+entity "Telemetry & Mobility Records" as D
+control "Charging Scheduler" as Q
+note over P,D
+  What-if events must use isolated run-scoped storage.
+end note
+P -> API: Submit event (point/Hub, eventRef, observedAt, condition; session/vehicle and measurements when required)
+activate API
+API -> C: Process event with source credentials and operational/run scope
+activate C
+C -> D: Read provider permissions, resource scope and validation policy
+activate D
+D --> C: Policy / unavailable
+deactivate D
+C -> C: Verify source identity, resource authorization and operational/run scope
+activate C
+C --> C: Evaluation result
+deactivate C
+alt policy unavailable
+C -> C: Set retryable failure; no operational update
+activate C
+C --> C: Evaluation result
+deactivate C
+else source or scope unauthorized
+C -> D: Record access failure without protected resource details
+activate D
+D --> C: Audit recorded / audit unavailable
+deactivate D
+C -> C: Set access denied; never apply event
+activate C
+C --> C: Evaluation result
+deactivate C
+else authorized source and scope
+C -> C: Validate point/Hub mapping, event type, timestamp, supported\nstate and required session/vehicle/progress/stop references
+activate C
+C --> C: Evaluation result
+deactivate C
+alt invalid event / unknown mapping
+C -> C: Set validation rejection; retain last accepted state and freshness
+activate C
+C --> C: Evaluation result
+deactivate C
+else structurally valid
+C -> D: Read original event result/fingerprint and latest accepted observation\nfor this resource/reporting scope (and session when applicable)
+activate D
+D --> C: Prior result and observation / unavailable
+deactivate D
+alt event state unavailable
+C -> C: Set retryable failure; do not infer availability
+activate C
+C --> C: Evaluation result
+deactivate C
+else identical event already processed
+C -> C: Use original result; do not advance freshness or repeat effects
+activate C
+C --> C: Evaluation result
+deactivate C
+else identity conflict, stale or out-of-order event
+C -> D: Retain conflicting evidence where applicable; do not alter accepted observation
+activate D
+D --> C: Evidence result / unavailable
+deactivate D
+C -> C: Set rejection reason; do not reset freshness
+activate C
+C --> C: Evaluation result
+deactivate C
+else new event satisfies ordering and freshness rules
+loop initial attempt; repeat only after concurrency conflict while retry policy permits
+C -> D: Read current point restrictions, Hub state, schedule, session/request, vehicle and private-EV parking context\nand versions in the selected scope
+activate D
+D --> C: Consistent context / unavailable
+deactivate D
+alt context unavailable
+C -> C: Set retryable failure; stop this retry loop
+activate C
+C --> C: Evaluation result
+deactivate C
+else context available
+C -> C: Match session to point/vehicle; validate transition and allocation
+activate C
+C --> C: Compatible transition / unresolved report
+deactivate C
+alt session mismatch or incompatible transition
+C -> C: Plan unresolved evidence for Operator reconciliation;\nunexpected start blocks new allocations pending verification
+activate C
+C --> C: Evaluation result
+deactivate C
+else compatible observation
+  alt confirmed start / progress
+C -> C: Start requires valid allocation, operational Hub/point;\nprivate EV requires Active parking + Checked In reservation;\nmark existing session/request Active or update progress without restarting
+activate C
+C --> C: Evaluation result
+deactivate C
+  else confirmed stop / completion / permitted pause
+C -> C: Completed if target met; Interrupted for final stop before target;\nPaused only under session policy; retain actual time;\nrelease only capacity no longer committed, once
+activate C
+C --> C: Evaluation result
+deactivate C
+  else condition-only report (healthy, idle or fault)
+C -> C: Update reported condition; preserve open restrictions and future allocations
+activate C
+C --> C: Evaluation result
+deactivate C
+  end
+end
+opt validated point fault, including fault accompanying a session report
+C -> C: Restrict point; create/update equivalent incident; identify affected allocations;\nwithout confirmed cessation retain last confirmed session state and require verification
+activate C
+C --> C: Evaluation result
+deactivate C
+end
+critical Final event identity, ordering and business-state check + atomic update
+C -> D: Atomically commit observation/effects and original processing result only if\nidentity, order, permissions and context versions still match;\npersist scheduling work for eligible capacity release
+activate D
+note right of D
+  Unresolved transitions save evidence, not a valid session transition.
+end note
+D --> C: Committed / original duplicate result / stale or conflicting /\nconcurrency conflict / failed / outcome unknown
+deactivate D
+end
+C -> C: Retry only concurrency conflicts with a fresh context;\notherwise stop loop and classify result
+activate C
+C --> C: Retry / terminal outcome
+deactivate C
+end
+end
+opt outcome unknown
+C -> D: Find original processing result using same source, scope and eventRef
+activate D
+D --> C: Original applied/rejected/failed result / not yet resolved
+deactivate D
+end
+opt newly committed observation/evidence (including recovered commit)
+C -> C: Expose accepted time, freshness, restrictions and discrepancies\nfrom committed records to monitoring/detail views
+activate C
+C --> C: Evaluation result
+deactivate C
+end
+opt committed eligible capacity release has pending scheduling work
+C -> Q: Signal scoped durable work (eventRef); re-evaluate eligible queue
+activate Q
+Q -> D: Claim work idempotently and use current capacity/policy
+activate D
+D --> Q: Work/context or already handled / unavailable
+deactivate D
+Q --> C: Accepted / already handled / retry pending
+deactivate Q
+note over C,Q
+  Failed notification leaves scheduling work pending.
+  A pause alone does not prove free capacity.
+end note
+end
+end
+end
+end
+C --> API: Processing result + event reference (applied / original / rejected / retryable / unresolved)
+deactivate C
+alt acknowledgement delivered
+API --> P: Return processing result; unknown is not an applied acknowledgement
+else acknowledgement lost
+API -> API: Response delivery fails; committed result is retained
+activate API
+API --> API: Provider may retry same event identity and payload
+deactivate API
+end
+deactivate API
+note over P,D
+  Charging telemetry does not close parking.
+end note
+footer Smart E-Mobility Hub | Submission 2 | External Telemetry
+@enduml

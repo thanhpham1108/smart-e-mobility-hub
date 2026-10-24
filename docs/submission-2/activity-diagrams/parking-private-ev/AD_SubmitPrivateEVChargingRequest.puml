@@ -1,0 +1,188 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title
+UC-P02 - Submit a Private-EV Charging Request
+<size:12>Preconditions: Student is signed in and has a parking booking/session reference.</size>
+<size:12>Ownership and current eligibility are checked during the flow.</size>
+end title
+
+|Actor|
+|System|
+|Database|
+|Actor|
+start
+:Select Request Charging for a parking\nbooking/session;
+|System|
+|Database|
+:Retrieve owned parking context, expiresAt, Hub\npolicy and linked requests;
+|System|
+if () then ([data unavailable])
+  :Report data retrieval failure; change no\nrecords; offer retry or exit;
+  stop
+else ([data retrieved])
+  :Verify ownership and parking eligibility;\nConfirmed requires serverNow < expiresAt;\nActive parking uses remaining permitted interval;
+
+:Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
+if () then ([overdue Confirmed records])
+  |Database|
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nPending/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  |System|
+  if () then ([cleanup failed, unknown or Active conflict])
+    :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;
+    stop
+  else ([cleanup confirmed or state changed])
+  endif
+  |Database|
+  :Reload current records after expiry decision;
+  |System|
+  if () then ([reload unavailable])
+    :Report current state unavailable; retry later;
+    stop
+  else ([reload succeeded])
+  endif
+else ([no overdue Confirmed records])
+endif
+endif
+if () then ([not owned or ineligible])
+  :Explain eligible parking is required; return\nto personal bookings;
+  stop
+else ([owned and eligible])
+endif
+:Display vehicle, Hub and charging form; use\nconfirmed parking interval, or remaining\npermitted interval of an Active session;
+|Actor|
+repeat
+  |Actor|
+  :Enter/revise current battery, target battery\nand requested charging interval;
+  if () then ([request abandoned])
+    :Leave this attempt without applying changes;
+    stop
+  else ([continue editing])
+  endif
+  |System|
+:Validate battery values and requested interval;
+|Database|
+:Reload owned parking, deadline and Hub charging\npolicy;
+|System|
+note right
+  0 <= current < target <= 100.
+  Charging window must fit inside parking.
+end note
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership and parking eligibility;\nConfirmed requires serverNow < expiresAt;\nActive parking uses remaining permitted interval;
+  endif
+  if () then ([parking no longer eligible])
+    :Reject request; return to personal bookings;
+    stop
+  else ([parking eligible])
+  endif
+  if () then ([charging unsupported])
+    :Explain charging is unavailable here; preserve\nparking;
+    stop
+  else ([charging supported])
+  endif
+  if () then ([charging inputs invalid])
+    :Identify invalid values;
+  else ([charging inputs valid])
+    :Display summary; explain that submission does\nNOT guarantee a charging slot;
+    |Actor|
+    :Review summary; choose confirm, edit or cancel;
+    if () then ([cancel selected])
+      :Leave this attempt without applying changes;
+      stop
+    else ([continue])
+    endif
+
+    if () then ([request confirmed])
+      |System|
+      :Check current sign-in session;
+      if () then ([session expired])
+        :Request sign-in and preserve current input;\nafter sign-in, reload parking context and\nvalidate charging inputs;
+        stop
+      else ([session valid])
+      endif
+|Database|
+:Retrieve latest owned parking and equivalent\ncharging requests;
+|System|
+      if () then ([data unavailable])
+        :Report data retrieval failure; change no\nrecords; offer retry or exit;
+        stop
+      else ([data retrieved])
+  :Verify ownership and parking eligibility;\nConfirmed requires serverNow < expiresAt;\nActive parking uses remaining permitted interval;
+      endif
+      if () then ([parking no longer eligible])
+        :Reject request; return to personal bookings;
+        stop
+      else ([parking eligible])
+      endif
+      if () then ([equivalent request exists])
+        :Display existing request and current status;\ncreate no duplicate;
+      else ([no equivalent request])
+|Database|
+:Guarded atomic create: recheck ownership, parking\neligibility and deadline against expiry/cancel;\nreturn equivalent request if present, otherwise\ncreate ONE Pending request without slot\nallocation;
+|System|
+note right
+  Busy charging points can still accept Pending requests.
+end note
+        if () then ([confirmation response lost])
+|Database|
+:Retrieve the original operation's result; do not\nrepeat the update;
+|System|
+        else ([confirmation response received])
+        endif
+        if () then ([outcome still unknown])
+          :Show result as unconfirmed; reconcile the\noriginal result before any retry;
+          stop
+        else ([outcome known])
+        endif
+        if () then ([save failed])
+          :Report save failure; no partial updates; offer\nretry after revalidation and confirmation;
+          stop
+        else ([update result available])
+        endif
+        if () then ([eligibility changed or deadline reached])
+          :Reconcile overdue parking via FR-NI-13;\nreject creation and display current state;
+          stop
+        else ([created or equivalent request returned])
+        endif
+        :Display returned request reference, vehicle, Hub,\ninterval and current status (Pending if created);
+      endif
+      stop
+    else ([edit selected])
+    endif
+  endif
+|Actor|
+repeat while ( ) is ([correct or revise]) not ([leave])
+stop
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

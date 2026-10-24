@@ -1,0 +1,149 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title
+UC-P03 - View My Parking and Charging Bookings
+<size:12>Preconditions: Student is signed in. Existing bookings are not required.</size>
+end title
+
+|Actor|
+|System|
+|Database|
+|Actor|
+start
+:Open My Parking and Charging Bookings;
+repeat
+  |System|
+  :Use the current session for personal records;
+  if () then ([session expired])
+    :Request sign-in and preserve current input;\nafter sign-in, reload personal bookings;
+    stop
+  else ([session valid])
+  endif
+|Database|
+:Retrieve only this Student's matching\nreservations, sessions, requests and deadlines;
+|System|
+  if () then ([data unavailable])
+    :Report retrieval failure, not an empty list;\nlabel retained records as not refreshed; offer\nretry or exit;
+    stop
+  else ([data retrieved])
+  :Verify session scope, ownership and current status;
+
+:Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
+if () then ([overdue Confirmed records])
+  |Database|
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nPending/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  |System|
+  if () then ([cleanup failed, unknown or Active conflict])
+    :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;
+    stop
+  else ([cleanup confirmed or state changed])
+  endif
+  |Database|
+  :Reload current records after expiry decision;
+  |System|
+  if () then ([reload unavailable])
+    :Report current state unavailable; retry later;
+    stop
+  else ([reload succeeded])
+  endif
+else ([no overdue Confirmed records])
+endif
+  endif
+  if () then ([no matching records])
+    :Display a valid empty result;
+    |Actor|
+    :Choose whether to start a new booking;
+    if () then ([new booking requested])
+      :Leave this view; open UC-P01 or UC-P02;
+      stop
+    else ([stay in current view])
+    endif
+  else ([records found])
+    |System|
+    :Display Hub, vehicle, interval, exact deadline, current status\nand assigned charging schedule where available;
+    |Actor|
+    :Select a record or keep the list view;
+    if () then ([record selected])
+      |System|
+      :Use the current session for selected record;
+      if () then ([session expired])
+        :Request sign-in; after authentication, reload\npersonal list before opening details;
+        stop
+      else ([session valid])
+      endif
+|Database|
+:Retrieve selected record within this Student's\nscope and linked parking/charging details;
+|System|
+      if () then ([data unavailable])
+        :Report retrieval failure, not an empty list;\nlabel retained records as not refreshed; offer\nretry or exit;
+        stop
+      else ([data retrieved])
+  :Verify session scope, ownership and current status;
+      endif
+      if () then ([record accessible])
+
+:Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
+if () then ([overdue Confirmed records])
+  |Database|
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nPending/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  |System|
+  if () then ([cleanup failed, unknown or Active conflict])
+    :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;
+    stop
+  else ([cleanup confirmed or state changed])
+  endif
+  |Database|
+  :Reload current records after expiry decision;
+  |System|
+  if () then ([reload unavailable])
+    :Report current state unavailable; retry later;
+    stop
+  else ([reload succeeded])
+  endif
+else ([no overdue Confirmed records])
+endif
+        :Display current details and permitted actions;\nActive charging cannot use request cancellation;
+
+        |Actor|
+        :Review details;
+      else ([missing or not owned])
+        |System|
+        :Show a generic unavailable-record message;\nreturn to refreshed personal list;
+      endif
+    else ([list only])
+    endif
+  endif
+  |Actor|
+  :Choose return to list / filter / refresh /\nclose;
+repeat while ( ) is ([return, filter or refresh]) not ([close])
+stop
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

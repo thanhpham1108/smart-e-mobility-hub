@@ -1,22 +1,20 @@
-# Sequence Diagram — Parking & Private EVs
+# Sequence Diagrams - Parking & Private EVs
 
-## Open Diagrams
-
-| ID | Use case | SVG | PNG | Source |
+| Use Case | Name | SVG | PNG | Source |
 | --- | --- | --- | --- | --- |
-| UC-P01 | Reserve a Parking Space | [SVG](SD_UC-P01.svg) | [PNG](SD_UC-P01.png) | [PlantUML](SD_UC-P01.puml) |
-| UC-P02 | Submit a Private-EV Charging Request | [SVG](SD_UC-P02.svg) | [PNG](SD_UC-P02.png) | [PlantUML](SD_UC-P02.puml) |
-| UC-P03 | View My Parking and Charging Bookings | [SVG](SD_UC-P03.svg) | [PNG](SD_UC-P03.png) | [PlantUML](SD_UC-P03.puml) |
-| UC-P04 | Cancel a Parking Reservation | [SVG](SD_UC-P04.svg) | [PNG](SD_UC-P04.png) | [PlantUML](SD_UC-P04.puml) |
-| UC-P05 | Cancel a Charging Request | [SVG](SD_UC-P05.svg) | [PNG](SD_UC-P05.png) | [PlantUML](SD_UC-P05.puml) |
-| UC-P06 | Check In a Private EV | [SVG](SD_UC-P06.svg) | [PNG](SD_UC-P06.png) | [PlantUML](SD_UC-P06.puml) |
-| UC-P07 | Check Out a Private EV | [SVG](SD_UC-P07.svg) | [PNG](SD_UC-P07.png) | [PlantUML](SD_UC-P07.puml) |
+| UC-P01 | Reserve a Parking Space | [SVG](SD_ReserveParkingSpace.svg) | [PNG](SD_ReserveParkingSpace.png) | [PlantUML](SD_ReserveParkingSpace.puml) |
+| UC-P02 | Submit a Private-EV Charging Request | [SVG](SD_SubmitPrivateEVChargingRequest.svg) | [PNG](SD_SubmitPrivateEVChargingRequest.png) | [PlantUML](SD_SubmitPrivateEVChargingRequest.puml) |
+| UC-P03 | View My Parking and Charging Bookings | [SVG](SD_ViewParkingAndChargingBookings.svg) | [PNG](SD_ViewParkingAndChargingBookings.png) | [PlantUML](SD_ViewParkingAndChargingBookings.puml) |
+| UC-P04 | Cancel a Parking Reservation | [SVG](SD_CancelParkingReservation.svg) | [PNG](SD_CancelParkingReservation.png) | [PlantUML](SD_CancelParkingReservation.puml) |
+| UC-P05 | Cancel a Charging Request | [SVG](SD_CancelChargingRequest.svg) | [PNG](SD_CancelChargingRequest.png) | [PlantUML](SD_CancelChargingRequest.puml) |
+| UC-P06 | Check In a Private EV | [SVG](SD_CheckInPrivateEV.svg) | [PNG](SD_CheckInPrivateEV.png) | [PlantUML](SD_CheckInPrivateEV.puml) |
+| UC-P07 | Check Out a Private EV | [SVG](SD_CheckOutPrivateEV.svg) | [PNG](SD_CheckOutPrivateEV.png) | [PlantUML](SD_CheckOutPrivateEV.puml) |
 
-## Rerender
+## Regenerate Images
 
-Open files `.puml` in this folder
+Install Java and download PlantUML. Run these commands from this folder, replacing `/path/to/plantuml.jar` with your JAR location:
 
-```bash
-java -jar /path/to/plantuml.jar -tsvg *.puml
-java -jar /path/to/plantuml.jar -tpng *.puml
+```sh
+java -Djava.awt.headless=true -DPLANTUML_LIMIT_SIZE=30000 -jar /path/to/plantuml.jar -failfast2 -tsvg *.puml
+java -Djava.awt.headless=true -DPLANTUML_LIMIT_SIZE=30000 -jar /path/to/plantuml.jar -failfast2 -tpng *.puml
 ```

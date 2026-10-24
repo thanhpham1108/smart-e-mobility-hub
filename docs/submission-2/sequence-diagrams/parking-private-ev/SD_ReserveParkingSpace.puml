@@ -1,0 +1,198 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam titleFontSize 20
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 24
+skinparam BoxPadding 12
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ActivationBorderColor #42566B
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  ParticipantFontColor #172B4D
+  ActorBorderColor #42566B
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+  GroupHeaderFontColor #172B4D
+  DividerBackgroundColor #E8F1FA
+  DividerBorderColor #8295A8
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+hide footbox
+title
+UC-P01 - Reserve a Parking Space
+<size:11>Preconditions: Student is signed in and authorized; parking policies are configured.</size>
+end title
+actor Student as ST
+boundary "Student Portal" as UI
+control "ParkingController\n(Parking Service)" as SVC
+entity "Mobility Records" as DATA
+
+ST -> UI: Open parking reservation
+activate UI #D8EAFE
+UI -> SVC: Get Hubs, vehicle fields and time choices
+activate SVC #D8EEDC
+SVC -> DATA: Read policies and current parking availability
+activate DATA #E2E7ED
+DATA --> SVC: Hubs, feasible time choices / retrieval error
+deactivate DATA
+SVC --> UI: Time choices or explicit retrieval error
+deactivate SVC
+alt availability retrieved
+UI --> ST: Show reservation form and feasible arrival/departure choices
+else retrieval failed
+UI --> ST: Cannot verify availability; offer retry or exit; do not promise available times
+end
+deactivate UI
+break availability cannot be verified
+
+end
+note over ST,DATA
+  expiresAt = min(arrival + grace, departure).
+  Default grace: 15 minutes; separate from slot increment.
+end note
+ST -> UI: Select/revise Hub, dates, vehicle, arrival and departure
+activate UI #D8EAFE
+UI -> SVC: Validate request, refresh choices and check whole-interval availability
+activate SVC #D8EEDC
+SVC -> DATA: Read current feasible choices for selected inputs
+activate DATA #E2E7ED
+DATA --> SVC: Choices / no feasible times / retrieval error
+deactivate DATA
+opt time choices retrieved and feasible
+SVC -> SVC: Validate fields, permitted time points, end > start and rules
+activate SVC #D8EEDC
+SVC --> SVC: Validation result
+deactivate SVC
+opt inputs valid
+group UC-S02 - Check Parking Availability
+SVC -> SVC: Initialize allSlotsAvailable = true; enumerate consecutive slots
+activate SVC #D8EEDC
+SVC --> SVC: Slot list for [arrival, departure)
+deactivate SVC
+loop each covered slot (default length 15 minutes)
+SVC -> DATA: Read slot capacity, occupancy, valid holds and unavailable spaces without double-counting
+activate DATA #E2E7ED
+DATA --> SVC: Verified slot capacity / retrieval error
+deactivate DATA
+SVC -> SVC: Accumulate availability without double-counting occupancy and holds
+activate SVC #D8EEDC
+SVC --> SVC: Keep false if any slot is full; mark unverified on any read error
+deactivate SVC
+end
+end
+end
+end
+SVC --> UI: Validation / availability outcome and summary when available
+deactivate SVC
+alt read or availability verification failed
+UI --> ST: Report retrieval error; no allocation; retry or leave
+else no feasible choices or invalid inputs
+UI --> ST: Show unavailable choices / field errors; clear departure if no longer offered
+else valid inputs and at least one slot unavailable
+UI --> ST: Entire interval unavailable; revise, request alternatives or leave
+else valid inputs and all slots available
+UI --> ST: Review Hub, vehicle, interval and expiresAt; no allocation yet
+end
+deactivate UI
+break read failed, no feasible choices or invalid inputs
+
+end
+break interval unavailable
+
+opt Student requests alternatives
+ST -> UI: View alternative Hubs for the same interval
+activate UI #D8EAFE
+UI -> SVC: UC-X01 - Find alternative Hubs (interval)
+activate SVC #D8EEDC
+SVC -> DATA: Read alternative capacity for the entire interval
+activate DATA #E2E7ED
+DATA --> SVC: Alternatives / none / retrieval error
+deactivate DATA
+SVC --> UI: Alternatives or explicit error
+deactivate SVC
+UI --> ST: Select another Hub or decline; selecting does not reserve it
+deactivate UI
+
+end
+end
+ST -> UI: Confirm, edit or cancel reservation
+activate UI #D8EAFE
+alt Student declines, edits or abandons
+UI --> ST: No update; revise inputs with revalidation, or leave
+else Student confirms
+UI -> SVC: Confirm reservation (request, operationRef)
+activate SVC #D8EEDC
+SVC -> SVC: Recheck session and permission
+activate SVC #D8EEDC
+SVC --> SVC: Current access result
+deactivate SVC
+alt session expired or permission denied
+SVC -> SVC: Prepare authentication-required / access-denied result
+activate SVC #D8EEDC
+SVC --> SVC: No update attempted
+deactivate SVC
+else session valid and permission granted
+critical Final capacity decision and reservation creation
+note over SVC,DATA
+  All slot checks and the single write share one serialized decision.
+end note
+SVC -> SVC: Compute expiresAt; verify applicable policy matches reviewed summary
+activate SVC #D8EEDC
+SVC --> SVC: Deadline and configuration snapshot
+deactivate SVC
+loop recheck EVERY covered slot using current consistent data
+SVC -> DATA: Reconcile due holds and verify remaining capacity for this slot
+activate DATA #E2E7ED
+DATA --> SVC: Slot available / full / verification failure
+deactivate DATA
+end
+alt all slots available and verified; now < expiresAt; reviewed policy unchanged
+SVC -> DATA: Create ONE Confirmed reservation + ALL holds + expiresAt\n(studentId, request, policySnapshot, operationRef)
+activate DATA #E2E7ED
+DATA --> SVC: Confirmed / save failure / original operation result
+deactivate DATA
+else slot full/unverified, deadline passed, or reviewed policy changed
+SVC -> SVC: Reject allocation without writing a reservation
+activate SVC #D8EEDC
+SVC --> SVC: Unavailable / verification error / deadline passed / policy changed
+deactivate SVC
+end
+end
+opt update outcome uncertain / response lost
+SVC -> DATA: Find original reservation result (operationRef, studentId)
+activate DATA #E2E7ED
+DATA --> SVC: Original result / still unknown
+deactivate DATA
+end
+end
+SVC --> UI: Operation outcome and accessible current details
+deactivate SVC
+alt access invalid
+UI --> ST: Sign in if permitted; reload current records and confirm again
+else outcome still unknown
+UI --> ST: Outcome unconfirmed; retain operationRef and resolve original result before retry
+else save failed
+UI --> ST: Report failure; no partial update; retry after reload and revalidation
+else capacity unavailable, unverifiable or deadline already passed
+UI --> ST: No allocation; revise or retry; request alternative Hubs only for unavailable capacity
+else reviewed expiry policy changed
+UI --> ST: Refresh deadline summary and obtain confirmation again; no booking created
+else reservation confirmed
+UI --> ST: Show Confirmed reference / QR ticket, Hub, vehicle, interval and expiresAt
+end
+end
+deactivate UI
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

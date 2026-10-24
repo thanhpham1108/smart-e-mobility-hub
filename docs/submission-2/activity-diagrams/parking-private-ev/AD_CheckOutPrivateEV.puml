@@ -1,0 +1,180 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title
+UC-P07 - Check Out a Private EV
+<size:12>Preconditions: Student is signed in and has a parking-session reference.</size>
+end title
+
+|Actor|
+|System|
+|Database|
+|Actor|
+start
+:Select Check Out for a parking session;
+|Actor|
+repeat
+  |System|
+|Database|
+:Retrieve parking session within this Student's\nscope and selected vehicle;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, selected vehicle and current parking/charging states;
+  endif
+  if () then ([missing, not owned or vehicle mismatch])
+    :Reject checkout; no occupancy change;
+    stop
+  else ([session owned and vehicle matches])
+  endif
+  if () then ([already checked out])
+    :Display original completion result; no second\ncapacity release;
+    stop
+  else ([not checked out])
+  endif
+|Database|
+:Retrieve linked requests and persisted charging\nstate;
+|System|
+:Verify latest charging state through charging\nmanagement;
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, selected vehicle and current parking/charging states;
+  endif
+  if () then ([charging Active])
+    |Actor|
+    :Choose whether to stop charging and continue;
+    if () then ([stop declined])
+      |System|
+      :Keep parking Active;
+      stop
+    else ([stop accepted])
+      |Actor|
+
+    endif
+    |System|
+    :Request charging stop; wait for a confirmed\nstopped state;
+    if () then ([stop failed or unconfirmed])
+      :Keep parking Active and point unreleased;\nreport issue for operational assistance;
+      stop
+    else ([stop confirmed])
+    endif
+    if () then ([target met])
+:Set confirmed charging outcome to Completed;
+    else ([target not met])
+:Set confirmed charging outcome to Interrupted;
+    endif
+    |Database|
+    :Persist confirmed charging outcome and stop result;
+    |System|
+    if () then ([save failed or outcome unknown])
+      :Keep parking Active; reconcile charging result;\ndo not restart confirmed stopped charging;
+      stop
+    else ([charging result confirmed])
+    endif
+  else ([no Active charging])
+  endif
+  :If past reserved departure, flag timing discrepancy;\nkeep occupancy until confirmed checkout;
+  :Display checkout summary and unused\nPending/Scheduled requests to cancel;
+
+  |Actor|
+  :Review checkout summary; confirm or decline\ndeparture;
+  if () then ([departure declined])
+    |System|
+    :Keep parking Active; any confirmed charging\nstop stays effective;
+    stop
+  else ([departure confirmed])
+    |Actor|
+
+  endif
+  |System|
+  :Check current sign-in session;
+  if () then ([session expired])
+    :Request sign-in and preserve current input;\nafter sign-in, reload parking/charging states\nand confirm departure again. Keep any\nconfirmed charging stop effective;
+    stop
+  else ([session valid])
+  endif
+|Database|
+:Reload owned parking, charging states and current\ncancellation consequences;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, selected vehicle and current parking/charging states;
+  endif
+  if () then ([already checked out])
+    :Display original completion result; no second\nrelease;
+    stop
+  else ([not checked out])
+  endif
+  if () then ([charging became Active])
+    :Keep parking Active; reload charging state;\nrepeat stop flow and obtain departure\nconfirmation again;
+  else ([no Active charging])
+|Database|
+:Guarded atomic checkout: recheck ownership, no\nActive charging and reviewed dependents; close\nsession, mark reservation Completed, record\nactual departure; cancel unused Pending/Scheduled\nrequests; release occupied space, ALL remaining\nparking holds and future charging allocations\nONCE;
+|System|
+note right
+  Early checkout also releases unused reserved time.
+end note
+    if () then ([confirmation response lost])
+|Database|
+:Retrieve the original operation's result; do not\nrepeat the update;
+|System|
+    else ([confirmation response received])
+    endif
+    if () then ([outcome still unknown])
+      :Show result as unconfirmed; reconcile the\noriginal result before any retry;
+      stop
+    else ([outcome known])
+    endif
+    if () then ([save failed])
+      :Report save failure; no partial updates; offer\nretry after revalidation and confirmation;
+      stop
+    else ([update result available])
+    endif
+    if () then ([guard rejected or consequences changed])
+      :Keep parking Active; reload current state;\nrepeat stop flow if needed and obtain\nfresh departure confirmation before retry;
+      stop
+    else ([checkout confirmed or already closed])
+    endif
+    :Display completed visit and final linked\ncharging-request statuses;
+    stop
+  endif
+|Actor|
+repeat while ( ) is ([continue checkout]) not ([leave])
+|System|
+:Keep parking Active; any confirmed charging\nstop stays effective;
+stop
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

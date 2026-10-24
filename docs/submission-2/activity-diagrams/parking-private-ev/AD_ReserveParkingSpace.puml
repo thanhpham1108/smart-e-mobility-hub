@@ -1,0 +1,204 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title
+UC-P01 - Reserve a Parking Space
+<size:12>Preconditions: Student is signed in and authorized to reserve parking.</size>
+<size:12>Parking-reservation policies are configured.</size>
+end title
+
+|Actor|
+|System|
+|Database|
+|Actor|
+start
+:Open parking reservation;
+|Actor|
+repeat
+  |System|
+:Reconcile affected overdue holds (FR-NI-13); do\nnot count unresolved cleanup as free capacity;
+|Database|
+:Retrieve Hubs, parking policies and capacity data;
+|System|
+note right
+  Parking interval: [arrival, departure).
+  Default time increment: 15 minutes.
+end note
+  if () then ([data unavailable])
+    :Report availability retrieval failure; do not\nassume capacity is available; offer retry or\nexit;
+    stop
+  else ([data retrieved])
+  :Evaluate availability data and reservation rules;
+  endif
+  :Build and display permitted time choices;
+  |Actor|
+  :Select/revise Hub, date(s), vehicle and\narrival/departure times;
+  if () then ([request abandoned])
+    :Leave this attempt without applying changes;
+    stop
+  else ([continue editing])
+  endif
+  |System|
+:Reconcile affected overdue holds (FR-NI-13); do\nnot count unresolved cleanup as free capacity;
+|Database|
+:Retrieve current capacity for revised Hub and\ndates;
+|System|
+if () then ([data unavailable])
+:Report availability retrieval failure; offer retry or exit;
+stop
+else ([data retrieved])
+endif
+:Refresh permitted time choices; clear a departure\nno longer offered;
+  if () then ([no valid time choices])
+    :Explain that no arrival/departure time is\navailable;
+  else ([time choices available])
+    :Validate fields, time points, time order and\nreservation rules;
+    if () then ([inputs invalid])
+      :Identify invalid fields;
+    else ([inputs valid])
+:UC-S02: identify EVERY covered slot;
+:Reconcile affected overdue holds (FR-NI-13); do\nnot count unresolved cleanup as free capacity;
+|Database|
+:Retrieve occupancy, holds and unavailable spaces\nfor all covered slots;
+|System|
+
+      if () then ([data unavailable])
+        :Report availability retrieval failure; do not\nassume capacity is available; offer retry or\nexit;
+        stop
+      else ([data retrieved])
+  :Evaluate availability data and reservation rules;
+      endif
+      if () then ([all slots available])
+        :Calculate expiresAt = min(arrival + grace, departure);\ndisplay interval, exact deadline and summary;\nno allocation yet;
+        |Actor|
+        :Review summary; choose confirm, edit or cancel;
+        if () then ([cancel selected])
+          :Leave this attempt without applying changes;
+          stop
+        else ([continue])
+        endif
+
+        if () then ([request confirmed])
+          |System|
+          :Check current sign-in session;
+          if () then ([session expired])
+            :Request sign-in and preserve current input;\nafter sign-in, reload request and validate\ninputs again;
+            stop
+          else ([session valid])
+          endif
+          :Check permission to reserve parking;
+          if () then ([permission revoked])
+            :Deny reservation; create no booking;
+            stop
+          else ([permission granted])
+          endif
+:Reconcile affected overdue holds (FR-NI-13); do\nnot count unresolved cleanup as free capacity;
+|Database|
+:Retrieve latest capacity and expiry configuration\nfor confirmation;
+|System|
+          if () then ([data unavailable])
+            :Report availability retrieval failure; do not\nassume capacity is available; offer retry or\nexit;
+            stop
+          else ([data retrieved])
+  :Evaluate availability data and reservation rules;
+          endif
+          if () then ([capacity still sufficient])
+|Database|
+:Guarded atomic create: recheck EVERY slot,\npermission and reviewed policy; reject elapsed\ndeadline; create ONE Confirmed reservation,\nsnapshot grace and expiresAt; allocate ALL slots\nor NONE;
+|System|
+
+            if () then ([confirmation response lost])
+|Database|
+:Retrieve the original operation's result; do not\nrepeat the update;
+|System|
+            else ([confirmation response received])
+            endif
+            if () then ([outcome still unknown])
+              :Show result as unconfirmed; reconcile the\noriginal result before any retry;
+              stop
+            else ([outcome known])
+            endif
+            if () then ([save failed])
+              :Report save failure; no partial updates; offer\nretry after revalidation and confirmation;
+              stop
+            else ([update result available])
+            endif
+            if () then ([policy or capacity changed, or deadline passed])
+              :Do not create reservation; show current reason;\nrefresh choices/deadline and require review\nand confirmation again on retry;
+              stop
+            else ([reservation confirmed])
+            endif
+            :Display confirmed reference, Hub, vehicle and\nfull interval and exact expiresAt;
+            stop
+          else ([capacity no longer sufficient])
+            :Mark the entire interval unavailable; retain\nno partial allocation;
+          endif
+        else ([edit selected])
+          |System|
+          :Keep request editable; require validation and\na fresh capacity check;
+        endif
+      else ([at least one slot unavailable])
+        :Mark the entire interval unavailable; create\nno reservation;
+      endif
+      if () then ([interval unavailable])
+        |Actor|
+        :Choose whether to view alternative Hubs;
+        if () then ([alternatives requested])
+          |System|
+:UC-X01: request alternatives for the same\ninterval;
+:Reconcile affected overdue holds (FR-NI-13); do\nnot count unresolved cleanup as free capacity;
+|Database|
+:Retrieve alternative Hubs and interval capacity;
+|System|
+          if () then ([data unavailable])
+            :Report availability retrieval failure; do not\nassume capacity is available; offer retry or\nexit;
+            stop
+          else ([data retrieved])
+  :Evaluate availability data and reservation rules;
+          endif
+          :Determine and display feasible alternative Hubs;
+          |Actor|
+          :Select an alternative Hub or decline;
+          if () then ([alternative selected])
+            |System|
+            :Update Hub; retain requested interval; refresh\nchoices and revalidate on next pass;
+          else ([none available or selected])
+          endif
+        else ([alternatives declined])
+        endif
+      else ([interval available])
+      endif
+    endif
+  endif
+  |Actor|
+repeat while ( ) is ([revise or continue with selected Hub]) not ([leave])
+stop
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

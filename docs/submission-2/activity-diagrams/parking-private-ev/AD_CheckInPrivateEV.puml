@@ -1,0 +1,208 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title
+UC-P06 - Check In a Private EV
+<size:12>Preconditions: Student is signed in, has arrived at the Hub,</size>
+<size:12>and has a parking reservation reference.</size>
+end title
+
+|Actor|
+|System|
+|Database|
+|Actor|
+start
+:Arrive at Hub; select reservation or scan QR;
+|System|
+:Resolve reference or verify scanned ticket;
+if () then ([invalid or unreadable ticket])
+:Reject ticket; allow accessible reference selection;
+stop
+else ([reference resolved])
+endif
+repeat
+  |System|
+|Database|
+:Retrieve reservation within this Student's scope,\nexpiresAt and existing parking/charging sessions;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, vehicle, Hub, deadline and existing session;
+
+:Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
+if () then ([overdue Confirmed records])
+  |Database|
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nPending/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  |System|
+  if () then ([cleanup failed, unknown or Active conflict])
+    :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;
+    stop
+  else ([cleanup confirmed or state changed])
+  endif
+  |Database|
+  :Reload current records after expiry decision;
+  |System|
+  if () then ([reload unavailable])
+    :Report current state unavailable; retry later;
+    stop
+  else ([reload succeeded])
+  endif
+else ([no overdue Confirmed records])
+endif
+  endif
+  if () then ([missing or not owned])
+    :Reject check-in; disclose no protected data;
+    stop
+  else ([record accessible])
+  endif
+  :Display reserved Hub, vehicle, interval and exact deadline;
+  |Actor|
+  :Review vehicle and Hub; confirm or decline\narrival;
+  if () then ([arrival declined])
+    :Leave this attempt without applying changes;
+    stop
+  else ([arrival confirmed])
+  endif
+  |System|
+|Database|
+:Reload reservation, vehicle, Hub, deadline and\nexisting session;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify ownership, vehicle, Hub, deadline and existing session;
+  endif
+  if () then ([vehicle or Hub mismatch])
+    :Explain mismatch; return to reservation review;
+  else ([vehicle and Hub match])
+    if () then ([already checked in])
+      :Display existing Active session; no new\nsession or occupancy increment;
+      stop
+    else ([not checked in])
+    endif
+    if () then ([reservation not Confirmed])
+      :Reject invalid / Cancelled / Expired /\nCompleted reservation;
+      stop
+    else ([reservation Confirmed])
+    endif
+    if () then ([serverNow < arrivalTime])
+      :Display when check-in becomes available;\npreserve reservation;
+      stop
+    else ([serverNow >= arrivalTime])
+    endif
+    if () then ([serverNow >= expiresAt])
+      :Reconcile overdue parking via FR-NI-13;\nreject check-in; show current eligibility;
+      stop
+    else ([serverNow < expiresAt])
+    endif
+|Database|
+:Retrieve reserved allocation and actual occupancy;
+|System|
+    if () then ([data unavailable])
+      :Report data retrieval failure; change no\nrecords; offer retry or exit;
+      stop
+    else ([data retrieved])
+  :Verify ownership, vehicle, Hub, deadline and existing session;
+    endif
+    if () then ([allocation cannot be honoured])
+      :Preserve reservation; record no occupancy;\ndirect Student to operational assistance;
+      stop
+    else ([allocation can be honoured])
+    endif
+    :Check current sign-in session;
+    if () then ([session expired])
+      :Request sign-in and preserve current input;\nafter sign-in, reload reservation and confirm\narrival again;
+      stop
+    else ([session valid])
+    endif
+|Database|
+:Retrieve latest owned reservation, deadline,\nallocation and existing session;
+|System|
+    if () then ([data unavailable])
+      :Report data retrieval failure; change no\nrecords; offer retry or exit;
+      stop
+    else ([data retrieved])
+  :Verify ownership, vehicle, Hub, deadline and existing session;
+    endif
+    if () then ([session already created])
+      :Display its existing session; do not count\noccupancy again;
+      stop
+    else ([no session created])
+    endif
+    if () then ([eligibility changed])
+:Return to reservation review; reload and\nrevalidate before any update;
+    else ([eligibility unchanged])
+|Database|
+:Guarded atomic check-in: recheck owner, Hub,\nvehicle, allocation and arrival <= serverNow <\nexpiresAt; return existing session or create ONE\nActive session, mark Checked In, record actual\narrival and account occupancy against existing\nhold;
+|System|
+note right
+  Keep remaining parking holds; do not count occupancy twice.
+end note
+      if () then ([confirmation response lost])
+|Database|
+:Retrieve the original operation's result; do not\nrepeat the update;
+|System|
+      else ([confirmation response received])
+      endif
+      if () then ([outcome still unknown])
+        :Show result as unconfirmed; reconcile the\noriginal result before any retry;
+        stop
+      else ([outcome known])
+      endif
+      if () then ([save failed])
+        :Report save failure; no partial updates; offer\nretry after revalidation and confirmation;
+        stop
+      else ([update result available])
+      endif
+      if () then ([final eligibility rejected])
+        :Reconcile expiry if overdue; deny check-in;\nreload current status before retry;
+        stop
+      else ([check-in confirmed or existing session])
+      endif
+      if () then ([gate simulation enabled])
+        :Display barrier-opening simulation;
+        if () then ([visualization unavailable])
+          :Show simulation warning; preserve confirmed\nsession and occupancy;
+        else ([visualization shown])
+        endif
+      else ([simulation disabled])
+      endif
+      :Display Active session and linked charging\nstatus; check-in alone does not start charging;
+      stop
+    endif
+  endif
+  |Actor|
+repeat while ( ) is ([review or retry]) not ([leave])
+stop
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

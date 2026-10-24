@@ -1,0 +1,138 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam titleFontSize 20
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 24
+skinparam BoxPadding 12
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ActivationBorderColor #42566B
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  ParticipantFontColor #172B4D
+  ActorBorderColor #42566B
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+  GroupHeaderFontColor #172B4D
+  DividerBackgroundColor #E8F1FA
+  DividerBorderColor #8295A8
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+hide footbox
+title
+UC-P06 - Check In a Private EV
+<size:11>Preconditions: Student is signed in, has arrived at the Hub and has a reservation reference.</size>
+end title
+actor Student as ST
+boundary "Student Portal" as UI
+control "ParkingController\n(Parking Service)" as SVC
+entity "Mobility Records" as DATA
+participant "Gate Simulator" as GATE
+
+ST -> UI: Scan QR ticket at Hub or select reservation
+activate UI #D8EAFE
+UI -> SVC: Resolve ticket/reference and get owned check-in context
+activate SVC #D8EEDC
+SVC -> DATA: Validate ticket/reference; reconcile due expiry; load owned reservation/session
+activate DATA #E2E7ED
+DATA --> SVC: Owned context / existing Active session / invalid ticket or record / expiry unresolved / retrieval error
+deactivate DATA
+SVC --> UI: Check-in context or existing result / explicit error
+deactivate SVC
+alt ticket/record invalid, not owned, Cancelled/Expired/Completed or data unavailable
+UI --> ST: Generic unavailable record / accessible invalid state / read error; no check-in
+else check-in already completed with Active session
+UI --> ST: Show existing Active session; no extra occupancy
+else owned reservation allows arrival review
+UI --> ST: Show reserved Hub, vehicle, interval and expiresAt
+end
+deactivate UI
+break invalid or unreadable context, or check-in already completed
+
+end
+ST -> UI: Confirm arrival details or decline
+activate UI #D8EAFE
+alt Student declines, edits or abandons
+UI --> ST: Leave reservation and occupancy unchanged
+else Student confirms
+UI -> SVC: Confirm arrival (reservationRef, Hub, vehicle, operationRef)
+activate SVC #D8EEDC
+SVC -> SVC: Recheck session and permission
+activate SVC #D8EEDC
+SVC --> SVC: Current access result
+deactivate SVC
+alt session expired or permission denied
+SVC -> SVC: Prepare authentication-required / access-denied result
+activate SVC #D8EEDC
+SVC --> SVC: No update attempted
+deactivate SVC
+else session valid and permission granted
+critical Validate current reservation and record one check-in
+SVC -> DATA: Check in if owned, matching vehicle/Hub, Confirmed,\narrival <= now < expiresAt and allocation can be honoured;\nrecord actual unrounded arrival
+activate DATA #E2E7ED
+note over SVC,DATA
+  Create one Active session and mark Checked In together;
+  reuse existing holds without double-counting occupancy.
+end note
+DATA --> SVC: Active session / mismatch / too early / overdue or invalid state / capacity issue / failure
+deactivate DATA
+end
+opt update outcome uncertain / response lost
+SVC -> DATA: Find original check-in result (operationRef, studentId)
+activate DATA #E2E7ED
+DATA --> SVC: Original result / still unknown
+deactivate DATA
+end
+opt new or existing Active session confirmed AND gate simulation enabled
+SVC -> GATE: Show open-barrier visualization (confirmedSessionRef)
+activate GATE #FFE3BF
+GATE --> SVC: Barrier visualization shown / simulation unavailable
+deactivate GATE
+note over SVC,GATE
+  Visualization only; failure does not undo confirmed check-in.
+end note
+end
+opt new or existing Active session confirmed
+SVC -> DATA: Read current linked charging-request status
+activate DATA #E2E7ED
+DATA --> SVC: Charging status / unavailable
+deactivate DATA
+end
+end
+SVC --> UI: Operation outcome and accessible current details
+deactivate SVC
+alt access invalid
+UI --> ST: Sign in if permitted; reload current records and confirm again
+else outcome still unknown
+UI --> ST: Outcome unconfirmed; retain operationRef and resolve original result before retry
+else save failed
+UI --> ST: Report failure; no partial update; retry after reload and revalidation
+else vehicle or Hub mismatch
+UI --> ST: No check-in; review reserved vehicle and Hub before confirming again
+else before permitted check-in window
+UI --> ST: Show when check-in opens; preserve reservation
+else deadline reached or reservation no longer permits check-in
+UI --> ST: Show Expired / expiry unresolved / current state; no new session
+else reserved allocation cannot be honoured
+UI --> ST: Preserve reservation; no extra occupancy; seek operational assistance
+else new or existing Active session confirmed
+UI --> ST: Show Active session, actual arrival, charging status and any gate-simulation warning
+end
+end
+deactivate UI
+note over ST,DATA
+  Check-in does not start charging.
+end note
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

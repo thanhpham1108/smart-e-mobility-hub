@@ -1,0 +1,160 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title UC-T03 - Update Charging-Point Status
+|External Telemetry System (Actor)|
+|System|
+|Database|
+|External Telemetry System (Actor)|
+start
+:Send point/Hub, eventRef, observedAt, condition;\nsession/vehicle and measurements when required;
+|System|
+:Receive event envelope, source credentials\nand claimed scope;
+|Database|
+:Retrieve source permissions, resource mappings and\nvalidation policy;
+|System|
+if () then ([data unavailable])
+:Return retryable failure; preserve accepted state;\ndo not infer availability;
+stop
+else ([data available])
+endif
+:Authenticate machine identity; authorize resource\nand operational/run scope;
+if () then ([unauthorized source or scope])
+|Database|
+:Record access failure without protected details;
+|System|
+:Return access denied even if audit logging fails; no\noperational update;
+stop
+else ([authorized])
+endif
+:Select authorized operational context or isolated\nWhat-if run context; all following reads/writes\nstay in that scope;
+:Validate point/Hub mapping, event type, timestamp,\nsupported state and required\nsession/vehicle/progress/stop references;
+if () then ([invalid fields / mapping / timestamp])
+:Return validation reason; retain last accepted state\nand freshness;
+stop
+else ([valid structure])
+endif
+|Database|
+:Read original event result/fingerprint and latest\naccepted observation for resource/reporting scope\nand applicable session;
+|System|
+if () then ([data unavailable])
+:Return retryable failure; preserve accepted state;\ndo not infer availability;
+stop
+else ([data available])
+endif
+if () then ([identical processed event])
+:Return original result; no repeated effect or\nrefreshed observation time;
+stop
+else ([not identical processed event])
+endif
+if () then ([identity conflict / stale / out of order])
+|Database|
+:Retain conflicting evidence where applicable; leave\naccepted observation unchanged;
+|System|
+:Return rejection; do not advance freshness;
+stop
+else ([new and eligible event])
+endif
+repeat
+|Database|
+:Load current point restrictions, Hub state,\nschedule, session/request, vehicle and private-EV\nparking context and versions in selected scope;
+|System|
+if () then ([data unavailable])
+:Return retryable failure; preserve accepted state;\ndo not infer availability;
+stop
+else ([data available])
+endif
+:Match session, point and vehicle; check transition\nand allocation; start requires operational Hub/point\nand valid allocation; private EV requires Active\nparking + Checked In reservation;
+if () then ([session mismatch or incompatible transition])
+:Plan unresolved evidence and Operator review;\nunexpected start blocks new allocations pending\nverification; no fabricated session or free point;
+else ([compatible report])
+  if () then ([start / progress])
+:Plan Active on confirmed start with actual start\ntime; update progress on existing session without\nrestarting;
+  else ([other event])
+    if () then ([confirmed stop / completion / permitted pause])
+:Plan Completed if target met, Interrupted for final\nearly stop, or Paused if permitted; retain actual\nstop time; release only capacity no longer committed;
+    else ([condition-only report])
+:Preserve unresolved restrictions and future\nallocations;
+    endif
+  endif
+endif
+if () then ([validated point fault])
+:Plan point restriction and equivalent incident\nupdate; identify affected allocations; without\nconfirmed cessation keep last confirmed session\nstate and require verification;
+else ([no fault])
+endif
+|Database|
+:Guarded atomic commit: recheck identity, ordering,\npermissions and context versions; save accepted\nobservation, actual time, state effects, evidence\nand original result together; unresolved transition\nsaves evidence/restriction only; eligible capacity\nrelease creates one scoped scheduling work item;
+|System|
+if () then ([concurrent state changed])
+:Preserve current commitments; reload and re-evaluate\nonly while retry policy permits;
+else ([no concurrency conflict])
+endif
+repeat while () is ([conflict and retry permitted]) not ([terminal outcome / retry exhausted])
+if () then ([conflict remains / definite save failure])
+:Return retryable failure; no partial effects or\nnewly available capacity;
+stop
+else ([other result])
+endif
+if () then ([outcome unknown])
+|Database|
+:Retrieve original processing result using same\nsource, scope and eventRef;
+|System|
+else ([outcome known])
+endif
+if () then ([outcome still unknown])
+:Return unconfirmed outcome; resolve original result\nbefore retrying; never acknowledge as applied;
+stop
+else ([outcome resolved])
+endif
+if () then ([resolved result is a definite failure])
+:Return original failure; no partial update;\nreload and revalidate before retry;
+stop
+else ([committed or rejected result])
+endif
+if () then ([final identity/order check rejected event])
+:Return stale/conflicting rejection; preserve\naccepted state and freshness;
+stop
+else ([committed / original result recovered])
+endif
+:Expose committed observation time, freshness,\nrestrictions and discrepancies in monitoring/detail\nviews;
+if () then ([eligible release with pending scheduling work])
+:Signal scoped queue re-evaluation using original\neventRef; scheduler handles work once; retain work\nfor retry if notification fails;
+else ([no scheduling work])
+endif
+:Send processing result and event reference;\nunresolved evidence is not an accepted session\ntransition;
+if () then ([acknowledgement lost])
+|External Telemetry System (Actor)|
+:Retry with SAME event reference, payload and scope;\nnext attempt retrieves original result;
+else ([acknowledgement received])
+|External Telemetry System (Actor)|
+:Receive processing result;
+endif
+stop
+footer Smart E-Mobility Hub | Submission 2 | External Telemetry
+@enduml
