@@ -1,0 +1,46 @@
+@startuml SD_MonitorHubNetwork
+title UC-F01 - Monitor the Mobility Hub Network
+hide footbox
+autonumber
+actor Operator
+boundary "Operator Dashboard" as UI
+control "FleetDashboardController" as C
+entity "HubRepository" as H
+entity "VehicleRepository" as V
+entity "IncidentRepository" as I
+entity "Status/Freshness Store" as S
+
+Operator -> UI: Open Network Map
+UI -> C: getNetworkOverview(operatorSession)
+alt Operator is not authorized
+  C --> UI: Access denied
+  UI --> Operator: Show authorization error
+else Operator is authorized
+  C -> H: listHubsWithCapacity()
+  H --> C: Hubs and parking capacity
+  C -> V: listVehiclesByHubAndStatus()
+  V --> C: Distribution, availability, battery
+  C -> I: listOpenIncidents()
+  I --> C: Open incidents
+  C -> S: getChargingStatusAndFreshness()
+  S --> C: Charging status and timestamps
+  alt Required data cannot be retrieved
+    C --> UI: Partial/unavailable data with source timestamps
+    UI --> Operator: Mark affected cards unavailable
+  else Required data is available
+    loop For each Hub
+      C -> C: Calculate occupancy and resource shortage
+      C -> C: Mark stale observations (FR-NI-03)
+    end
+    opt Hub shortage or capacity risk (FR-NI-06)
+      C -> C: Attach existing alert/recommendation
+    end
+    C --> UI: Overview, KPIs, alerts, freshness
+    UI --> Operator: Show dashboard and Network Map
+  end
+end
+note over C,S
+Read-only use case. Alerts can come from background rules;
+opening the dashboard does not create an assignment.
+end note
+@enduml

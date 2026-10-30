@@ -1,0 +1,27 @@
+@startuml SC_RedistributionOrder
+title RedistributionOrder lifecycle (UC-F04, UC-F05, FR-NI-07)
+[*] --> Assigned : UC-F04 / save feasible assignment
+Assigned : Vehicle locations and physical occupancy unchanged
+Assigned --> InTransit : Physical transfer begins (recorded by Operator)
+Assigned --> PartiallyCompleted : Confirm subset arrived
+InTransit --> PartiallyCompleted : Confirm subset arrived
+InTransit --> Completed : Confirm all vehicles arrived
+Assigned --> Completed : Confirm all vehicles arrived
+PartiallyCompleted --> PartiallyCompleted : Confirm another subset arrived
+PartiallyCompleted --> Completed : Confirm remaining arrivals
+Assigned --> AtRisk : FR-NI-07 / vehicle conflict or fault
+InTransit --> AtRisk : FR-NI-07 / vehicle conflict or fault
+PartiallyCompleted --> AtRisk : FR-NI-07 / remaining vehicle conflict
+AtRisk --> Assigned : Resolve conflict before departure
+AtRisk --> InTransit : Resolve conflict during transfer
+AtRisk --> PartiallyCompleted : Resolve remaining conflict
+Assigned --> Cancelled : Cancel before movement
+AtRisk --> Cancelled : Cancel outstanding transfer
+Completed --> [*]
+Cancelled --> [*]
+note right of PartiallyCompleted
+Only confirmed vehicles change location and
+Hub occupancy. Unconfirmed vehicles retain
+their previous confirmed state.
+end note
+@enduml
