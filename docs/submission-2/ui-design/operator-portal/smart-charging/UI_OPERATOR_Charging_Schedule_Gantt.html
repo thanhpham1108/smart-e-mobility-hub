@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>SmartHub Ops - Lịch biểu Gantt Sạc Thông Minh</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            emerald: {
+              500: '#10B981',
+              600: '#059669',
+              700: '#047857',
+            },
+            cyan: {
+              500: '#06B6D4',
+              600: '#0891B2',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      width: 1440px;
+      height: 900px;
+      margin: 0;
+      overflow: hidden;
+      background-color: #F8FAFC;
+    }
+    /* Grid background pattern for Gantt canvas */
+    .gantt-grid {
+      background-size: 85px 100%;
+      background-image: linear-gradient(to right, #F1F5F9 1px, transparent 1px);
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 antialiased flex h-[900px] w-[1440px] select-none">
+
+  <!-- ======================================================== -->
+  <!-- 1. LEFT SIDEBAR (w-64 = 256px, Dark Slate-900) -->
+  <!-- ======================================================== -->
+  <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 border-r border-slate-800">
+    <!-- Top Branding & Navigation -->
+    <div>
+      <div class="h-16 flex items-center px-6 gap-3 border-b border-slate-800 bg-slate-950/40">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-emerald-900/30">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-bold text-white tracking-tight flex items-center gap-1.5 text-base">
+            SmartHub <span class="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-medium">OPS</span>
+          </div>
+          <div class="text-[11px] text-slate-400 tracking-tight">ĐHQG-HCM E-Mobility</div>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-3 space-y-1 text-xs">
+        <div class="px-3 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Phân hệ vận hành</div>
+
+        <!-- Tab 1: Bản đồ mạng lưới (Mem 1) -->
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition group cursor-pointer">
+          <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+          </svg>
+          <span>Bản đồ Hub mạng lưới</span>
+        </a>
+
+        <!-- Tab 2: Điều phối xe điện (Mem 4) -->
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition group cursor-pointer">
+          <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          </svg>
+          <span>Điều phối xe (Fleet Ops)</span>
+        </a>
+
+        <!-- Tab 3: Lập lịch sạc thông minh (Mem 5 - ACTIVE) -->
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-emerald-500/15 text-emerald-400 font-semibold border-r-2 border-emerald-500 cursor-pointer shadow-sm">
+          <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span class="flex-1">Lập lịch sạc thông minh</span>
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        </a>
+
+        <!-- Tab 4: Mô phỏng What-if (Mem 6) -->
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition group cursor-pointer">
+          <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          <span>Mô phỏng What-if</span>
+        </a>
+
+        <!-- Tab 5: Sự cố & Bảo trì (Mem 4) -->
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition group cursor-pointer">
+          <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span>Sự cố & Bảo trì</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-400 font-mono">1</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Bottom Operator Info & Role Switcher -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/30">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-xs text-white">
+          NVA
+        </div>
+        <div class="overflow-hidden">
+          <div class="text-xs font-semibold text-white truncate">Nguyễn Văn An</div>
+          <div class="text-[10px] text-emerald-400 font-mono">Operator ID: #OP-8821</div>
+        </div>
+      </div>
+      <button class="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center justify-center gap-2 border border-slate-700/60 transition cursor-pointer">
+        <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+        </svg>
+        <span>Chuyển sang Cổng Sinh Viên</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ======================================================== -->
+  <!-- 2. MAIN CONTENT AREA (w-[1184px]) -->
+  <!-- ======================================================== -->
+  <main class="flex-1 flex flex-col h-[900px] overflow-hidden bg-slate-50">
+
+    <!-- Top Header Bar (h-16 = 64px) -->
+    <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 shadow-sm">
+      <!-- Breadcrumb & Hub Selector -->
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <span>Vận hành</span>
+          <span class="text-slate-300">/</span>
+          <span class="text-slate-900 font-semibold">Lập lịch sạc thông minh</span>
+        </div>
+
+        <div class="h-4 w-px bg-slate-200"></div>
+
+        <!-- Hub Selector Dropdown -->
+        <div class="relative flex items-center">
+          <div class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 cursor-pointer transition">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="font-semibold text-slate-900">Hub KTX Khu B</span>
+            <span class="text-slate-500">(Trạm sạc trung tâm - 10 Cổng)</span>
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time Status Indicators & Actions -->
+      <div class="flex items-center gap-4">
+        <!-- IoT Grid Power Telemetry -->
+        <div class="flex items-center gap-2.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
+          <div class="text-xs">
+            <span class="text-slate-600">Tải điện lưới:</span>
+            <span class="font-bold font-mono text-emerald-800">142.5 / 200 kW</span>
+            <span class="text-[11px] text-emerald-700 font-medium">(71.2% - An toàn)</span>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <button class="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <span class="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
+        </button>
+
+        <!-- CTA: Lập lịch sạc tự động -->
+        <button class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow-sm shadow-emerald-700/20 transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span>Chạy Tối Ưu Lịch Sạc (FCFS)</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Sub-header: KPI Metric Cards (4 Cards) -->
+    <div class="px-6 py-3.5 grid grid-cols-4 gap-4 shrink-0">
+      <!-- Card 1 -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Cổng sạc hoạt động</div>
+          <div class="text-xl font-bold text-slate-900 mt-0.5">8 / 10 <span class="text-xs font-medium text-slate-500 font-normal">cổng</span></div>
+          <div class="text-[11px] text-emerald-700 font-medium mt-0.5 flex items-center gap-1">
+            <span>●</span> 2 cổng khả dụng ngay
+          </div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">
+          80%
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Hàng đợi chờ sạc (FCFS)</div>
+          <div class="text-xl font-bold text-slate-900 mt-0.5">5 <span class="text-xs font-medium text-slate-500 font-normal">xe trong hàng đợi</span></div>
+          <div class="text-[11px] text-amber-700 font-medium mt-0.5 flex items-center gap-1">
+            <span>⏳</span> Chờ trung bình: 18 phút
+          </div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
+          #5
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Điện năng nạp hôm nay</div>
+          <div class="text-xl font-bold text-slate-900 font-mono mt-0.5">348.6 <span class="text-xs font-sans text-slate-500 font-normal">kWh</span></div>
+          <div class="text-[11px] text-sky-700 font-medium mt-0.5 flex items-center gap-1">
+            <span>⚡</span> 28 phiên sạc hoàn tất
+          </div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-sm">
+          kWh
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <div class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Tải đỉnh lưới điện</div>
+          <div class="text-xl font-bold text-slate-900 font-mono mt-0.5">142.5 <span class="text-xs font-sans text-slate-500 font-normal">kW</span></div>
+          <div class="text-[11px] text-emerald-700 font-medium mt-0.5 flex items-center gap-1">
+            <span>✓</span> Dưới ngưỡng đỉnh (200 kW)
+          </div>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs font-mono">
+          71%
+        </div>
+      </div>
+    </div>
+
+    <!-- Gantt Chart Filter & Legend Bar -->
+    <div class="px-6 py-2.5 flex items-center justify-between shrink-0 bg-slate-100/70 border-y border-slate-200 text-xs">
+      <!-- Port Filter Tabs -->
+      <div class="flex items-center gap-2">
+        <span class="text-slate-500 font-medium mr-1">Bộ lọc cổng:</span>
+        <button class="px-3 py-1 rounded-md bg-white text-slate-900 font-semibold shadow-xs border border-slate-200">Tất cả cổng (10)</button>
+        <button class="px-3 py-1 rounded-md text-slate-600 hover:bg-white/60 transition">DC Siêu nhanh 60kW (4)</button>
+        <button class="px-3 py-1 rounded-md text-slate-600 hover:bg-white/60 transition">AC Tiêu chuẩn 11kW (6)</button>
+      </div>
+
+      <!-- Legend (Chú thích mã màu) -->
+      <div class="flex items-center gap-4 text-[11px] text-slate-600">
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-emerald-500 border border-emerald-600"></span>
+          <span>Đang sạc (Charging)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-sky-400 border border-sky-500"></span>
+          <span>Đã xếp lịch (Scheduled)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-amber-400 border border-amber-500"></span>
+          <span>Hàng đợi (Pending/Wait)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded bg-rose-400 border border-rose-500"></span>
+          <span>Bảo trì / Lỗi</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded border border-dashed border-slate-300 bg-white"></span>
+          <span>Khung giờ trống</span>
+        </div>
+      </div>
+
+      <!-- Time Navigator & Zoom -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center bg-white border border-slate-200 rounded-lg px-2 py-0.5">
+          <button class="text-slate-500 hover:text-slate-900 px-1 font-bold">◀</button>
+          <span class="px-2 font-medium text-slate-700">Hôm nay, 19/10/2026</span>
+          <button class="text-slate-500 hover:text-slate-900 px-1 font-bold">▶</button>
+        </div>
+        <div class="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 text-[11px]">
+          <span class="px-2 py-0.5 text-slate-500 cursor-pointer">15p</span>
+          <span class="px-2 py-0.5 bg-slate-900 text-white rounded font-medium cursor-pointer">30p</span>
+          <span class="px-2 py-0.5 text-slate-500 cursor-pointer">1h</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- GANTT SCHEDULE TIMELINE CANVAS -->
+    <!-- ======================================================== -->
+    <div class="flex-1 overflow-hidden px-6 py-3 flex flex-col">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col flex-1 overflow-hidden relative">
+        
+        <!-- Gantt Header: Time ruler (07:00 - 18:00) -->
+        <div class="flex border-b border-slate-200 bg-slate-50/90 sticky top-0 z-20 text-[11px] font-mono text-slate-500">
+          <!-- Port Label Corner (208px) -->
+          <div class="w-52 shrink-0 p-2.5 font-sans font-semibold text-slate-700 border-r border-slate-200 flex items-center justify-between bg-slate-50">
+            <span>Cổng sạc & Công suất</span>
+            <span class="text-[10px] text-slate-500 font-normal">10 Cổng</span>
+          </div>
+
+          <!-- Time Column Headers (11 hours: 07:00 -> 18:00, each hour stretched evenly) -->
+          <div class="flex-1 grid grid-cols-11 relative">
+            <div class="text-center py-2 border-r border-slate-200">07:00</div>
+            <div class="text-center py-2 border-r border-slate-200">08:00</div>
+            <div class="text-center py-2 border-r border-slate-200">09:00</div>
+            <div class="text-center py-2 border-r border-slate-200 bg-emerald-50/50 text-emerald-800 font-semibold">10:00</div>
+            <div class="text-center py-2 border-r border-slate-200 bg-emerald-50/70 text-emerald-800 font-bold">11:00</div>
+            <div class="text-center py-2 border-r border-slate-200">12:00</div>
+            <div class="text-center py-2 border-r border-slate-200">13:00</div>
+            <div class="text-center py-2 border-r border-slate-200">14:00</div>
+            <div class="text-center py-2 border-r border-slate-200">15:00</div>
+            <div class="text-center py-2 border-r border-slate-200">16:00</div>
+            <div class="text-center py-2">17:00 - 18:00</div>
+
+            <!-- "NOW" Indicator Flag at 10:30 (3.5 / 11 = 31.818%) -->
+            <div class="absolute top-0 bottom-0 left-[31.818%] z-30 pointer-events-none flex flex-col items-center">
+              <span class="bg-rose-500 text-white text-[9px] font-sans font-bold px-1.5 py-0.5 rounded shadow -translate-y-1">HIỆN TẠI (10:30)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gantt Rows Container (10 Ports) -->
+        <div class="flex-1 divide-y divide-slate-100 relative overflow-y-auto">
+
+          <!-- Global Red Vertical Line for 10:30 (NOW line: 208px + (1184 - 48 - 208) * 31.818% = 208 + 295 = 503px) -->
+          <div class="absolute top-0 bottom-0 left-[503px] w-[2px] bg-rose-500 z-20 pointer-events-none opacity-85"></div>
+
+          <!-- ROW 1: Cổng DC-01 (60kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng DC-01</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 font-semibold border border-cyan-200">60 kW</span>
+            </div>
+            <!-- Timeline Track (Grid with vertical lines) -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Block 1: 07:30 - 09:00 (Done) -->
+              <div class="absolute top-1 bottom-1 left-[42px] w-[128px] bg-slate-200/90 border border-slate-300 rounded px-2 flex items-center text-[10px] text-slate-600 truncate opacity-70">
+                <span class="font-mono font-medium">59A-102.34</span> (85% ✓)
+              </div>
+              <!-- Block 2: 09:30 - 11:15 (CHARGING NOW - Active) -->
+              <div class="absolute top-0.5 bottom-0.5 left-[213px] w-[150px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md px-2.5 flex items-center justify-between text-[11px] shadow-sm shadow-emerald-600/30 ring-2 ring-emerald-400/40 z-10">
+                <div class="truncate">
+                  <span class="font-mono font-bold tracking-tight">59A-882.19</span>
+                  <span class="text-[9px] opacity-90 block">VF5 (42%➔80%)</span>
+                </div>
+                <span class="text-[9px] bg-emerald-800/60 px-1 py-0.5 rounded font-mono shrink-0">52 kW</span>
+              </div>
+              <!-- Block 3: 11:30 - 12:45 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[383px] w-[106px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2 flex items-center text-[10px] font-medium truncate">
+                <span class="font-mono font-semibold">51K-334.80</span> (11:30)
+              </div>
+              <!-- Block 4: 14:00 - 15:30 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[596px] w-[128px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2 flex items-center text-[10px] font-medium truncate">
+                <span class="font-mono font-semibold">50E-120.44</span> (20➔90%)
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 2: Cổng DC-02 (60kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng DC-02</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 font-semibold border border-cyan-200">60 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Block 1: 08:00 - 10:00 (Done) -->
+              <div class="absolute top-1 bottom-1 left-[85px] w-[170px] bg-slate-200/90 border border-slate-300 rounded px-2 flex items-center text-[10px] text-slate-600 truncate opacity-70">
+                <span class="font-mono font-medium">51H-992.10</span> (100% ✓)
+              </div>
+              <!-- Block 2: 10:15 - 11:45 (CHARGING NOW) -->
+              <div class="absolute top-0.5 bottom-0.5 left-[277px] w-[128px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md px-2.5 flex items-center justify-between text-[11px] shadow-sm shadow-emerald-600/30 ring-2 ring-emerald-400/40 z-10">
+                <div class="truncate">
+                  <span class="font-mono font-bold tracking-tight">59C-412.05</span>
+                  <span class="text-[9px] opacity-90 block">VF e34 (58%➔85%)</span>
+                </div>
+                <span class="text-[9px] bg-emerald-800/60 px-1 py-0.5 rounded font-mono shrink-0">48 kW</span>
+              </div>
+              <!-- Block 3: 13:00 - 14:30 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[511px] w-[128px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2 flex items-center text-[10px] font-medium truncate">
+                <span class="font-mono font-semibold">59A-701.12</span> (Hẹn 13:00)
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 3: Cổng DC-03 (60kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng DC-03</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 font-semibold border border-cyan-200">60 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Available Slot Banner around now -->
+              <div class="absolute top-1 bottom-1 left-[255px] w-[170px] border border-dashed border-emerald-400/80 bg-emerald-50/60 rounded flex items-center justify-center text-[10px] font-medium text-emerald-800">
+                + Cổng Đang Trống (Sẵn sàng FCFS)
+              </div>
+              <!-- Block: 12:00 - 13:30 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[426px] w-[128px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2 flex items-center text-[10px] font-medium truncate">
+                <span class="font-mono font-semibold">50H-555.99</span> (Hẹn 12:00)
+              </div>
+              <!-- Block: 15:00 - 16:30 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[681px] w-[128px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2 flex items-center text-[10px] font-medium truncate">
+                <span class="font-mono font-semibold">59A-118.02</span> (Hẹn 15:00)
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 4: Cổng DC-04 (60kW) - BẢO TRÌ SENSOR -->
+          <div class="flex items-center h-[37px] bg-rose-50/25 hover:bg-rose-50/50 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span class="font-bold text-slate-800">Cổng DC-04</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-semibold border border-rose-200">Bảo trì</span>
+            </div>
+            <!-- Timeline Track: Striped Fault Bar -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <div class="absolute top-1 bottom-1 left-[85px] w-[511px] bg-rose-100/85 border border-rose-300 rounded px-3 flex items-center justify-between text-[10px] text-rose-800 font-medium">
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  Tạm ngưng an toàn: Lỗi cảm biến nhiệt độ rơ-le (Ticket #TK-209)
+                </span>
+                <span class="text-[9px] bg-rose-200/90 text-rose-900 px-1.5 py-0.5 rounded font-mono">Dự kiến mở: 14:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 5: Cổng AC-01 (11kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng AC-01</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">11 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Block 1: 07:00 - 11:00 (Active Charging) -->
+              <div class="absolute top-0.5 bottom-0.5 left-0 w-[341px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md px-2.5 flex items-center justify-between text-[11px] shadow-sm z-10">
+                <div class="truncate">
+                  <span class="font-mono font-bold tracking-tight">59B-128.90</span>
+                  <span class="text-[9px] opacity-90 block">Xe máy điện VinFast Feliz (72%)</span>
+                </div>
+                <span class="text-[9px] bg-emerald-800/60 px-1 py-0.5 rounded font-mono shrink-0">11 kW</span>
+              </div>
+              <!-- Block 2: 12:00 - 16:00 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[426px] w-[341px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2.5 flex items-center justify-between text-[10px] font-medium">
+                <span class="font-mono font-semibold">50E-901.88 (Xe chia sẻ KTX)</span>
+                <span class="text-[9px] text-sky-700">12:00 - 16:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 6: Cổng AC-02 (11kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng AC-02</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">11 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Block 1: 08:30 - 12:30 (Active Charging) -->
+              <div class="absolute top-0.5 bottom-0.5 left-[128px] w-[341px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md px-2.5 flex items-center justify-between text-[11px] shadow-sm z-10">
+                <div class="truncate">
+                  <span class="font-mono font-bold tracking-tight">59D-330.12</span>
+                  <span class="text-[9px] opacity-90 block">Dat Bike Weaver++ (64%)</span>
+                </div>
+                <span class="text-[9px] bg-emerald-800/60 px-1 py-0.5 rounded font-mono shrink-0">11 kW</span>
+              </div>
+              <!-- Block 2: 13:00 - 17:00 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[511px] w-[341px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2.5 flex items-center justify-between text-[10px] font-medium">
+                <span class="font-mono font-semibold">59A-991.04</span>
+                <span class="text-[9px] text-sky-700 font-mono">13:00 - 17:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 7: Cổng AC-03 (11kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng AC-03</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">11 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Block 1: 09:00 - 13:00 (Active Charging) -->
+              <div class="absolute top-0.5 bottom-0.5 left-[170px] w-[341px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md px-2.5 flex items-center justify-between text-[11px] shadow-sm z-10">
+                <div class="truncate">
+                  <span class="font-mono font-bold tracking-tight">50E-711.23</span>
+                  <span class="text-[9px] opacity-90 block">Yadea S3 (51%)</span>
+                </div>
+                <span class="text-[9px] bg-emerald-800/60 px-1 py-0.5 rounded font-mono shrink-0">11 kW</span>
+              </div>
+              <!-- Block 2: 13:30 - 17:30 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[554px] w-[341px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2.5 flex items-center justify-between text-[10px] font-medium">
+                <span class="font-mono font-semibold">59C-608.11</span>
+                <span class="text-[9px] text-sky-700 font-mono">13:30 - 17:30</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 8: Cổng AC-04 (11kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng AC-04</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">11 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Slot Available now -->
+              <div class="absolute top-1 bottom-1 left-[170px] w-[256px] border border-dashed border-emerald-400/80 bg-emerald-50/50 rounded flex items-center justify-center text-[10px] font-medium text-emerald-800">
+                + Cổng Đang Trống (Sẵn sàng cấp slot)
+              </div>
+              <!-- Block: 14:00 - 17:30 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[596px] w-[298px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2.5 flex items-center text-[10px] font-medium truncate">
+                <span class="font-mono font-semibold">59F-221.89</span> (Hẹn 14:00)
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 9: Cổng AC-05 (11kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng AC-05</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">11 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Block 1: 07:30 - 11:30 (Active Charging) -->
+              <div class="absolute top-0.5 bottom-0.5 left-[42px] w-[341px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md px-2.5 flex items-center justify-between text-[11px] shadow-sm z-10">
+                <div class="truncate">
+                  <span class="font-mono font-bold tracking-tight">59G-802.15</span>
+                  <span class="text-[9px] opacity-90 block">VinFast Klara S (81%)</span>
+                </div>
+                <span class="text-[9px] bg-emerald-800/60 px-1 py-0.5 rounded font-mono shrink-0">11 kW</span>
+              </div>
+              <!-- Block 2: 12:30 - 16:30 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[468px] w-[341px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2.5 flex items-center justify-between text-[10px] font-medium">
+                <span class="font-mono font-semibold">50E-333.12 (Cán bộ ĐHQG)</span>
+                <span class="text-[9px] text-sky-700 font-mono">12:30 - 16:30</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 10: Cổng AC-06 (11kW) -->
+          <div class="flex items-center h-[37px] hover:bg-slate-50/70 transition text-xs relative">
+            <div class="w-52 shrink-0 px-3 py-1 border-r border-slate-200 flex items-center justify-between bg-white z-10">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-slate-800">Cổng AC-06</span>
+              </div>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">11 kW</span>
+            </div>
+            <!-- Timeline Track -->
+            <div class="flex-1 h-full relative grid grid-cols-11 divide-x divide-slate-100/80">
+              <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              
+              <!-- Block 1: 08:00 - 12:00 (Active Charging) -->
+              <div class="absolute top-0.5 bottom-0.5 left-[85px] w-[341px] bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md px-2.5 flex items-center justify-between text-[11px] shadow-sm z-10">
+                <div class="truncate">
+                  <span class="font-mono font-bold tracking-tight">59A-448.91</span>
+                  <span class="text-[9px] opacity-90 block">VF e34 Fleet #12 (76%)</span>
+                </div>
+                <span class="text-[9px] bg-emerald-800/60 px-1 py-0.5 rounded font-mono shrink-0">11 kW</span>
+              </div>
+              <!-- Block 2: 13:00 - 17:00 (Scheduled) -->
+              <div class="absolute top-1 bottom-1 left-[511px] w-[341px] bg-sky-100 border border-sky-300 text-sky-800 rounded px-2.5 flex items-center justify-between text-[10px] font-medium">
+                <span class="font-mono font-semibold">59H-109.82</span>
+                <span class="text-[9px] text-sky-700 font-mono">13:00 - 17:00</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Gantt Bottom Action & Status Bar -->
+        <div class="h-10 bg-slate-50 border-t border-slate-200 px-4 flex items-center justify-between text-xs text-slate-600 shrink-0">
+          <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5 text-slate-700 font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Thuật toán xếp lịch: <span class="font-mono font-semibold text-emerald-800">FCFS kết hợp ưu tiên SOC thấp</span>
+            </span>
+            <span class="text-slate-300">|</span>
+            <span class="text-slate-500 text-[11px]">Chu kỳ tối ưu: 5 phút/lần (Lần chạy tới: 10:35)</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button class="px-2.5 py-1 text-xs text-slate-700 hover:text-slate-900 font-medium hover:bg-slate-200/60 rounded transition cursor-pointer">
+              Xuất báo cáo PDF/Excel
+            </button>
+            <button class="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+              <span>Can thiệp / Điều chỉnh thủ công</span>
+              <kbd class="px-1 py-0.2 bg-slate-700 text-[10px] rounded font-mono">UC-C03</kbd>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+</body>
+</html>
