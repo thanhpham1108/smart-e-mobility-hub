@@ -5,8 +5,34 @@
 - Parking arrival and departure times are selected from the system's available time points, spaced 15 minutes apart by default (e.g., 08:00, 08:15, 08:30). One reservation covers a continuous interval from arrival up to, but not including, departure, comprising all consecutive parking slots in that interval. Capacity must be available in every covered slot.
 - A charging request is linked to a confirmed parking reservation or an active parking session for the same Student, vehicle, and Hub. Its requested charging interval is the window within which the system may schedule charging, not an allocated charging slot, and must fit within the associated parking interval. The parking time increment does not require charging schedules to use 15-minute increments.
 - Parking reservations can be cancelled before check-in. Cancelling a parking reservation also cancels its linked pending or scheduled charging requests. Cancelling only a charging request leaves parking unchanged.
-- Check-in and checkout are confirmed through the application; physical events may be simulated. Actual arrival and departure times are recorded without rounding to parking time points. Arrival must satisfy the configured check-in window. No fixed grace period is assumed; for example, a check-in at 08:07 for a reservation starting at 08:00 is recorded as 08:07 if that check-in is permitted.
+- Check-in and checkout are confirmed through the application; physical events may be simulated. Actual arrival and departure times are recorded without rounding to parking time points. Arrival must satisfy the parking-expiry policy below. For example, with the default 15-minute grace period and a reservation from 08:00 to 09:00, check-in at 08:07 is recorded as 08:07; check-in at 08:15 is rejected as overdue.
 - Checkout requires active charging to have ended. It also cancels unused pending or scheduled charging requests linked to the departing parking session. Completed charging records remain unchanged.
+
+## Parking Reservation Expiry Policy
+
+This policy concerns **unused private-EV parking reservations**, independently of vehicle-rental reservation expiry (FR-NI-04).
+
+| Policy item | Rule |
+| --- | --- |
+| Configuration | `parkingCheckInGraceMinutes` is a positive duration, default **15 minutes**, stored in configuration rather than hard-coded in the UI. It is independent of the default 15-minute parking-slot increment. |
+| Deadline | On successful reservation creation, snapshot the applicable grace period and store `expiresAt = min(arrivalTime + parkingCheckInGraceMinutes, departureTime)`. Later configuration changes do not alter existing reservations. If the applicable configuration changes between review and creation, refresh the deadline summary and obtain confirmation again. Use the server clock and store timestamps as instants; display them in the Hub's local time. |
+| Check-in window | Check-in is allowed only while `arrivalTime <= now < expiresAt`, subject to the other eligibility checks. No early admission before the reserved interval. At `now == expiresAt`, an unused reservation is already overdue. Reject a new reservation if its calculated deadline has already passed. |
+| Visible deadline | Display the exact deadline in the reservation summary, confirmation, electronic ticket and booking details. The deadline is not rounded to a parking time point. |
+| Trigger | A background expiry scan runs at least once every 60 seconds. Booking/detail reads and operations that depend on parking eligibility also evaluate overdue reservations before returning current eligibility or applying changes. Availability checks reconcile affected overdue holds before counting capacity; unresolved cleanup never counts as released capacity. |
+| Eligible source state | Only `Confirmed` reservations with no Active parking session and no Active linked charging session may expire. `Checked In`, `Completed`, `Cancelled` and already `Expired` records are not changed by expiry. |
+| Consistent expiry | Recheck the deadline and eligibility, then atomically mark the reservation `Expired`, set reason `NoShow` and the actual processing time `expiredAt`, cancel its linked `Pending`/`Scheduled` charging requests, and release all parking holds and future charging allocations still held by those records exactly once. No parking session is created. Preserve all historical records. |
+| Deadline versus processing time | `expiresAt` is the eligibility deadline; `expiredAt` is when cleanup succeeds. A delayed timer does not extend check-in eligibility. An overdue reservation cannot accept check-in or a new charging request, even if its persisted status is still temporarily `Confirmed`. |
+| Concurrent operations | Check-in, cancellation, charging-request creation, charging start and expiry use a serialized final eligibility decision with authoritative server time. Check-in wins only if its final decision is made before `expiresAt` and creates the Active session consistently; expiry then skips it. At or after the deadline, reject check-in and reconcile expiry first. A record already cancelled/expired/checked in is never released a second time. |
+| Faults and retries | A failed or uncertain expiry update must not partially release capacity; retry or retrieve the original expiry result idempotently. If a `Confirmed` reservation unexpectedly has Active charging or an Active parking session, deny overdue admission, report an operational inconsistency and defer expiry until resolved; never stop active charging or clear occupied capacity as an expiry side effect. Occupancy observations remain governed by FR-NI-08. |
+| After check-in | No-show expiry never closes an Active visit or frees its occupied space. If the vehicle remains after the reserved departure time, keep the visit Active and its occupancy counted until UC-P07; expose the timing discrepancy to operations. No automatic checkout, fine, extension or new reservation status is introduced by this policy. |
+
+Examples: `[08:00, 09:00)` with the default grace expires at 08:15; `[08:00, 08:15)` also expires at 08:15. With a configured 30-minute grace, `[08:00, 08:15)` still expires at 08:15. A successful check-in at 08:14:59 prevents no-show expiry. An attempt at exactly 08:15:00 is rejected. An unchanged, already-expired record returns its existing result on repeated scans.
+
+### QR and gate simulation for Submission #2
+
+A QR ticket identifies the parking reservation; scanning it is an alternative to selecting the reservation reference in the application. Verify the ticket, signed-in owner, Hub, vehicle, deadline and current reservation state; possession of a QR code alone does not grant access. An invalid/unreadable ticket is rejected without creating a session.
+
+For the MVP, the **Gate Simulator** displays the barrier-opening result of a confirmed logical check-in. It is an optional simulation output after the consistent parking update, not evidence of physical movement or an additional occupancy allocation. If this visualization is unavailable, show the confirmed session with a simulation warning; do not undo the confirmed check-in or count occupancy again. Real barrier control and physical-entry confirmation would require a separate hardware admission protocol, outside this simulator flow.
 
 ## UC-P01 — Reserve a Parking Space
 
@@ -26,10 +52,10 @@
 2. The Student selects a Hub and date(s), enters the vehicle information, and selects arrival and departure times from the available time points. The system offers arrival times with at least one feasible departure, and departure times later than the selected arrival with capacity in every covered slot, subject to reservation rules.
 3. The system validates the required information, checks that both selected times fall on permitted time points and departure is later than arrival, and applies the reservation rules.
 4. The system performs **UC-S02 — Check Parking Availability** for the selected Hub and the entire requested interval. Every covered slot must have sufficient capacity; a single slot without capacity makes the whole interval unavailable.
-5. The system displays availability for the entire selected interval and a summary of the Hub, vehicle, and selected arrival/departure times for review. No reservation or capacity allocation has been created at this point.
+5. The system displays availability for the entire selected interval and a summary of the Hub, vehicle, and selected arrival/departure times for review. Include the calculated check-in deadline `expiresAt` in the summary. No reservation or capacity allocation has been created at this point.
 6. The Student confirms the reservation request.
-7. The system rechecks the Student's authorization and current capacity in every covered slot, then confirms one reservation for the entire interval as one consistent allocation decision. All covered slots are allocated together or none are; no partial reservation is retained. Concurrent requests cannot allocate the same remaining capacity incompatibly.
-8. The system displays the reservation reference, Hub, vehicle, parking interval, and **Confirmed** status.
+7. The system rechecks the Student's authorization and current capacity in every covered slot, then confirms one reservation for the entire interval as one consistent allocation decision. Snapshot the expiry configuration and persist `expiresAt` with the reservation; reject a deadline already passed. All covered slots are allocated together or none are; no partial reservation is retained. Concurrent requests cannot allocate the same remaining capacity incompatibly.
+8. The system displays the reservation reference, Hub, vehicle, parking interval, exact check-in deadline, and **Confirmed** status.
 
 ### Alternative Flow
 
@@ -39,6 +65,7 @@
 | P01-A2 | Student changes the request at Step 5 | Return to Step 2 and refresh the available time points for the revised Hub, date(s), or arrival time. Require a new departure selection if the previous one is no longer offered. Validate both selected times and repeat the availability check for every slot in the revised interval before showing a new summary. |
 | P01-A3 | Student cancels before Step 7 | End the use case without creating a reservation or allocating parking capacity. |
 | P01-A4 | No arrival or departure times are available at Step 2 | Explain that no arrival times are available for the selected Hub and date(s), or that no departure times are available for the selected arrival, as applicable. The Student may change the Hub, date(s), or arrival time at Step 2, or end the use case without a reservation. |
+| P01-A5 | The applicable expiry policy changes after review and before creation | Refresh the policy/deadline summary and obtain confirmation again before creating the reservation; do not silently apply a different check-in deadline. |
 
 ### Exception Flow
 
@@ -72,10 +99,10 @@
 1. The system retrieves the associated parking record and verifies that it belongs to the Student.
 2. The system displays the vehicle, Hub, parking interval, and charging-request form.
 3. The Student enters the current battery level, target battery level, and requested charging interval within the parking interval. This interval defines when the system may schedule charging; it does not select or allocate a charging slot and need not use the parking time increment.
-4. The system validates the charging inputs, confirms that the Hub accepts charging requests, and checks the associated parking record's current eligibility.
+4. The system validates the charging inputs, confirms that the Hub accepts charging requests, and checks the associated parking record's current eligibility, including `now < expiresAt` for an unused Confirmed reservation.
 5. The system displays a request summary and indicates that submission does not guarantee a charging slot.
 6. The Student confirms submission.
-7. The system rechecks the associated parking state and creates one linked charging request with **Pending** status as a consistent update. Concurrent parking cancellation must not leave an active request linked to a cancelled reservation. The request becomes available to the charging scheduler without a slot being allocated in this use case.
+7. The system rechecks the associated parking state and creates one linked charging request with **Pending** status as a consistent update. Concurrent parking cancellation or expiry must not leave a live request linked to a cancelled or expired reservation. Reconcile an overdue reservation before creation; no request may be created after its deadline. The request becomes available to the charging scheduler without a slot being allocated in this use case.
 8. The system displays the request reference, vehicle, Hub, requested interval, and **Pending** status.
 
 ### Alternative Flow
@@ -119,7 +146,7 @@
 
 1. The system verifies the Student's session.
 2. The system retrieves only the Student's parking reservations, parking sessions, and charging requests.
-3. The system displays summaries containing the vehicle, Hub, time interval, current status, and charging allocation where one exists.
+3. The system displays summaries containing the vehicle, Hub, time interval, current status, check-in deadline for an unused reservation, and charging allocation where one exists. Reconcile overdue reservations before displaying a refreshed state; if cleanup fails, report expiry pending/unavailable and never present the record as eligible for check-in.
 4. The Student selects a record to view its details.
 5. The system verifies access to the selected record and retrieves its current details and linked parking/charging information.
 6. The system displays the details and available actions based on the current state. Pending charging requests are distinguished from scheduled or active charging.
@@ -147,7 +174,7 @@
 | Outcome | State |
 | --- | --- |
 | Success | The Student sees the requested personal records and their retrieved statuses, or a valid empty result. |
-| Unsuccessful completion | An access or retrieval error is reported. No reservation, parking session, charging request, or resource allocation is changed. |
+| Unsuccessful completion | An access or retrieval error is reported. Viewing itself creates no booking or user-requested state change. Independent expiry reconciliation under FR-NI-13 may expire an overdue unused reservation and its unused charging requests; any failed reconciliation is reported without partial release. |
 
 ## UC-P04 — Cancel a Parking Reservation
 
@@ -163,7 +190,7 @@
 ### Steps — Acceptance Flow (Main Success Flow)
 
 1. The system retrieves the selected reservation and verifies that it belongs to the Student.
-2. The system checks that the reservation is **Confirmed**, has not been checked in, and is eligible for cancellation.
+2. The system checks that the reservation is **Confirmed**, has not been checked in, has not reached `expiresAt`, and is eligible for cancellation. Reconcile an overdue reservation as Expired before considering cancellation.
 3. The system retrieves linked pending or scheduled charging requests and displays the parking cancellation summary, including all dependent requests that will also be cancelled.
 4. The Student confirms the cancellation and its displayed consequences.
 5. The system rechecks the reservation and dependent request states. It then cancels the parking reservation and the displayed eligible charging requests, releasing all parking capacity still held for the reservation across its covered slots and the dependent charging allocations together, without partial updates or double release.
@@ -249,17 +276,17 @@
 | Use-case overview | Record a reserved private EV's arrival and start its parking session. |
 | Actors | Student |
 | Preconditions | The Student is signed in, has arrived at the Hub, and has a parking reservation reference. The reservation's current validity is checked during the flow. |
-| Trigger | The Student selects Check In for the parking reservation. |
+| Trigger | The Student selects Check In for the parking reservation or scans its QR ticket at the Hub. |
 
 ### Steps — Acceptance Flow (Main Success Flow)
 
-1. The system retrieves the selected reservation and verifies access.
-2. The system displays the reserved Hub, vehicle, and parking interval.
+1. The system resolves the selected reference or verifies the scanned QR ticket, retrieves the reservation, evaluates expiry and verifies access.
+2. The system displays the reserved Hub, vehicle, parking interval and exact check-in deadline.
 3. The Student confirms arrival and the vehicle/Hub information.
-4. The system validates that the reservation belongs to the Student, matches the arriving vehicle and Hub, remains **Confirmed**, and permits check-in at the current time.
+4. The system validates that the reservation belongs to the Student, matches the arriving vehicle and Hub, remains **Confirmed**, and satisfies `arrivalTime <= now < expiresAt` at the serialized final eligibility decision. If overdue, reject check-in and reconcile expiry under the policy above.
 5. The system checks that the reserved allocation can be honoured and that no parking session already exists for this check-in.
 6. The system starts one **Active** parking session, records the actual arrival time without rounding to a parking time point, and marks the reservation **Checked In**. It accounts for actual occupancy against the existing reserved allocation without consuming the same capacity twice or releasing capacity still committed to the remaining parking interval.
-7. The system displays the active parking session and any linked charging-request status. Check-in alone does not guarantee that charging has started.
+7. The system displays the active parking session and any linked charging-request status. If gate simulation is enabled, show its barrier-opening visualization after confirmed check-in, without another occupancy update. Check-in alone does not guarantee that charging has started.
 
 ### Alternative Flow
 
@@ -278,6 +305,7 @@
 | P06-E3 | The reserved allocation cannot be honoured at Step 5 | Do not confirm check-in or record additional occupancy. Preserve the reservation, report the capacity/operational problem, and direct the Student to operational assistance. |
 | P06-E4 | The session expires or reservation state changes before Step 6 | Require authentication if the session expired, then reload the reservation. Continue only if check-in remains permitted; otherwise report the current state without creating a session. |
 | P06-E5 | Saving fails or the acknowledgement is lost at Steps 6–7 | Do not leave a checked-in reservation without its matching session or count occupancy twice. If the outcome is uncertain, retrieve the existing check-in result before retrying. |
+| P06-E6 | QR ticket is invalid/unreadable or gate simulation is unavailable | Reject an invalid/unreadable ticket before check-in and allow selection of an accessible reservation. If only gate visualization fails after a confirmed check-in, display a simulation warning and preserve the existing session and occupancy. |
 
 ### Postconditions
 

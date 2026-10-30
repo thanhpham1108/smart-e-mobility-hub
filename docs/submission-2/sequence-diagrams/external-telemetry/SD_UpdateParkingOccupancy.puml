@@ -1,0 +1,183 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam titleFontSize 20
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 24
+skinparam BoxPadding 12
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ActivationBorderColor #42566B
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  ParticipantFontColor #172B4D
+  ActorBorderColor #42566B
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+  GroupHeaderFontColor #172B4D
+  DividerBackgroundColor #E8F1FA
+  DividerBorderColor #8295A8
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+hide footbox
+title UC-T02 - Update Parking Occupancy
+actor "External Telemetry System\n(Provider / ACT-03)" as P
+boundary "Telemetry API / Adapter" as API
+control "TelemetryController" as C
+entity "Telemetry & Mobility Records" as D
+note over P,D
+  What-if events must use isolated run-scoped storage.
+end note
+P -> API: Submit event (Hub/space, eventRef, observedAt, reporting mode, occupied/free or count)
+activate API
+API -> C: Process event with source credentials and operational/run scope
+activate C
+C -> D: Read provider permissions, resource scope and validation policy
+activate D
+D --> C: Policy / unavailable
+deactivate D
+C -> C: Verify source identity, resource authorization and operational/run scope
+activate C
+C --> C: Evaluation result
+deactivate C
+alt policy unavailable
+C -> C: Set retryable failure; no operational update
+activate C
+C --> C: Evaluation result
+deactivate C
+else source or scope unauthorized
+C -> D: Record access failure without protected resource details
+activate D
+D --> C: Audit recorded / audit unavailable
+deactivate D
+C -> C: Set access denied; never apply event
+activate C
+C --> C: Evaluation result
+deactivate C
+else authorized source and scope
+C -> C: Validate Hub/space and configured reporting mode, timestamp;\ncount is an integer from 0 to physical capacity
+activate C
+C --> C: Evaluation result
+deactivate C
+alt invalid event / unknown mapping
+C -> C: Set validation rejection; retain last accepted state and freshness
+activate C
+C --> C: Evaluation result
+deactivate C
+else structurally valid
+C -> D: Read original event result/fingerprint and latest accepted observation\nfor this resource/reporting scope (and session when applicable)
+activate D
+D --> C: Prior result and observation / unavailable
+deactivate D
+alt event state unavailable
+C -> C: Set retryable failure; do not infer availability
+activate C
+C --> C: Evaluation result
+deactivate C
+else identical event already processed
+C -> C: Use original result; do not advance freshness or repeat effects
+activate C
+C --> C: Evaluation result
+deactivate C
+else identity conflict, stale or out-of-order event
+C -> D: Retain conflicting evidence where applicable; do not alter accepted observation
+activate D
+D --> C: Evidence result / unavailable
+deactivate D
+C -> C: Set rejection reason; do not reset freshness
+activate C
+C --> C: Evaluation result
+deactivate C
+else new event satisfies ordering and freshness rules
+loop initial attempt; repeat only after concurrency conflict while retry policy permits
+C -> D: Read current occupancy records, Active sessions, reservations, unavailable spaces and reporting policy\nand versions in the selected scope
+activate D
+D --> C: Consistent context / unavailable
+deactivate D
+alt context unavailable
+C -> C: Set retryable failure; stop this retry loop
+activate C
+C --> C: Evaluation result
+deactivate C
+else context available
+alt aggregate reporting mode
+C -> C: Treat count as total observed occupancy, not an increment to Active sessions
+activate C
+C --> C: Evaluation result
+deactivate C
+else identified-space reporting mode
+C -> C: Reconcile observed space once; do not count an existing occupied space twice
+activate C
+C --> C: Evaluation result
+deactivate C
+end
+loop each relevant occupancy record, session and commitment
+C -> C: Reconcile without double-counting; preserve reservations and session states
+activate C
+C --> C: Evaluation result
+deactivate C
+end
+alt observed and expected occupancy disagree
+C -> C: Plan observed/expected discrepancy; withhold disputed capacity from new bookings
+activate C
+C --> C: Evaluation result
+deactivate C
+else observation agrees / no physical change
+C -> C: Advance accepted observation time; no repeated occupancy delta;\nresolve prior discrepancy only if reconciliation policy permits
+activate C
+C --> C: Evaluation result
+deactivate C
+end
+critical Final event identity, ordering and business-state check + atomic update
+C -> D: Atomically commit observation/effects and original processing result only if\nidentity, order, permissions and context versions still match
+activate D
+
+D --> C: Committed / original duplicate result / stale or conflicting /\nconcurrency conflict / failed / outcome unknown
+deactivate D
+end
+C -> C: Retry only concurrency conflicts with a fresh context;\notherwise stop loop and classify result
+activate C
+C --> C: Retry / terminal outcome
+deactivate C
+end
+end
+opt outcome unknown
+C -> D: Find original processing result using same source, scope and eventRef
+activate D
+D --> C: Original applied/rejected/failed result / not yet resolved
+deactivate D
+end
+opt newly committed observation/evidence (including recovered commit)
+C -> C: Expose accepted time, freshness, restrictions and discrepancies\nfrom committed records to monitoring/detail views
+activate C
+C --> C: Evaluation result
+deactivate C
+end
+end
+end
+end
+C --> API: Processing result + event reference (applied / original / rejected / retryable / unresolved)
+deactivate C
+alt acknowledgement delivered
+API --> P: Return processing result; unknown is not an applied acknowledgement
+else acknowledgement lost
+API -> API: Response delivery fails; committed result is retained
+activate API
+API --> API: Provider may retry same event identity and payload
+deactivate API
+end
+deactivate API
+note over P,D
+  Observations do not execute Student check-in or checkout.
+end note
+footer Smart E-Mobility Hub | Submission 2 | External Telemetry
+@enduml

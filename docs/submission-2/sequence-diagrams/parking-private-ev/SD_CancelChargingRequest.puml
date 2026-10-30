@@ -1,0 +1,124 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam titleFontSize 20
+skinparam maxMessageSize 260
+skinparam ParticipantPadding 24
+skinparam BoxPadding 12
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ActivationBorderColor #42566B
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  ParticipantFontColor #172B4D
+  ActorBorderColor #42566B
+  ActorBackgroundColor #FFFFFF
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+  GroupHeaderFontColor #172B4D
+  DividerBackgroundColor #E8F1FA
+  DividerBorderColor #8295A8
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+hide footbox
+title
+UC-P05 - Cancel a Charging Request
+<size:11>Preconditions: Student is signed in and has a charging-request reference.</size>
+end title
+actor Student as ST
+boundary "Student Portal" as UI
+control "Charging Request Service" as SVC
+entity "Mobility Records" as DATA
+
+ST -> UI: Cancel charging request
+activate UI #D8EAFE
+UI -> SVC: Get cancellation summary (requestRef)
+activate SVC #D8EEDC
+SVC -> DATA: Load owned request, charging allocation and parking status (studentId)
+activate DATA #E2E7ED
+DATA --> SVC: Current states, allocations and summary version / unavailable / retrieval error
+deactivate DATA
+opt owned record retrieved and not already Cancelled
+SVC -> SVC: Check status is Pending or Scheduled
+activate SVC #D8EEDC
+SVC --> SVC: Cancellable / ineligible
+deactivate SVC
+end
+SVC --> UI: Cancellation context, existing result or explicit error
+deactivate SVC
+alt record missing, inaccessible or retrieval failed
+UI --> ST: Generic unavailable record / read error; return to bookings or retry
+else already Cancelled
+UI --> ST: Show existing cancellation; do not release resources again
+else owned record exists but is not cancellable
+UI --> ST: Reject request cancellation; Active charging needs its interruption procedure
+else eligible for cancellation
+UI --> ST: Review assigned slot (if any); parking will remain unchanged
+end
+deactivate UI
+break record unavailable, read failed, already Cancelled or not cancellable
+
+end
+
+ST -> UI: Confirm or decline cancellation
+activate UI #D8EAFE
+alt Student declines, edits or abandons
+UI --> ST: Leave all records and allocations unchanged
+else Student confirms
+UI -> SVC: Confirm cancellation (requestRef, summaryVersion, operationRef)
+activate SVC #D8EEDC
+SVC -> SVC: Recheck session and permission
+activate SVC #D8EEDC
+SVC --> SVC: Current access result
+deactivate SVC
+alt session expired or permission denied
+SVC -> SVC: Prepare authentication-required / access-denied result
+activate SVC #D8EEDC
+SVC --> SVC: No update attempted
+deactivate SVC
+else session valid and permission granted
+critical Recheck charging request and cancel its allocation
+SVC -> DATA: Cancel owned Pending/Scheduled request only if\ncurrent allocation matches confirmed summary
+activate DATA #E2E7ED
+note over SVC,DATA
+  Release an existing future charging allocation once.
+  Keep parking unchanged; no allocation means no release.
+end note
+DATA --> SVC: Cancelled / already cancelled / summary changed / ineligible / save failure
+deactivate DATA
+end
+opt update outcome uncertain / response lost
+SVC -> DATA: Find original charging cancellation result (operationRef, studentId)
+activate DATA #E2E7ED
+DATA --> SVC: Original result / still unknown
+deactivate DATA
+end
+end
+SVC --> UI: Operation outcome and accessible current details
+deactivate SVC
+alt access invalid
+UI --> ST: Sign in if permitted; reload current records and confirm again
+else outcome still unknown
+UI --> ST: Outcome unconfirmed; retain operationRef and resolve original result before retry
+else save failed
+UI --> ST: Report failure; no partial update; retry after reload and revalidation
+else summary changed but records remain cancellable
+UI --> ST: No cancellation; reload updated consequences and ask for confirmation again
+else record or dependent became ineligible
+UI --> ST: Reject request cancellation for Active/Completed/Interrupted; show current status
+else cancelled or already cancelled
+UI --> ST: Show Cancelled request and unchanged parking status; no duplicate release
+end
+end
+deactivate UI
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

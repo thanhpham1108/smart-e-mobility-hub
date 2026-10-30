@@ -1,0 +1,142 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 11
+}
+skinparam titleFontSize 19
+skinparam footerFontSize 10
+title
+UC-P05 - Cancel a Charging Request
+<size:12>Preconditions: Student is signed in and has a charging-request reference.</size>
+<size:12>Ownership and cancellation eligibility are checked during the flow.</size>
+end title
+
+|Actor|
+|System|
+|Database|
+|Actor|
+start
+:Select Cancel Charging Request;
+|Actor|
+repeat
+  |System|
+|Database|
+:Retrieve charging request within this Student's\nscope, allocation and parking context;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify request ownership, current state and allocation;
+  endif
+  if () then ([missing or not owned])
+    :Reject without exposing protected details;\nreturn to personal bookings;
+    stop
+  else ([record accessible])
+  endif
+  if () then ([already Cancelled])
+    :Display existing result; no second release;
+    stop
+  else ([not Cancelled])
+  endif
+  if () then ([other state])
+    :Reject and display current status; Active\ncharging requires an interruption procedure;
+    stop
+  else ([Pending or Scheduled])
+  endif
+  :Display cancellation summary, any allocation\nto release and unchanged parking context;
+note right
+  No allocation means no capacity release.
+end note
+  |Actor|
+  :Review summary and confirm or decline\ncancellation;
+  if () then ([cancellation declined])
+    :Leave this attempt without applying changes;
+    stop
+  else ([cancellation confirmed])
+  endif
+  |System|
+  :Check current sign-in session;
+  if () then ([session expired])
+    :Request sign-in and preserve current input;\nafter sign-in, reload charging request, then\nconfirm again;
+    stop
+  else ([session valid])
+  endif
+|Database|
+:Reload owned request and current allocation;
+|System|
+  if () then ([data unavailable])
+    :Report data retrieval failure; change no\nrecords; offer retry or exit;
+    stop
+  else ([data retrieved])
+  :Verify request ownership, current state and allocation;
+  endif
+  if () then ([already Cancelled])
+    :Display original result; no second release;
+    stop
+  else ([not Cancelled])
+  endif
+  if () then ([no longer cancellable])
+    :Reject; display current status; retain parking\nunchanged;
+    stop
+  else ([still Pending or Scheduled])
+  endif
+  if () then ([summary changed])
+    :Refresh summary; require confirmation again;
+  else ([summary unchanged])
+|Database|
+:Guarded atomic cancellation: recheck ownership,\nPending/Scheduled state and reviewed allocation;\nmark request Cancelled and release future\nallocation ONCE; keep parking unchanged;
+|System|
+
+    if () then ([confirmation response lost])
+|Database|
+:Retrieve the original operation's result; do not\nrepeat the update;
+|System|
+    else ([confirmation response received])
+    endif
+    if () then ([outcome still unknown])
+      :Show result as unconfirmed; reconcile the\noriginal result before any retry;
+      stop
+    else ([outcome known])
+    endif
+    if () then ([save failed])
+      :Report save failure; no partial updates; offer\nretry after revalidation and confirmation;
+      stop
+    else ([update result available])
+    endif
+    if () then ([guard rejected or summary changed])
+:Show current request state; reload summary and\nrequire confirmation again if still cancellable;
+      stop
+    else ([cancellation confirmed or already cancelled])
+    endif
+    :Display cancelled request and unchanged\nparking booking/session;
+    stop
+  endif
+|Actor|
+repeat while ( ) is ([review updated summary]) not ([leave])
+stop
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml

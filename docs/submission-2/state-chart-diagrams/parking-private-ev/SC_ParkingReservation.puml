@@ -1,0 +1,67 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam titleFontSize 21
+skinparam ArrowColor #42566B
+skinparam ArrowFontSize 12
+skinparam nodesep 65
+skinparam ranksep 70
+skinparam state {
+  BackgroundColor #E8F1FA
+  BorderColor #42566B
+  FontColor #172B4D
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+  FontSize 12
+}
+title Parking Reservation - State-Chart Diagram
+
+state "Confirmed" as Confirmed
+Confirmed : Entire parking interval reserved
+Confirmed : Vehicle has not checked in
+state "Checked In" as CheckedIn
+CheckedIn : Linked parking session is Active
+CheckedIn : Actual arrival recorded without rounding
+state "Completed" as Completed
+Completed : Linked parking session is Closed
+Completed : Actual departure recorded without rounding
+state "Cancelled" as Cancelled
+Cancelled : Parking and eligible dependent requests cancelled
+Cancelled : Remaining allocations released once
+state "Expired" as Expired
+Expired : No-show; check-in and cancellation disabled
+Expired : Unused charging requests cancelled; holds released once
+
+[*] --> Confirmed : / create reservation, snapshot expiresAt and allocate ALL covered slots
+note top of Confirmed
+  Only successfully created reservations enter this lifecycle.
+end note
+
+Confirmed -down-> CheckedIn : checkInConfirmed (UC-P06)\n[authorized owner && matching Hub/vehicle\n&& arrival <= now < expiresAt && allocation can be honoured]\n/ create one Active session; account occupancy against existing holds
+Confirmed -left-> Cancelled : cancellationConfirmed (UC-P04)\n[authorized owner && cancellation permitted\n&& now < expiresAt && dependents cancellable && summary still current]\n/ cancel reservation and Pending/Scheduled dependents; release holds once
+Confirmed -right-> Expired : expiryCheck (FR-NI-13)\n[now >= expiresAt && no Active parking/charging session]\n/ expire as NoShow; cancel unused charging; release remaining holds once
+
+CheckedIn -down-> Completed : departureConfirmed (UC-P07)\n[authorized owner && latest states verified\n&& no Active charging && summary still current]\n/ close visit; cancel unused requests; release remaining allocations once
+note left of CheckedIn
+  Cancelling checkout does not restart stopped charging.
+end note
+note right of Expired
+  expiresAt = min(arrival + grace, departure).
+  Default grace: 15 minutes; snapshot per reservation.
+end note
+note right of Completed
+  Early checkout also releases unused reserved time.
+end note
+
+Cancelled --> [*]
+Completed --> [*]
+Expired --> [*]
+
+footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs
+@enduml
