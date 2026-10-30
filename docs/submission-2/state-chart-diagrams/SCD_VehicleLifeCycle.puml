@@ -1,0 +1,21 @@
+@startuml
+Title Shared Vehicle Lifecycle
+
+state Available
+state Reserved
+state InUse
+state UnderMaintenance
+state Redistributing
+
+[*] --> Available
+Available --> Reserved : Reservation Confirmed
+Reserved --> Available : Reservation Cancelled / Allocation Released
+Reserved --> InUse : Pickup Validated / Rental Started
+InUse --> Available : Return Completed / Vehicle Operational
+InUse --> UnderMaintenance : Return Completed / Vehicle Faulted
+Reserved --> UnderMaintenance : Vehicle Found Not Operational
+UnderMaintenance --> Available : Vehicle Restored To Service
+Available --> Redistributing : No Available Vehicle Found 
+Redistributing --> Available : Redistribution Completed
+
+@enduml

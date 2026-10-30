@@ -1,0 +1,104 @@
+@startuml SD_PickupSharedVehicle
+
+title SD_PickupSharedVehicle - Pick Up A Shared Vehicle
+
+autonumber
+hide footbox
+
+actor "Student" as Student
+boundary "Mobile / Web Interface" as UI
+control "RentalController" as Controller
+entity "Reservation" as Reservation
+entity "Vehicle" as Vehicle
+database "Rental Database" as DB
+boundary "Vehicle Lock Gateway" as LockGateway
+
+Student -> UI : Open Reserved Vehicle
+UI -> Controller : Request Pickup Details(Student Id, Reservation Id)
+Controller -> DB : Retrieve Reservation By Id(Reservation Id)
+DB --> Controller : Reservation Record / Not Found
+
+alt Reservation Found And Belongs To Student
+    Controller -> Reservation : Check Reservation Status And Expiration
+    Reservation --> Controller : Reservation Validity
+    alt Reservation Valid For Pickup
+        Controller --> UI : Return Vehicle Details And Pickup Instructions
+        UI --> Student : Display QR And Bluetooth Pickup Options
+
+        opt Student Selects Bluetooth Pickup
+            Student -> UI : Select Bluetooth Connection
+            UI -> UI : Enable Bluetooth Discovery
+        end
+
+        loop Until Identifier Read Or Maximum Attempts Reached
+            Student -> UI : Scan QR Code Or Connect Via Bluetooth
+            UI -> UI : Read Vehicle Identifier
+            alt Identifier Read Successfully
+                UI --> Student : Display Identified Vehicle
+                break Vehicle Identifier Obtained
+                end
+            else Identifier Read Failed
+                UI --> Student : Display Retry Message
+            end
+        end
+
+        alt Vehicle Identifier Obtained
+            Student -> UI : Confirm Vehicle Pickup
+            UI -> Controller : Request Vehicle Pickup(Student Id, Reservation Id, Vehicle Id)
+            Controller -> DB : Retrieve Latest Reservation And Vehicle Records
+            DB --> Controller : Reservation And Vehicle Status / Retrieval Failure
+
+            alt Latest Records Retrieved
+                Controller -> Reservation : Verify Ownership, Expiration And Vehicle Assignment
+                Reservation --> Controller : Reservation Validation Result
+                Controller -> Vehicle : Check Operational Condition And Pickup Eligibility
+                Vehicle --> Controller : Vehicle Validation Result
+
+                alt Reservation Valid And Vehicle Matches And Is Operational
+                    Controller -> LockGateway : Unlock Vehicle(Vehicle Id)
+                    LockGateway --> Controller : Unlock Result
+
+                    alt Physical Unlock Successful
+                        Controller -> Reservation : Mark Rental As Active
+                        Reservation --> Controller : Updated Reservation Data
+                        Controller -> Vehicle : Set Status To IN_USE
+                        Vehicle --> Controller : Updated Vehicle Data
+                        Controller -> DB : Save Rental Activation And Vehicle Status In One Transaction
+
+                        alt Transaction Committed
+                            DB --> Controller : Active Rental And Vehicle IN_USE
+                            Controller --> UI : Return Pickup Confirmation
+                            UI --> Student : Display Active Rental And Pickup Success
+                        else Transaction Failed
+                            DB --> Controller : Transaction Rolled Back
+                            Controller -> LockGateway : Request Safe Relock(Vehicle Id)
+                            LockGateway --> Controller : Relock Result
+                            Controller -> DB : Record Pickup Activation Failure
+                            Controller --> UI : Return Pickup Activation Failure
+                            UI --> Student : Display Failure And Contact Support
+                        end
+                    else Physical Unlock Failed
+                        Controller --> UI : Return Unlock Failure
+                        UI --> Student : Display Unlock Failure And Support Options
+                    end
+                else Reservation Invalid Or Vehicle Ineligible
+                    Controller --> UI : Reject Pickup With Current Status
+                    UI --> Student : Display Pickup Rejection
+                end
+            else Record Retrieval Failed
+                Controller --> UI : Return Current Status Unavailable
+                UI --> Student : Display Pickup Unavailable
+            end
+        else Identifier Not Obtained
+            UI --> Student : Display Scan Or Connection Failure
+        end
+    else Reservation Expired, Cancelled Or Not Eligible
+        Controller --> UI : Return Invalid Reservation Status
+        UI --> Student : Display Pickup Not Allowed
+    end
+else Reservation Not Found Or Owned By Another Student
+    Controller --> UI : Reject Pickup Request
+    UI --> Student : Display Reservation Not Found Or Access Denied
+end
+
+@enduml

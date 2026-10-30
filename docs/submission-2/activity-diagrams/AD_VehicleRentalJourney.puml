@@ -1,0 +1,104 @@
+@startuml
+ title Shared Vehicle Rental Journey
+ |User|
+ start
+ :Select Available Vehicle;
+ :Request Reservation;
+ |System|
+ :Request Latest Vehicle And Reservation Status;
+ |Database|
+ :Retrieve Vehicle Status And Conflicting Reservations;
+ |System|
+ if (Available And No Conflict?) then (Yes)
+   :Display Reservation Information;
+   |User|
+   :Confirm Reservation;
+   |System|
+   :Create Reservation And Allocate Vehicle;
+   |Database|
+   :Save Reservation And Vehicle Allocation;
+   |System|
+   if (Reservation Saved?) then (Yes)
+     :Confirm Reservation;
+   else (No)
+     :Notify Reservation Failure;
+     stop
+   endif
+ else (No)
+   :Notify Vehicle Unavailable;
+   stop
+ endif
+ |User|
+ :Open Reservation And Request Pickup;
+ |System|
+ :Request Reservation And Latest Vehicle Status;
+ |Database|
+ :Retrieve Reservation And Vehicle Status;
+ |System|
+ if (Owned, Valid, Eligible And Operational?) then (Yes)
+   :Start Rental;
+   |Database|
+   :Save Active Rental;
+   |System|
+   :Confirm Active Rental;
+ else (No)
+   :Deny Pickup And Show Reason;
+   stop
+ endif
+ |User|
+ :Use Vehicle;
+ if (Report Problem During Use?) then (Yes)
+   :Enter Description And Submit Report;
+   |System|
+   :Validate Vehicle, rental context\nAnd Required Information;
+   if (Report Valid?) then (Yes)
+     |Database|
+     :Save Linked Incident For Operator Review;
+     |System|
+     :Confirm Report Submission;
+   else (No)
+     :Show Reporting Error;
+   endif
+ endif
+ |User|
+ :Arrive At Hub And Request Return;
+ |System|
+ :Request Active Rental And Hub Parking Details;
+ |Database|
+ :Retrieve Rental, Vehicle And Hub Parking State;
+ |System|
+ if (Rental, Vehicle And Return Location Valid?) then (Yes)
+   |User|
+   if (Report Problem At Return?) then (Yes)
+     :Enter Description And Submit Report;
+     |System|
+     :Validate Report And Rental Context;
+     if (Report Valid?) then (Yes)
+       |Database|
+       :Save Linked Incident For Operator Review;
+       |System|
+       :Confirm Report Submission;
+     else (No)
+       :Show Reporting Error;
+     endif
+   endif
+   |System|
+   :Determine Resulting Vehicle Condition;
+   :Complete Return;
+   |Database|
+   :Save Rental Completion, Vehicle Condition,\nReturn Hub, Parking Occupancy And Status;
+   |System|
+   if (Return Saved?) then (Yes)
+     :Confirm Return;
+     stop
+   else (No)
+|System|
+     :Show Return Failure;
+     stop
+   endif
+ else (No)
+|System|
+   :Reject Return;
+   stop
+ endif
+@enduml

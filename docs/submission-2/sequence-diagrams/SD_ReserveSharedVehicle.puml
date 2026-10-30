@@ -1,0 +1,88 @@
+@startuml SD_ReserveSharedVehicle
+
+title SD_ReserveSharedVehicle - Reserve A Shared Vehicle
+
+autonumber
+hide footbox
+
+actor "Student" as Student
+boundary "Mobile / Web Interface" as UI
+control "RentalController" as Controller
+entity "Vehicle" as Vehicle
+entity "Reservation" as Reservation
+entity "Hub" as Hub
+database "Rental Database" as DB
+
+Student -> UI : Select Shared Vehicle
+Student -> UI : Click Reserve Vehicle
+UI -> Controller : Request Vehicle Reservation(Student Id, Vehicle Id)
+Controller -> DB : Retrieve Vehicle By Id(Vehicle Id)
+DB --> Controller : Vehicle Record / Not Found
+
+alt Vehicle Found And Status Retrieved
+    Controller -> Vehicle : Check Current Availability And Operational Condition
+    Vehicle --> Controller : Vehicle Status
+    Controller -> DB : Check Incompatible Active Reservations(Vehicle Id)
+    DB --> Controller : Conflict Status
+
+    alt Vehicle Available And No Conflict
+        Controller --> UI : Display Reservation Details
+        UI --> Student : Show Reservation Confirmation
+        Student -> UI : Confirm Reservation
+        UI -> Controller : Confirm Vehicle Reservation(Student Id, Vehicle Id)
+        Controller -> DB : Recheck And Atomically Allocate Vehicle(Vehicle Id)
+        DB --> Controller : Allocation Result
+
+        alt Allocation Successful
+            Controller -> Reservation : Create Reservation(Student Id, Vehicle Id, 15 Minutes)
+            Reservation --> Controller : Reservation Data And Expiration Time
+            Controller -> DB : Save Reservation And Vehicle Allocation In One Transaction
+            alt Transaction Committed
+                DB --> Controller : Saved Reservation
+                Controller --> UI : Return Reservation Confirmation And Expiration Time
+                UI --> Student : Display Confirmed Reservation And 15-Minute Hold
+            else Reservation Save Failure
+                DB --> Controller : Transaction Failed And Rolled Back
+                Controller -> DB : Record Reservation Error
+                Controller --> UI : Return Reservation Failure
+                UI --> Student : Display Reservation Unsuccessful
+            end
+        else Concurrent Allocation Conflict
+            DB --> Controller : Vehicle Already Allocated
+            Controller --> UI : Return Vehicle Unavailable
+            UI --> Student : Display Vehicle Unavailable
+            opt Student Requests Alternative Hub - UC-X01
+                Student -> UI : Request Alternative Hub
+                UI -> Controller : Find Alternative Hubs(Search Criteria)
+                Controller -> DB : Retrieve Alternative Hubs And Vehicles
+                DB --> Controller : Candidate Hubs And Vehicles
+                loop For Each Candidate Hub And Vehicle
+                    Controller -> Hub : Check Hub And Vehicle Suitability
+                    Hub --> Controller : Suitability Result
+                end
+                Controller --> UI : Return Suitable Alternatives
+                UI --> Student : Display Alternative Hubs And Vehicles
+            end
+        end
+    else Vehicle Unavailable Or Reservation Conflict
+        Controller --> UI : Return Vehicle Unavailable
+        UI --> Student : Display Vehicle Unavailable
+        opt Student Requests Alternative Hub - UC-X01
+            Student -> UI : Request Alternative Hub
+            UI -> Controller : Find Alternative Hubs(Search Criteria)
+            Controller -> DB : Retrieve Alternative Hubs And Vehicles
+            DB --> Controller : Candidate Hubs And Vehicles
+            loop For Each Candidate Hub And Vehicle
+                Controller -> Hub : Check Hub And Vehicle Suitability
+                Hub --> Controller : Suitability Result
+            end
+            Controller --> UI : Return Suitable Alternatives
+            UI --> Student : Display Alternative Hubs And Vehicles
+        end
+    end
+else Vehicle Not Found Or Status Retrieval Failed
+    Controller --> UI : Return Vehicle Information Unavailable
+    UI --> Student : Display Reservation Unavailable
+end
+
+@enduml
