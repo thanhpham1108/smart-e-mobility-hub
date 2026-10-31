@@ -1,0 +1,25 @@
+@startuml
+title SC-01 - MobilityHub Lifecycle
+
+[*] --> Active : Hub registered and initialized
+
+state Active
+state Peak_Load
+state Maintenance
+state Offline
+
+Active --> Peak_Load : Utilization exceeds threshold
+Peak_Load --> Active : Utilization returns to normal
+
+Active --> Maintenance : Maintenance required
+Peak_Load --> Maintenance : Maintenance required
+
+Maintenance --> Active : Maintenance completed\nand Hub verified operational
+
+Active --> Offline : Hub becomes unavailable
+Peak_Load --> Offline : Hub becomes unavailable
+Maintenance --> Offline : Hub loses connectivity
+
+Offline --> Active : Connectivity restored\nand Hub verified operational
+
+@enduml

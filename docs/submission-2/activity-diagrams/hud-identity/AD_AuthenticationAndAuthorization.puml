@@ -1,0 +1,74 @@
+@startuml
+title AD-01 - Authentication and Role-Based Access
+
+|Actor|
+start
+:Open Smart E-Mobility Hub;
+:Enter username/email and password;
+:Select Sign In;
+
+|System / Controller|
+:Receive authentication request;
+:Validate input format;
+
+if (Input format valid?) then (Yes)
+    |Database|
+    :Retrieve user account;
+    :Return account and credential data;
+
+    |System / Controller|
+    :Verify credentials;
+    if (Credentials valid?) then (Yes)
+        :Check account status;
+
+        if (Account active?) then (Yes)
+            :Determine assigned role;
+
+            if (Role is Student?) then (Student)
+                :Create authenticated session;
+                :Grant Student permissions;
+
+                |Actor|
+                :Access Student dashboard;
+                stop
+
+            else (Other role)
+                if (Role is Operator?) then (Operator)
+                    |System / Controller|
+                    :Create authenticated session;
+                    :Grant Operator permissions;
+
+                    |Actor|
+                    :Access Operator dashboard;
+                    stop
+                else (Unknown)
+                    |System / Controller|
+                    :Deny access;
+                    |Actor|
+                    :Display unauthorized role message;
+                    stop
+                endif
+            endif
+
+        else (No)
+            :Reject inactive account;
+            |Actor|
+            :Display account unavailable message;
+            stop
+        endif
+
+    else (No)
+        :Reject invalid credentials;
+        |Actor|
+        :Display authentication error;
+        stop
+    endif
+
+else (No)
+    :Reject invalid input;
+    |Actor|
+    :Display validation errors;
+    stop
+endif
+
+@enduml

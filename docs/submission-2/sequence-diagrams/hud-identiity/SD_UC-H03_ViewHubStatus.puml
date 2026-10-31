@@ -1,0 +1,59 @@
+@startuml
+title UC-H03 - View Hub Status
+autonumber
+
+actor Student
+boundary "Hub Details Page" as UI
+control "Hub Status Controller" as HSC
+database "Hub Database" as HubDB
+database "Vehicle Database" as VehicleDB
+database "Parking Database" as ParkingDB
+database "Charging Point Database" as ChargingDB
+
+Student -> UI: Select a Mobility Hub
+UI -> HSC: getHubStatus(hubId)
+
+HSC -> HubDB: getHubDetails(hubId)
+HubDB --> HSC: Hub details and operational status
+
+HSC -> VehicleDB: getVehicleAvailability(hubId)
+VehicleDB --> HSC: Vehicle availability and battery status
+
+HSC -> ParkingDB: getParkingStatus(hubId)
+ParkingDB --> HSC: Occupied spaces and total capacity
+
+HSC -> ChargingDB: getChargingPointStatus(hubId)
+ChargingDB --> HSC: Charging-point availability
+
+HSC -> HSC: Compile Hub status
+HSC -> HSC: Generate data timestamp/freshness indicator
+
+alt All required data retrieved
+    HSC --> UI: Hub status and freshness information
+    UI --> Student: Display complete Hub status
+
+else Some data unavailable
+    HSC --> UI: Available status + unavailable fields
+    UI --> Student: Display available data\nand mark missing information
+
+else Hub status cannot be retrieved
+    HSC --> UI: Status retrieval failure
+    UI --> Student: Display status unavailable\nand offer retry
+end
+
+opt Availability changes while viewing
+    Student -> UI: Refresh Hub status
+    UI -> HSC: getHubStatus(hubId)
+    HSC -> HubDB: Get latest Hub status
+    HubDB --> HSC: Latest status
+    HSC -> VehicleDB: Get latest vehicle availability
+    VehicleDB --> HSC: Latest vehicle status
+    HSC -> ParkingDB: Get latest parking status
+    ParkingDB --> HSC: Latest parking status
+    HSC -> ChargingDB: Get latest charging status
+    ChargingDB --> HSC: Latest charging status
+    HSC --> UI: Updated status and timestamp
+    UI --> Student: Display refreshed information
+end
+
+@enduml

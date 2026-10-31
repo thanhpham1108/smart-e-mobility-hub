@@ -1,0 +1,54 @@
+@startuml
+title UC-H01 - Manage Personal Profile
+autonumber
+
+actor Student
+boundary "Profile Page" as UI
+control "Profile Controller" as PC
+entity "User Profile" as Profile
+database "User Database" as DB
+
+Student -> UI: Open Profile
+UI -> PC: getProfile(session)
+PC -> DB: findProfile(studentId)
+DB --> PC: Profile data
+PC --> UI: Profile data + editable fields
+UI --> Student: Display profile
+
+alt Student chooses View Only
+    Student -> UI: Exit profile
+    UI --> Student: Return to previous screen
+
+else Student edits profile
+    Student -> UI: Select Edit Profile
+    UI --> Student: Enable permitted fields
+    Student -> UI: Update contact details
+    Student -> UI: Select Finish Editing
+    UI -> PC: updateProfile(changes)
+
+    PC -> PC: Validate permitted fields
+
+    alt Input is valid
+        PC -> DB: Save permitted changes
+
+        alt Save succeeds
+            DB --> PC: Update confirmed
+            PC --> UI: Update successful
+            UI --> Student: Display success message
+        else Save fails
+            DB --> PC: Save error
+            PC --> UI: Report save failure
+            UI --> Student: Display error message
+        end
+
+    else Input is invalid
+        PC --> UI: Validation errors
+        UI --> Student: Highlight invalid fields\nand show required formats
+        note over PC,DB
+          Existing profile data remains unchanged.
+          Student identity and role cannot be modified.
+        end note
+    end
+end
+
+@enduml
