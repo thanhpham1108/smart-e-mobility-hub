@@ -1,0 +1,97 @@
+@startuml AD_AdjustChargingSchedule
+skinparam style strictuml
+skinparam conditionStyle insideDiamond
+skinparam activityShape rounded
+skinparam roundCorner 14
+skinparam defaultFontName sans-serif
+
+skinparam ActivityBorderColor #0369A1
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityDiamondBorderColor #B45309
+skinparam ActivityDiamondBackgroundColor #FEF3C7
+skinparam ArrowColor #1E293B
+
+skinparam activity<<status>> {
+  RoundCorner 4
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+}
+
+title Detailed Activity Diagram: Adjust a Charging Schedule (UC-C03)
+
+|#E0F2FE|Operator|
+|#F0FDF4|ChargingController|
+|#FEF3C7|Database|
+
+|Operator|
+start
+:Select charging request;
+:Click "Adjust Schedule";
+
+|ChargingController|
+:Validate Operator privileges;
+
+|Database|
+:Load current schedule and selected request;
+
+|Operator|
+:View current queue position,
+port, and charging interval;
+:Edit queue position, port, or interval;
+:Click "Save Adjustment";
+
+|ChargingController|
+:Validate requested changes;
+if (Queue order only?) then (yes)
+  :Check new queue position is valid;
+else (no)
+  |Database|
+  :Read latest charging-point status
+  and existing allocations;
+
+  |ChargingController|
+  if (Port operational?) then (no)
+    |Operator|
+    :Show unavailable-point error;
+    stop
+  endif
+  ->yes;
+
+  |ChargingController|
+  if (Interval conflicts?) then (yes)
+    :Reject adjustment;
+    :Current schedule remains unchanged; <<status>>
+    |Operator|
+    :Show conflicting allocation;
+    stop
+  endif
+  ->no;
+
+  |ChargingController|
+  :Check remaining scheduling constraints;
+endif
+
+|ChargingController|
+if (Requested change valid?) then (no)
+  |Operator|
+  :Show invalid-adjustment error;
+  stop
+endif
+->yes;
+
+|Database|
+:Save approved adjustment atomically;
+
+|ChargingController|
+if (Save successful?) then (no)
+  :Previous valid schedule remains active; <<status>>
+  |Operator|
+  :Show save error;
+  stop
+endif
+->yes;
+
+|Operator|
+:Show confirmation and updated schedule;
+stop
+@enduml

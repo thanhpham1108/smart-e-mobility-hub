@@ -1,0 +1,75 @@
+@startuml SD_AdjustChargingSchedule
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam boxPadding 10
+skinparam maxMessageSize 200
+
+skinparam sequenceLifeLineBorderColor #0284C7
+skinparam sequenceLifeLineBackgroundColor #BAE6FD
+
+title Sequence Diagram: Adjust Charging Schedule (UC-C03)
+
+actor "Operator" as Op
+participant "Adjust Schedule Modal" as UI #E0F2FE
+participant "Charging Controller" as Ctrl #F0FDF4
+participant "Charging Point" as Point #FEF3C7
+participant "Charging Schedule" as Sched #FEF3C7
+participant "Charging Request" as Req #FEF3C7
+
+activate Op
+Op -> UI : Select request and click "Adjust Schedule"
+activate UI
+
+UI -> Ctrl : getCurrentSchedule(scheduleId)
+activate Ctrl
+Ctrl -> Sched : findCurrentSchedule(scheduleId)
+activate Sched
+Sched -->> Ctrl : currentSchedule
+deactivate Sched
+Ctrl -->> UI : currentSchedule
+deactivate Ctrl
+UI -->> Op : Show current point, time slot, and queue position
+
+Op -> UI : Edit time slot or switch charging point
+Op -> UI : Click "Save Adjustment"
+
+UI -> Ctrl : adjustScheduleSlot(scheduleId, newPointId, newTimeSlot)
+activate Ctrl
+
+Ctrl -> Point : checkPointOperationalStatus(newPointId)
+activate Point
+Point --> Ctrl : isOperational
+deactivate Point
+
+alt Charging Point Is Faulty or Offline
+    Ctrl -->> UI : showError("Selected charging point is unavailable or faulty")
+    UI -->> Op : Highlight port error and prompt alternative
+else Charging Point Is Operational
+    Ctrl -> Sched : checkTimeOverlap(newPointId, newTimeSlot, scheduleId)
+    activate Sched
+    Sched --> Ctrl : isOverlapping
+    deactivate Sched
+
+    alt Time Slot Conflicts With Another Vehicle
+        Ctrl -->> UI : showConflictWarning("Time slot conflicts with existing allocation")
+        UI -->> Op : Alert conflict and suggest open intervals
+    else Valid Adjustment (No Conflict)
+        Ctrl -> Sched : updateSlotAllocation(scheduleId, newPointId, newTimeSlot)
+        activate Sched
+        Sched --> Ctrl : updateSuccess
+        deactivate Sched
+
+        Ctrl -> Req : syncRequestSchedule(scheduleId, newPointId, newTimeSlot)
+        activate Req
+        Req --> Ctrl : syncSuccess
+        deactivate Req
+
+        Ctrl -->> UI : showSuccess("Schedule adjusted successfully")
+        UI -->> Op : Close modal and refresh Gantt view
+    end
+end
+
+deactivate Ctrl
+deactivate UI
+deactivate Op
+@enduml

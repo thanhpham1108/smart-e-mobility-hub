@@ -1,0 +1,79 @@
+@startuml SD_GenerateChargingSchedule
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam boxPadding 10
+skinparam maxMessageSize 200
+
+skinparam sequenceLifeLineBorderColor #0284C7
+skinparam sequenceLifeLineBackgroundColor #BAE6FD
+
+title Sequence Diagram: Generate Charging Schedule (UC-C02) - FCFS Policy
+
+actor "Operator" as Op
+participant "Charging Dashboard UI" as UI #E0F2FE
+participant "Charging Controller" as Ctrl #F0FDF4
+participant "Charging Request" as Req #FEF3C7
+participant "Charging Point" as Point #FEF3C7
+participant "Charging Schedule" as Sched #FEF3C7
+
+activate Op
+Op -> UI : Click "Generate Schedule"
+activate UI
+
+UI -> Ctrl : generateChargingSchedule(hubId)
+activate Ctrl
+
+Ctrl -> Req : getPendingRequests(hubId)
+activate Req
+Req -->> Ctrl : requestList or retrievalError
+deactivate Req
+
+Ctrl -> Point : getAvailablePoints(hubId)
+activate Point
+Point -->> Ctrl : availablePoints or retrievalError
+deactivate Point
+
+alt Request or charging-point retrieval failed
+    Ctrl -->> UI : showError("Charging data unavailable")
+    UI -->> Op : Display error; keep previous schedule
+else Charging data retrieved
+== First-Come First-Served Ordering (FCFS) ==
+Ctrl -> Ctrl : sortQueueBySubmissionTime(requestList)\nFor exact timestamp ties, lower battery first
+
+== Slot Allocation (FCFS) ==
+loop for each request in arrival order
+    Ctrl -> Ctrl : findFeasiblePointAndSlot(request, availablePoints)
+    alt Feasible Port & Time Found
+        Ctrl -> Ctrl : assignSlot(request, pointId, timeInterval)
+    else Port Busy or Insufficient Time
+        Ctrl -> Ctrl : markUnscheduled(request, reason)
+    end
+end
+
+== Save Schedule ==
+Ctrl -> Sched : saveNewSchedule(generatedSchedule)
+activate Sched
+
+alt Database Save Failure
+    Sched -->> Ctrl : saveFailed
+    deactivate Sched
+    Ctrl -->> UI : showError("Failed to save schedule")
+    UI -->> Op : Display error alert
+else Save Succeeded
+    Sched -->> Ctrl : saveSuccess
+    deactivate Sched
+
+    Ctrl -> Req : updateRequestStatuses(scheduledList, unscheduledList)
+    activate Req
+    Req -->> Ctrl : updateSuccess
+    deactivate Req
+
+    Ctrl -->> UI : displayResult(generatedSchedule, unscheduledList)
+    UI -->> Op : Update Gantt chart and unscheduled requests
+end
+end
+
+deactivate Ctrl
+deactivate UI
+deactivate Op
+@enduml

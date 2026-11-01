@@ -23,7 +23,7 @@ Theo đề bài quy định:
 | **2** | **Thành viên 2**<br>*(Vehicle Rental)* | Module 2: Thuê xe điện chia sẻ (Shared EVs) | • UC-R03: Đặt trước xe điện (Reserve)<br>• UC-R04: Nhận xe & Mở khóa (Pick Up)<br>• UC-R05: Trả xe & Hoàn tất chuyến đi | • Luồng đặt giữ chỗ & đếm ngược<br>• Toàn bộ chu trình từ mở khóa đến trả xe | Student Portal (Web):<br>- Danh sách xe & Lọc theo pin<br>- Form xác nhận đặt trước xe<br>- Trang hành trình đang chạy & Trả xe | Vòng đời của Xe chia sẻ (`SharedVehicle`) & Chuyến đi (`RentalTrip`) |
 | **3** | **Thành viên 3**<br>*(Parking & Private EV)* | Module 3: Đỗ xe & Sạc xe cá nhân (Private EVs) | • UC-P01: Đặt chỗ đỗ xe theo block 15p<br>• UC-P06: Check-in xe cá nhân vào bãi<br>• UC-P07: Check-out xe cá nhân | • Luồng kiểm tra chỗ trống xuyên suốt các khoảng 15p<br>• Luồng Check-in / Check-out bãi xe | Student Portal (Web):<br>- Đặt chỗ đỗ (chọn ngày & khung giờ)<br>- Vé điện tử / Mã QR Check-in<br>- Quản lý vị trí đỗ & yêu cầu sạc | Vòng đời Phiếu đặt chỗ đỗ (`ParkingReservation`) & Vị trí đỗ (`ParkingSpace`) |
 | **4** | **Thành viên 4**<br>*(Fleet & Incidents)* | Module 4: Giám sát Fleet & Xử lý sự cố | • UC-F04: Điều phối xe giữa các Hub<br>• UC-F05: Xác nhận hoàn tất điều chuyển<br>• UC-I02: Tiếp nhận & Xử lý xe hỏng | • Luồng lập lệnh và điều chuyển xe<br>• Luồng báo hỏng, cô lập và bảo trì xe/trụ sạc | Operator Portal (Web):<br>- Bản đồ giám sát toàn mạng lưới Hub<br>- Quản lý lệnh điều chuyển xe<br>- Bảng xử lý Ticket sự cố | Vòng đời Phiếu sự cố (`IncidentTicket`) & Lệnh điều chuyển (`RedistributionOrder`) |
-| **5** | **Thành viên 5**<br>*(Smart Charging)* | Module 5: Lập lịch sạc thông minh | • UC-C01: Xem hàng đợi & lịch sạc<br>• UC-C02: Sinh lịch sạc tự động (ưu tiên SOC)<br>• UC-C03: Điều chỉnh lịch sạc thủ công | • Thuật toán xếp hàng & ưu tiên sạc (UC-S04)<br>• Phân bổ cổng sạc và khung giờ (UC-S05) | Operator Portal (Web):<br>- Biểu đồ Gantt / Lịch biểu cổng sạc<br>- Danh sách hàng đợi sạc pin<br>- Form điều chỉnh can thiệp lịch sạc | Vòng đời Phiên sạc (`ChargingSession`) & Yêu cầu sạc (`ChargingRequest`) |
+| **5** | **Thành viên 5**<br>*(Smart Charging)* | Module 5: Lập lịch sạc thông minh | • UC-C01: Xem hàng đợi & lịch sạc<br>• UC-C02: Sinh lịch sạc tự động theo FCFS<br>• UC-C03: Điều chỉnh lịch sạc thủ công | • UC-C02: Lập lịch theo thứ tự yêu cầu đến (FCFS)<br>• UC-C03: Điều chỉnh lịch và kiểm tra xung đột cổng sạc | Operator Portal (Web):<br>- Biểu đồ Gantt / Lịch biểu cổng sạc<br>- Danh sách hàng đợi sạc FCFS<br>- Form điều chỉnh lịch sạc thủ công | Vòng đời Yêu cầu sạc (`ChargingRequest`) |
 | **6** | **Thành viên 6**<br>*(What-if Simulation)* | Module 6: Mô phỏng kịch bản vận hành | • UC-W01: Cấu hình kịch bản mô phỏng<br>• UC-W02: Thực thi mô phỏng What-if<br>• UC-W05: So sánh kịch bản với thực tế | • Luồng nạp Snapshot mạng lưới & tính toán tải<br>• Luồng đánh giá tác động & sinh giải pháp đề xuất | Operator Portal (Web):<br>- Form thiết lập tham số kịch bản<br>- Bảng kết quả mô phỏng & Đề xuất<br>- Màn hình so sánh đa kịch bản | Vòng đời Kịch bản / Lần chạy mô phỏng (`SimulationRun`) |
 
 ---
@@ -102,16 +102,16 @@ Theo đề bài quy định:
 - **File kịch bản tham chiếu:** [docs/submission-1/use-case-scenarios/smart_charging_scheduling.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-1/use-case-scenarios/smart_charging_scheduling.md)
 - **Nhiệm vụ cụ thể:**
   1. **Sequence Diagrams (3 diagrams):**
-     - `SD_GenerateChargingSchedule`: Operator kích hoạt lập lịch $\rightarrow$ ChargingScheduler lấy danh sách xe cần sạc $\rightarrow$ gọi `UC-S04` xếp độ ưu tiên (SOC thấp, lịch đi sớm) $\rightarrow$ gọi `UC-S05` gán cổng sạc $\rightarrow$ lưu Schedule.
+     - `SD_GenerateChargingSchedule` (UC-C02): Operator kích hoạt lập lịch $\rightarrow$ ChargingScheduler lấy các yêu cầu sạc $\rightarrow$ sắp xếp theo thời điểm gửi tăng dần (FCFS; nếu trùng chính xác thì xe pin yếu hơn được xét trước) $\rightarrow$ gán cổng và khung giờ khả dụng $\rightarrow$ lưu Schedule.
      - `SD_AdjustChargingSchedule`: Operator kéo thả/điều chỉnh thủ công thời gian sạc $\rightarrow$ kiểm tra xung đột cổng $\rightarrow$ cập nhật lịch.
      - `SD_ViewChargingQueue`: Truy vấn danh sách xe đang chờ sạc và xe đang sạc.
   2. **Activity Diagrams (1-2 diagrams):**
-     - Thuật toán ưu tiên sạc thông minh (Duyệt danh sách, tính điểm ưu tiên theo SOC và thời gian cần xe).
-     - Quy trình phân bổ khe sạc và xử lý khi cổng sạc bị đầy / quá tải nguồn điện.
+     - UC-C02: Quy trình lập lịch FCFS, duyệt yêu cầu theo thời điểm gửi và xử lý trường hợp không có cổng hoặc không đủ thời gian sạc.
+     - UC-C03: Quy trình điều chỉnh lịch thủ công, kiểm tra xung đột cổng/khung giờ trước khi lưu thay đổi.
   3. **UI Mockup:**
-     - Thiết kế 3 màn hình Web Dashboard: (1) Biểu đồ Gantt lịch biểu các cổng sạc; (2) Hàng đợi xe chờ sạc; (3) Modal cấu hình tham số ưu tiên.
+     - Thiết kế 3 màn hình Web Dashboard: (1) Biểu đồ Gantt lịch biểu các cổng sạc; (2) Hàng đợi xe chờ sạc theo FCFS; (3) Modal điều chỉnh lịch sạc thủ công.
   4. **State-Chart (Bonus):**
-     - Vòng đời phiên sạc (`Submitted` $\rightarrow$ `Scheduled` $\rightarrow$ `Charging` $\rightarrow$ `Completed` / `Interrupted`).
+     - Vòng đời yêu cầu sạc `ChargingRequest` (`Pending` $\rightarrow$ `Scheduled` $\rightarrow$ `Charging` $\rightarrow$ `Completed` / `Interrupted`).
 
 ---
 

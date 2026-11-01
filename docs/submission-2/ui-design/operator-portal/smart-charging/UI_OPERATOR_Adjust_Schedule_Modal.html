@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>SmartHub Ops - Modal Điều Chỉnh Lịch Sạc Thủ Công</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            emerald: {
+              500: '#10B981',
+              600: '#059669',
+              700: '#047857',
+            },
+            cyan: {
+              500: '#06B6D4',
+              600: '#0891B2',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      width: 1440px;
+      height: 900px;
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 antialiased flex h-[900px] w-[1440px] relative select-none">
+
+  <!-- ======================================================== -->
+  <!-- BACKGROUND DASHBOARD (BLURRED GANTT VIEW) -->
+  <!-- ======================================================== -->
+  <div class="flex h-full w-full filter blur-[2px] opacity-40 pointer-events-none">
+    <!-- Fake Sidebar -->
+    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between">
+      <div class="h-16 border-b border-slate-800 p-4 font-bold text-white">SmartHub Ops</div>
+      <div class="p-4 space-y-2">
+        <div class="h-8 bg-slate-800 rounded"></div>
+        <div class="h-8 bg-emerald-950/60 rounded"></div>
+        <div class="h-8 bg-slate-800 rounded"></div>
+      </div>
+      <div class="p-4 border-t border-slate-800 h-20"></div>
+    </aside>
+    <!-- Fake Main Area -->
+    <main class="flex-1 bg-slate-100 flex flex-col">
+      <header class="h-16 bg-white border-b border-slate-200 px-6"></header>
+      <div class="p-6 grid grid-cols-4 gap-4">
+        <div class="h-20 bg-white rounded-xl border border-slate-200"></div>
+        <div class="h-20 bg-white rounded-xl border border-slate-200"></div>
+        <div class="h-20 bg-white rounded-xl border border-slate-200"></div>
+        <div class="h-20 bg-white rounded-xl border border-slate-200"></div>
+      </div>
+      <div class="px-6 flex-1 pb-6">
+        <div class="h-full bg-white rounded-xl border border-slate-200"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- DARK MODAL OVERLAY BACKDROP -->
+  <!-- ======================================================== -->
+  <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-6">
+
+    <!-- ======================================================== -->
+    <!-- INTERACTIVE MODAL DIALOG (w-[740px]) -->
+    <!-- ======================================================== -->
+    <div class="bg-white w-[740px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg border border-emerald-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>Can Thiệp Điều Chỉnh Lịch Sạc Thủ Công</span>
+              <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-xs font-mono font-medium">UC-C03</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5">
+              Yêu cầu sạc: <span class="font-mono font-semibold text-slate-800">#REQ-8802</span> • Xe: <span class="font-mono font-bold text-slate-900">59A-992.14</span> (VinFast VF e34)
+            </div>
+          </div>
+        </div>
+
+        <!-- Close Button -->
+        <button class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 flex items-center justify-center transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Form & Conflict Checks) -->
+      <div class="p-6 space-y-4 text-xs overflow-y-auto max-h-[660px]">
+
+        <!-- Box 1: Snapshot thông tin ban đầu của yêu cầu -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 grid grid-cols-4 gap-3">
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Chủ xe & Vai trò</div>
+            <div class="font-semibold text-slate-900 text-xs mt-0.5">Trần Minh Khoa</div>
+            <div class="text-[11px] text-slate-500 font-mono">SV K21 Khoa KHMT</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Mức Pin Hiện Tại</div>
+            <div class="text-rose-600 font-mono font-bold text-sm mt-0.5 flex items-center gap-1">
+              <span>14%</span>
+              <span class="text-[9px] px-1 py-0.2 rounded bg-rose-100 font-sans">Nguy cấp</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Pin khả dụng: 5.8 kWh</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Mốc Thời Gian</div>
+            <div class="font-mono text-slate-800 font-semibold text-xs mt-0.5">Đến: 10:12</div>
+            <div class="font-mono text-rose-600 font-bold text-[11px]">Hạn đi: 11:45 (còn 75p)</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Trạng Thái Hàng Đợi</div>
+            <div class="font-bold text-amber-700 text-xs mt-0.5 flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-amber-500"></span> Hạng #1 (FCFS)
+            </div>
+            <div class="text-[10px] text-slate-400">Chưa được cấp slot</div>
+          </div>
+        </div>
+
+        <!-- Box 2: Form can thiệp các tham số -->
+        <div class="space-y-3.5 pt-1">
+          <div class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+            <span>Tham số can thiệp bởi Kỹ sư vận hành</span>
+            <span class="text-slate-400 font-normal">(Override Policy)</span>
+          </div>
+
+          <!-- Radio Selection: Chọn Cổng sạc muốn phân bổ -->
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1.5">1. Chọn Cổng Sạc Phân Bổ (Target Port):</label>
+            <div class="grid grid-cols-3 gap-2.5">
+              <!-- Option 1: Selected (DC-03 Trống) -->
+              <div class="border-2 border-emerald-500 bg-emerald-50/40 rounded-xl p-2.5 cursor-pointer flex flex-col justify-between shadow-xs">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-900 font-mono text-xs">Cổng DC-03</span>
+                  <span class="px-1.5 py-0.2 rounded bg-emerald-600 text-white font-mono text-[9px] font-bold">60 kW</span>
+                </div>
+                <div class="text-[11px] text-emerald-800 font-semibold mt-1">✓ Sẵn sàng ngay (Trống)</div>
+                <div class="text-[10px] text-slate-500 mt-0.5">Ước tính nạp: ~28 phút</div>
+              </div>
+
+              <!-- Option 2: DC-01 (Bận) -->
+              <div class="border border-slate-200 bg-white rounded-xl p-2.5 opacity-60 cursor-not-allowed flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700 font-mono text-xs">Cổng DC-01</span>
+                  <span class="px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-mono text-[9px]">60 kW</span>
+                </div>
+                <div class="text-[11px] text-slate-500 mt-1">Đang sạc xe 59A-882.19</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">Trống sau: 11:15 (Trễ)</div>
+              </div>
+
+              <!-- Option 3: AC-04 (11kW) -->
+              <div class="border border-slate-200 bg-white rounded-xl p-2.5 opacity-75 hover:border-slate-300 cursor-pointer flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-700 font-mono text-xs">Cổng AC-04</span>
+                  <span class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono text-[9px]">11 kW</span>
+                </div>
+                <div class="text-[11px] text-amber-700 font-semibold mt-1">⚠ Tốc độ chậm (11kW)</div>
+                <div class="text-[10px] text-rose-500 mt-0.5">Cần 3h15p (Không kịp giờ)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Time Window & Target SOC Grid -->
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Khung giờ sạc -->
+            <div>
+              <label class="block text-slate-700 font-semibold mb-1">2. Khung Giờ Cấp Slot Sạc:</label>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[10px] text-slate-500 block mb-0.5">Bắt đầu sạc:</span>
+                  <input type="text" value="10:35" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-mono text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-500 block mb-0.5">Kết thúc dự kiến:</span>
+                  <input type="text" value="11:05" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-mono text-xs font-semibold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                </div>
+              </div>
+              <div class="text-[10px] text-emerald-700 font-medium mt-1">✓ Thời lượng sạc: 30 phút (kịp trước 11:45)</div>
+            </div>
+
+            <!-- Target SOC Override -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="text-slate-700 font-semibold">3. Điều Chỉnh Mức Pin Mục Tiêu:</label>
+                <span class="font-mono font-bold text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">75% SOC</span>
+              </div>
+              <input type="range" min="50" max="100" value="75" class="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-200 rounded-lg">
+              <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
+                <span>50% (Đủ đi 150km)</span>
+                <span class="text-emerald-700 font-semibold">75% (Tối ưu an toàn)</span>
+                <span>100% (Pin đầy)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lý do can thiệp -->
+          <div>
+            <label class="block text-slate-700 font-semibold mb-1">4. Lý Do Can Thiệp Ưu Tiên (Audit Log Note):</label>
+            <div class="relative">
+              <input type="text" value="Tài xế sinh viên có lịch bảo vệ đồ án tốt nghiệp lúc 11:45 tại Nhà B6 - Ưu tiên khẩn cấp" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- Box 3: Real-time Conflict & Safety Validation Check -->
+        <div class="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3.5 space-y-1.5">
+          <div class="font-bold text-emerald-900 text-xs flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Kết Quả Kiểm Tra Tự Động Xung Đột & Tải Lưới (Conflict-Free Verification)</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 pt-1 text-[11px]">
+            <div class="flex items-center gap-1.5 text-emerald-800 font-medium">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span>Cổng DC-03 trống suốt 10:30 - 11:30</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-emerald-800 font-medium">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span>Tải lưới: 158.2 kW / 200 kW (79%)</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-emerald-800 font-medium">
+              <span class="text-emerald-600 font-bold">✓</span>
+              <span>Xong trước giờ đi 40 phút</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+        <div class="text-[11px] text-slate-500 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Hành động can thiệp sẽ được lưu vào lịch sử kiểm toán của Hub.</span>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <button class="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs transition cursor-pointer">
+            Hủy Bỏ
+          </button>
+          <button class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-700/20 transition cursor-pointer flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span>Lưu & Kích Hoạt Lịch Sạc</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>

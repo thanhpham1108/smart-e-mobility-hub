@@ -85,7 +85,7 @@
 4. **System:** retrieves the submission timestamp and required charging duration for each request.
 5. **System:** retrieves available charging points and their charging capacities.
 6. **System:** validates the retrieved scheduling data.
-7. **System:** orders active charging requests in First-Come, First-Served (FCFS) sequence based on their submission timestamp.
+7. **System:** orders active charging requests in First-Come, First-Served (FCFS) sequence based on their submission timestamp. Only if timestamps are exactly equal, the request with the lower battery level is considered first.
 8. **System:** executes **<<include>> Allocate Charging Slots**.
 9. **System:** checks available charging points and available time intervals.
 10. **System:** assigns a feasible charging point and time interval to the earliest-arrived request.
@@ -124,8 +124,8 @@
 **A4. Requests Arrive with Identical Timestamps**
 
 1. At Step 7, two or more requests share the exact same submission timestamp.
-2. The System applies the secondary tie-breaking rule based on Request ID ordering.
-3. The request with the earlier Request ID is processed first.
+2. The System compares the vehicles' battery levels only for requests with identical timestamps.
+3. The request for the vehicle with the lower battery level is processed first; if battery levels are also equal, Request ID determines a stable order.
 4. The System continues with slot allocation in FCFS order.
 
 ### Exception Flow

@@ -1,0 +1,88 @@
+@startuml AD_GenerateChargingSchedule_FCFS
+skinparam style strictuml
+skinparam conditionStyle insideDiamond
+skinparam activityShape rounded
+skinparam roundCorner 14
+skinparam defaultFontName sans-serif
+
+skinparam ActivityBorderColor #0369A1
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityDiamondBorderColor #B45309
+skinparam ActivityDiamondBackgroundColor #FEF3C7
+skinparam ArrowColor #1E293B
+
+skinparam activity<<status>> {
+  RoundCorner 4
+  BackgroundColor #F8FAFC
+  BorderColor #64748B
+}
+
+title Detailed Activity Diagram: Smart Charging Scheduling (FCFS Policy)
+
+|#E0F2FE|Operator|
+|#F0FDF4|ChargingController|
+|#FEF3C7|Database|
+
+|Operator|
+start
+:Select Mobility Hub on Dashboard;
+:Click "Generate Charging Schedule";
+
+|ChargingController|
+:Validate Operator privileges;
+
+|Database|
+:Fetch pending requests, charging ports,
+and active hub reservations;
+
+|ChargingController|
+if (
+      Active charging requests      
+      found in queue?      
+) then (no)
+  |Operator|
+  :No Pending Requests; <<status>>
+  stop
+endif
+->yes;
+
+|ChargingController|
+:Sort requests in FCFS arrival order
+(Exact timestamp tie: lower battery first);
+
+:Initialize allocation plan
+and unscheduled list;
+
+repeat
+  :Extract next request in FCFS arrival order;
+  if (
+      Operational port available with      
+      open slot before departure?      
+) then (yes)
+    :Assign port and time slot,
+and reserve port capacity;
+  else (no)
+    :Set request status: Unscheduled
+(No available port or insufficient charging time); <<status>>
+  endif
+repeat while (
+      Pending requests remain      
+      in queue?      
+) is (yes)
+->no;
+
+:Compile charging schedule
+and unscheduled requests summary;
+
+|Database|
+:Persist charging schedule allocations
+and update all request statuses;
+
+|ChargingController|
+:Format schedule for Gantt visualization;
+
+|Operator|
+:Render charging Gantt chart
+and unscheduled requests;
+stop
+@enduml

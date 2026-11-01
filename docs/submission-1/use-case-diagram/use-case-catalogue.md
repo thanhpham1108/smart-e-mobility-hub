@@ -98,9 +98,9 @@ Parking arrival and departure times are selected from available time points, spa
 
 | ID | Use case | Description |
 | --- | --- | --- |
-| UC-C01 | View the Charging Queue and Schedule | View charging requests, priorities, allocated points and intervals, and requests that remain unscheduled. |
-| UC-C02 | Generate a Charging Schedule | Produce or refresh a schedule using battery levels, upcoming usage requirements, available equipment, charging capacity, and existing commitments. Return feasible allocations and identify unscheduled requests. |
-| UC-C03 | Adjust a Charging Schedule | Modify permitted priorities, intervals, or assignments in an existing schedule. Validate resource availability and conflicts before accepting changes and record their effects on affected requests. |
+| UC-C01 | View the Charging Queue and Schedule | View charging requests ordered by submission time (FCFS), allocated points and intervals, and requests that remain unscheduled. When timestamps are identical, show the lower-battery request first. |
+| UC-C02 | Generate a Charging Schedule | Produce or refresh a schedule by processing requests in submission-time order (FCFS). Only for requests with identical timestamps, process the lower-battery request first; then assign available equipment and non-conflicting intervals and identify requests that remain unscheduled. |
+| UC-C03 | Adjust a Charging Schedule | Modify a permitted queue position, interval, or charging-point assignment in an existing schedule. Validate resource availability and conflicts before accepting the change and record its effect on the request. |
 
 ### 2.9 What-if Simulation
 
@@ -135,7 +135,7 @@ Detailed scenarios: [External IoT & Telemetry](../use-case-scenarios/external_io
 | UC-S01 | Check Vehicle Availability | Check the selected vehicle's operating condition and relevant commitments, accounting for the requesting Student's valid reservation when applicable. Return an availability decision and reason. |
 | UC-S02 | Check Parking Availability | Check capacity for every slot in the selected Hub's requested parking interval against occupancy, overlapping reservations, and unavailable spaces. Sufficient capacity must be available in all covered slots; if even one slot lacks capacity, the whole request cannot be fulfilled. Return an availability decision and reason. |
 | UC-S03 | Validate Redistribution Feasibility | Check vehicle eligibility, source/destination suitability, conflicting commitments, and destination capacity. Return a feasibility decision and any rejection reasons. |
-| UC-S04 | Prioritize Charging Requests | Prioritize eligible requests using battery levels, upcoming usage requirements, and the configured tie-breaking policy. |
+| UC-S04 | Order Charging Requests (FCFS) | Order eligible requests by submission timestamp. If two requests have the exact same timestamp, order the lower-battery request first; use Request ID only as a final stable tie-breaker. |
 | UC-S05 | Allocate Charging Slots | Assign available charging points and time intervals without violating capacity or existing commitments. Identify unallocated requests and the reasons they cannot be scheduled. |
 | UC-S06 | Obtain a Network Snapshot | Obtain a consistent, timestamped baseline of the network state and relevant resource commitments for the simulation. |
 | UC-S07 | Evaluate Scenario Impact | Calculate the simulated effects on service capacity and resource utilization relative to the selected baseline. |
@@ -163,7 +163,7 @@ UC-T01–UC-T03 supply operational data used by Student and Operator use cases. 
 | INC-02 | UC-R04 — Pick Up a Shared Vehicle | UC-S01 — Check Vehicle Availability |
 | INC-03 | UC-P01 — Reserve a Parking Space | UC-S02 — Check Parking Availability |
 | INC-04 | UC-F04 — Coordinate Vehicle Redistribution | UC-S03 — Validate Redistribution Feasibility |
-| INC-05 | UC-C02 — Generate a Charging Schedule | UC-S04 — Prioritize Charging Requests |
+| INC-05 | UC-C02 — Generate a Charging Schedule | UC-S04 — Order Charging Requests (FCFS) |
 | INC-06 | UC-C02 — Generate a Charging Schedule | UC-S05 — Allocate Charging Slots |
 | INC-07 | UC-W02 — Run a What-if Simulation | UC-S06 — Obtain a Network Snapshot |
 | INC-08 | UC-W02 — Run a What-if Simulation | UC-S07 — Evaluate Scenario Impact |

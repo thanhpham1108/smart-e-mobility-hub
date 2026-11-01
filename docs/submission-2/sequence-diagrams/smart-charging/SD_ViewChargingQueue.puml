@@ -1,0 +1,54 @@
+@startuml SD_ViewChargingQueue
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+skinparam boxPadding 10
+skinparam maxMessageSize 200
+
+skinparam sequenceLifeLineBorderColor #0284C7
+skinparam sequenceLifeLineBackgroundColor #BAE6FD
+
+title Sequence Diagram: View Charging Queue and Schedule (UC-C01)
+
+actor "Operator" as Op
+participant "Charging Dashboard UI" as UI #E0F2FE
+participant "Charging Controller" as Ctrl #F0FDF4
+participant "Charging Request" as Req #FEF3C7
+participant "Charging Point" as Point #FEF3C7
+participant "Charging Schedule" as Sched #FEF3C7
+
+activate Op
+Op -> UI : Click "View Queue & Schedule"
+activate UI
+
+UI -> Ctrl : getQueueAndSchedule(hubId)
+activate Ctrl
+
+Ctrl -> Req : findPendingRequests(hubId)
+activate Req
+Req -->> Ctrl : pendingRequests
+deactivate Req
+
+Ctrl -> Point : getChargingPointsStatus(hubId)
+activate Point
+Point -->> Ctrl : chargingPointsList
+deactivate Point
+
+Ctrl -> Sched : getCurrentSchedule(hubId)
+activate Sched
+Sched -->> Ctrl : currentSchedule
+deactivate Sched
+
+alt Database Connection Failure
+    Ctrl -->> UI : showError("Failed to retrieve charging data")
+    UI -->> Op : Display error alert
+else Data Retrieved Successfully
+    Ctrl -> Ctrl : sortPendingBySubmissionTime(pendingRequests)\nFCFS; lower battery first only for equal timestamps
+    Ctrl -> Ctrl : identifyUnscheduledRequests(pendingRequests, currentSchedule)
+    Ctrl -->> UI : displayQueueAndSchedule(sortedPendingRequests, currentSchedule, chargingPointsList)
+    UI -->> Op : Render schedule Gantt chart, port status, and waiting queue
+end
+
+deactivate Ctrl
+deactivate UI
+deactivate Op
+@enduml
