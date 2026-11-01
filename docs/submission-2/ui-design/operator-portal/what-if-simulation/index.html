@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SmartHub Ops - What-if Simulation</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="refinements.css">
 </head>
 <body>
   <div class="shell">
@@ -38,7 +39,7 @@
         <section class="view active" data-view="configure">
           <div class="screen-head">
             <div><p class="eyebrow">WHAT-IF SIMULATION · UC-W01</p><h1>Configure operating scenario</h1><p>Test hypothetical demand and resource failures without touching live operations.</p></div>
-            <div class="head-actions"><button class="button secondary" data-action="reset">Reset</button><button class="button primary" data-action="run">Run simulation →</button></div>
+            <div class="head-actions"><button class="button secondary" data-action="reset">Reset</button><button class="button primary" data-action="save">Validate &amp; save scenario</button></div>
           </div>
 
           <div class="scenario-grid">
@@ -64,15 +65,15 @@
 
             <aside class="side-stack">
               <article class="card baseline-card">
-                <div class="section-title compact"><div><span>3</span><div><h2>Baseline snapshot</h2></div></div><span class="badge green">Fresh</span></div>
-                <div class="snapshot-id"><small>SNAPSHOT ID</small><strong>NET-20261101-0930</strong></div>
-                <dl><div><dt>Captured</dt><dd>09:30:12 UTC+7</dd></div><div><dt>Network version</dt><dd>v1,842</dd></div><div><dt>Mobility Hubs</dt><dd>6 active</dd></div><div><dt>Vehicles</dt><dd>218 tracked</dd></div><div><dt>Charging points</dt><dd>31 / 34 online</dd></div></dl>
-                <div class="isolation"><span>✓</span><div><strong>Isolated execution</strong><p>A deep copy of this snapshot will be used. No reservations, occupancy or charging records will be changed.</p></div></div>
+                <div class="section-title compact"><div><span>3</span><div><h2>Scenario summary</h2></div></div><span class="badge amber" id="scenario-status">Draft</span></div>
+                <div class="snapshot-id"><small>SCENARIO ID</small><strong id="scenario-id">Not saved</strong></div>
+                <dl><div><dt>Conditions</dt><dd id="summary-condition-count">3 selected</dd></div><div><dt>Primary Hub</dt><dd>Metro Station</dd></div><div><dt>Secondary Hub</dt><dd>KTX Khu A</dd></div><div><dt>Start</dt><dd>01 Nov · 17:00</dd></div><div><dt>Time horizon</dt><dd>120 minutes</dd></div></dl>
+                <div class="isolation"><span>✓</span><div><strong>Configuration only</strong><p>Saving creates a ReadyToRun scenario. It does not start a run or obtain a live-network snapshot.</p></div></div>
               </article>
               <article class="card readiness">
-                <div class="readiness-head"><div><span class="pulse"></span><strong>Ready to run</strong></div><small>Est. 18 seconds</small></div>
-                <ul><li><span>✓</span>Required parameters validated</li><li><span>✓</span>Resources exist in baseline</li><li><span>✓</span>Simulation worker available</li></ul>
-                <button class="button primary wide" data-action="run">Create run from snapshot</button>
+                <div class="readiness-head"><div><span class="pulse"></span><strong id="readiness-title">Ready to validate</strong></div><small id="readiness-meta">No run started</small></div>
+                <ul><li><span>✓</span>Required parameters provided</li><li><span>✓</span>Affected resources selected</li><li><span>✓</span>Assumptions documented</li></ul>
+                <button class="button primary wide" data-action="save">Validate &amp; save as ReadyToRun</button>
               </article>
             </aside>
           </div>
@@ -83,6 +84,13 @@
             <div><p class="eyebrow">SIMULATION RESULT · UC-W03 / UC-W04</p><h1>Metro peak disruption · SIM-1101-04</h1><p>Completed against snapshot NET-20261101-0930 · 120-minute horizon.</p></div>
             <div class="head-actions"><span class="badge green large">● Completed</span><button class="button secondary" data-screen="compare">Compare</button></div>
           </div>
+
+          <article class="card result-context" aria-label="Simulation run context">
+            <div><small>BASELINE</small><strong>NET-20261101-0930 · Fresh</strong><span>Captured 09:30:12 UTC+7 · network v1,842</span></div>
+            <div><small>ASSUMPTIONS</small><strong>+200% Metro arrivals</strong><span>2 DC failures · KTX Khu A offline for 45 min</span></div>
+            <div><small>AFFECTED RESOURCES</small><strong>Metro Station · KTX Khu A</strong><span>DC-01 and DC-03 · shared-vehicle fleet</span></div>
+            <div><small>SIMULATION PERIOD</small><strong>17:00–19:00 · 120 min</strong><span>Recorded with this completed run</span></div>
+          </article>
 
           <div class="kpi-grid">
             <article class="card kpi"><span>Service capacity</span><strong>82%</strong><small class="negative">−18% vs baseline</small></article>
@@ -124,6 +132,7 @@
             <article class="card comparison-card">
               <div class="section-title simple"><div><h2>Metric comparison</h2><p>Common schema: Mobility Impact Metrics v2.1</p></div><span class="badge green">7 common metrics</span></div>
               <table class="comparison-table"><thead><tr><th>Measure</th><th>Baseline</th><th>Scenario A</th><th>Scenario B</th><th>Difference B − A</th></tr></thead><tbody><tr><td>Service capacity</td><td>100%</td><td>89%</td><td>82%</td><td class="bad">−7 pp</td></tr><tr><td>Unserved arrivals</td><td>0</td><td>78</td><td>146</td><td class="bad">+68</td></tr><tr><td>Parking peak</td><td>72%</td><td>91%</td><td>96%</td><td class="bad">+5 pp</td></tr><tr><td>Charging queue peak</td><td>2</td><td>5</td><td>11</td><td class="bad">+6</td></tr><tr><td>Average charging delay</td><td>4 min</td><td>12 min</td><td>26 min</td><td class="bad">+14 min</td></tr><tr><td>Available vehicles · 18:00</td><td>62</td><td>49</td><td>41</td><td class="bad">−8</td></tr><tr><td>Projected revenue</td><td>₫42.8m</td><td>₫39.9m</td><td>₫35.6m</td><td class="bad">−₫4.3m</td></tr></tbody></table>
+              <div class="outcome-comparison"><div><span>A</span><p><strong>2 recommended actions</strong><small>Redistribute vehicles and redirect arrivals · expected capacity 89% → 95%</small></p></div><div><span>B</span><p><strong>3 recommended actions</strong><small>Redistribute, protect DC capacity and redirect arrivals · expected capacity 82% → 93%</small></p></div></div>
               <div class="bar-block"><div><span>Scenario A · predicted capacity</span><strong>89%</strong></div><div class="bar"><i style="width:89%"></i></div><div><span>Scenario B · predicted capacity</span><strong>82%</strong></div><div class="bar danger"><i style="width:82%"></i></div></div>
             </article>
 

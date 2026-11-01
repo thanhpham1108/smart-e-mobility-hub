@@ -14,6 +14,6 @@ Open `index.html` directly, or serve this directory with a local HTTP server. Th
 
 ## Export and verify screenshots
 
-Run `capture_mockups.cjs` with Node.js, Playwright and a local Chromium installation. The script exports each screen at exactly 1440 x 900, rejects viewport overflow, exercises a simulation run, and confirms that neither simulation nor comparison changes the live-network fixture.
+Run `capture_mockups.cjs` with Node.js, Playwright and a local Chromium installation. The script exports each screen at exactly 1440 x 900, rejects viewport overflow, verifies that saving creates a `ReadyToRun` scenario without starting a run, then exercises an isolated simulation and a read-only comparison without changing the live-network fixture.
 
 The UI follows the shared emerald/cyan/slate design system and the Operator Portal layout. It is a design prototype; it does not connect to a backend, IoT gateway or production simulation engine.

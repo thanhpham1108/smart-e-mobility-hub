@@ -29,67 +29,79 @@ entity "Live Network Repository" as LIVE
 control "SimulationWorker" as SW
 control "ImpactEvaluator\n(UC-S07)" as IE
 control "RecommendationEngine\n(UC-S08)" as RE
+entity "ScenarioRepository" as SR
 entity "SimulationRunRepository" as RR
 
 OP -> UI: Select ReadyToRun scenario and Run
 UI -> C: runScenario(scenarioId)
-C -> RR: createRun(status = Queued, scenarioId)
-RR --> C: runId
-C --> UI: Accepted runId; UI remains responsive
-C ->> SW: executeAsync(runId, scenarioId)
+C -> C: Verify Operator permission
+C -> SR: loadReadyToRunScenario(scenarioId)
+SR --> C: Scenario, resource versions and assumptions / unavailable
+C -> C: Revalidate status, conditions, resources and period
 
-SW -> RR: loadScenarioAndMarkSnapshotting(runId)
-RR --> SW: Valid scenario + assumptions
+alt Access denied, scenario missing or no longer valid
+  C --> UI: Reject request with permission or validation errors
+  UI --> OP: Correct scenario, select another scenario or exit
+else Operator authorized and scenario valid
+  C -> RR: createRun(status = Queued, scenarioId)
+  RR --> C: runId
+  C --> UI: Accepted runId; UI remains responsive
+  C ->> SW: executeAsync(runId, scenarioId)
 
-group UC-S06 - Obtain a Network Snapshot
-  SW -> SS: obtainConsistentSnapshot(scope, baselineTime)
-  SS -> LIVE: read vehicles, parking, charging,\nreservations, incidents and data versions
-  LIVE --> SS: Timestamped network state / read failure
-  SS -> SS: Verify consistency and data freshness
-  SS --> SW: Consistent snapshot / failure reason
-end
+  SW -> SR: loadImmutableScenario(runId, scenarioId)
+  SR --> SW: Validated scenario + assumptions
+  SW -> RR: markSnapshotting(runId)
 
-alt Snapshot unavailable or inconsistent
-  SW -> RR: markFailed(runId, stage = Snapshotting, reason)
-  RR --> SW: Failed state saved
-else Snapshot obtained
-  SW -> RR: saveBaselineAndMarkRunning(runId, snapshot metadata)
-  SW -> SW: Deep-clone snapshot into isolated state
-  SW -> SW: Apply hypothetical events over time horizon
-
-  opt Simulated Hub becomes offline
-    SW -> SW: Pause simulated charging sessions
-    SW -> SW: Stop simulated charging-time progression
+  group UC-S06 - Obtain a Network Snapshot
+    SW -> SS: obtainConsistentSnapshot(scope, baselineTime)
+    SS -> LIVE: read vehicles, parking, charging,\nreservations, incidents and data versions
+    LIVE --> SS: Timestamped network state / read failure
+    SS -> SS: Verify consistency and data freshness
+    SS --> SW: Consistent snapshot / failure reason
   end
 
-  alt Simulation timeout or engine failure
-    SW -> RR: markFailed(runId, stage = Running, reason)
-  else Simulation completed
-    group UC-S07 - Evaluate Scenario Impact
-      SW -> IE: evaluate(isolatedState, baseline, measures)
-      IE --> SW: Service capacity, parking utilization,\nvehicle availability and charging congestion
+  alt Snapshot unavailable or inconsistent
+    SW -> RR: markFailed(runId, stage = Snapshotting, reason)
+    RR --> SW: Failed state saved
+  else Snapshot obtained
+    SW -> RR: saveBaselineAndMarkRunning(runId, snapshot metadata)
+    SW -> SW: Deep-clone snapshot into isolated state
+    SW -> SW: Apply hypothetical events over time horizon
+
+    opt Simulated Hub becomes offline
+      SW -> SW: Pause simulated charging sessions
+      SW -> SW: Stop simulated charging-time progression
     end
 
-    alt Impact evaluation fails
-      SW -> RR: markFailed(runId, stage = Evaluating, reason)
-    else Impact evaluated
-      group UC-S08 - Generate Coordination Recommendations
-        SW -> RE: generate(impact, isolatedState, constraints)
-        RE --> SW: Redistribution, charging adjustment,\nHub redirection or No Intervention Required
+    alt Simulation timeout or engine failure
+      SW -> RR: markFailed(runId, stage = Running, reason)
+    else Simulation completed
+      group UC-S07 - Evaluate Scenario Impact
+        SW -> IE: evaluate(isolatedState, baseline, measures)
+        IE --> SW: Service capacity, parking utilization,\nvehicle availability and charging congestion
       end
 
-      alt Recommendation generation fails
-        SW -> RR: markFailed(runId, stage = Recommending, reason)
-      else Recommendations generated
-        SW -> RR: saveCompletedRun(results, recommendations,\nassumptions, baseline metadata)
-        alt Save fails
-          RR --> SW: Persistence error
-          SW -> RR: retain Failed status; do not publish partial result
-        else Save succeeds
-          RR --> SW: Completed
-          SW --> C: runCompleted(runId)
-          C --> UI: Completion notification
-          UI --> OP: Results available for review
+      alt Impact evaluation fails
+        SW -> RR: markFailed(runId, stage = Evaluating, reason)
+      else Impact evaluated
+        group UC-S08 - Generate Coordination Recommendations
+          SW -> RE: generate(impact, isolatedState, constraints)
+          RE --> SW: Redistribution, charging adjustment,\nHub redirection or No Intervention Required
+        end
+
+        alt Recommendation generation fails
+          SW -> RR: markFailed(runId, stage = Recommending, reason)
+        else Recommendations generated
+          SW -> RR: saveCompletedRun(results, recommendations,\nassumptions, baseline metadata)
+          alt Save fails
+            RR --> SW: Persistence error
+            SW -> RR: retain Failed status; do not publish partial result
+          else Save succeeds
+            RR --> SW: Completed
+            SW --> C: runCompleted(runId)
+            C --> UI: Completion notification
+            UI --> OP: Results available for review
+          end
         end
       end
     end

@@ -1,4 +1,4 @@
-@startuml SD_ConfigureWhatIfScenario
+@startuml SD_ConfigureScenario
 title UC-W01 - Configure a What-if Scenario
 hide footbox
 autonumber

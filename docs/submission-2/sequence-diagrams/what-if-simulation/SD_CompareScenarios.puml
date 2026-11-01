@@ -1,4 +1,4 @@
-@startuml SD_CompareWhatIfScenarios
+@startuml SD_CompareScenarios
 title UC-W05 - Compare What-if Scenarios
 hide footbox
 autonumber
@@ -31,7 +31,7 @@ C --> UI: Available comparison targets
 OP -> UI: Select Run A and Run B or baseline
 UI -> C: compare(runAId, runBId | baseline)
 C -> RR: loadResultsAndMetadata(selection)
-RR --> C: Results, metric schema, snapshots,\nassumptions and time horizons
+RR --> C: Results, recommendation outcomes, metric schema,\nsnapshots, assumptions and time horizons
 
 alt Run missing, failed or not completed
   C --> UI: Comparison unavailable with reason
@@ -48,9 +48,10 @@ else Runs available
   else Common measures available
     CS -> CS: Compare only common measures
     CS -> CS: Calculate deltas for service capacity, parking,\nvehicles, congestion, delay and projected revenue
-    CS --> C: Comparable values, deltas and warnings
+    CS -> CS: Compare recommendation outcomes and expected effects
+    CS --> C: Comparable values, outcomes, deltas and warnings
     C --> UI: Render side-by-side comparison
-    UI --> OP: Show results with baseline context,\nassumptions and comparability warnings
+    UI --> OP: Show results and recommendation outcomes with\nbaseline context, assumptions and warnings
   end
 end
 

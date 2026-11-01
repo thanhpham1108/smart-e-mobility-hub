@@ -6,7 +6,7 @@ This package contains the individual diagrams and the group UI contribution for 
 
 | Deliverable | Files | Coverage |
 | --- | --- | --- |
-| Sequence diagrams | `SD_ConfigureWhatIfScenario.puml`, `SD_RunWhatIfSimulation.puml`, `SD_CompareWhatIfScenarios.puml` | UC-W01, UC-W02, UC-W05 and UC-S06 through UC-S08 |
+| Sequence diagrams | `SD_ConfigureScenario.puml`, `SD_RunWhatIfSimulation.puml`, `SD_CompareScenarios.puml` | UC-W01, UC-W02, UC-W05 and UC-S06 through UC-S08 |
 | Activity diagrams | `AD_RunWhatIfSimulation.puml`, `AD_CompareWhatIfScenarios.puml` | Isolated execution, impact evaluation, recommendations and comparison |
 | UI mockups | Configure, Results, and Compare PNGs plus interactive HTML/CSS/JavaScript | UC-W01, UC-W03, UC-W04 and UC-W05 |
 | State chart (bonus) | `SC_SimulationRun.puml` | Scenario validation and SimulationRun lifecycle |
@@ -19,7 +19,7 @@ This package contains the individual diagrams and the group UI contribution for 
 | UC-W02 and UC-S06 | Run sequence/activity | Obtain one consistent timestamped baseline before creating isolated simulation state. |
 | UC-S07 and UC-S08 | Run sequence/activity and Results UI | Evaluate common impact measures and return feasible recommendations or No Intervention Required. |
 | UC-W03 and UC-W04 | Results UI | Display baseline, assumptions, predicted effects and recommendations without applying live actions. |
-| UC-W05 | Compare sequence/activity and UI | Compare compatible congestion, delay, projected-revenue and resource measures while disclosing snapshot, assumption and horizon differences. |
+| UC-W05 | Compare sequence/activity and UI | Compare compatible congestion, delay, projected-revenue, resource and recommendation outcomes while disclosing snapshot, assumption and horizon differences. |
 | FR-NI-09 | Run sequence/activity | An offline Hub pauses charging sessions only in simulated state. |
 | FR-NI-12 | Every artifact | Live vehicles, reservations, parking, charging, incidents and redistribution remain unchanged. |
 
