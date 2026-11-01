@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartHub Ops - What-if Simulation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">S</span><div><strong>SmartHub <em>Ops</em></strong><small>VNU-HCM Mobility Network</small></div></div>
+      <p class="nav-label">OPERATIONS</p>
+      <nav>
+        <button class="nav-item"><span>⌂</span>Network overview</button>
+        <button class="nav-item"><span>⇄</span>Fleet & redistribution</button>
+        <button class="nav-item"><span>ϟ</span>Smart charging</button>
+        <button class="nav-item active" data-screen="configure"><span>◇</span>What-if simulation</button>
+        <button class="nav-item"><span>!</span>Incidents <b>3</b></button>
+      </nav>
+      <p class="nav-label secondary">SIMULATION</p>
+      <nav>
+        <button class="nav-item sub active" data-screen="configure">Configure scenario</button>
+        <button class="nav-item sub" data-screen="results">Latest result</button>
+        <button class="nav-item sub" data-screen="compare">Compare scenarios</button>
+      </nav>
+      <div class="protection"><span>✓</span><div><strong>Live network protected</strong><small>Simulation writes are isolated</small></div></div>
+      <div class="profile"><span>OP</span><div><strong>Network Operator</strong><small>Operations Control</small></div><i>•••</i></div>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div class="crumb"><span>Operations</span><b>/</b><strong id="crumb-title">Configure scenario</strong></div>
+        <div class="top-actions"><span class="online"><i></i>IoT gateway online</span><span>01 Nov 2026 · 09:30 UTC+7</span><button>♢</button><span class="role">OP</span></div>
+      </header>
+
+      <main>
+        <section class="view active" data-view="configure">
+          <div class="screen-head">
+            <div><p class="eyebrow">WHAT-IF SIMULATION · UC-W01</p><h1>Configure operating scenario</h1><p>Test hypothetical demand and resource failures without touching live operations.</p></div>
+            <div class="head-actions"><button class="button secondary" data-action="reset">Reset</button><button class="button primary" data-action="run">Run simulation →</button></div>
+          </div>
+
+          <div class="scenario-grid">
+            <article class="card scenario-card">
+              <div class="section-title"><div><span>1</span><div><h2>Scenario conditions</h2><p>Select one or more events to apply to the isolated snapshot.</p></div></div><small id="condition-count">3 selected</small></div>
+              <div class="condition-grid">
+                <label class="condition selected"><input type="checkbox" value="metro" checked><span class="condition-icon cyan">↗</span><div><strong>Metro arrival surge</strong><small>Increase arrivals at Metro Hub</small><em>+200%</em></div></label>
+                <label class="condition selected"><input type="checkbox" value="offline" checked><span class="condition-icon red">×</span><div><strong>Hub becomes offline</strong><small>Pause sessions at KTX Hub A</small><em>45 min</em></div></label>
+                <label class="condition selected"><input type="checkbox" value="charger" checked><span class="condition-icon amber">ϟ</span><div><strong>Charging-point failures</strong><small>Disable selected DC points</small><em>2 points</em></div></label>
+                <label class="condition"><input type="checkbox" value="concentration"><span class="condition-icon green">●</span><div><strong>Vehicle concentration</strong><small>Move demand to one location</small><em>Optional</em></div></label>
+              </div>
+
+              <div class="divider"></div>
+              <div class="section-title compact"><div><span>2</span><div><h2>Scope and time horizon</h2></div></div><small>GMT+7</small></div>
+              <div class="form-grid">
+                <label><span>Primary Hub</span><select><option>Metro Station Hub</option></select></label>
+                <label><span>Secondary Hub</span><select><option>KTX Khu A Hub</option></select></label>
+                <label><span>Simulation start</span><input value="01 Nov 2026 · 17:00"></label>
+                <label><span>Time horizon</span><select><option>120 minutes</option></select></label>
+              </div>
+              <label class="assumption"><span>Assumptions</span><textarea>Metro arrivals increase from 42 to 126 students/hour. Two DC charging points fail at 17:15. KTX Khu A is offline from 17:30 to 18:15.</textarea></label>
+            </article>
+
+            <aside class="side-stack">
+              <article class="card baseline-card">
+                <div class="section-title compact"><div><span>3</span><div><h2>Baseline snapshot</h2></div></div><span class="badge green">Fresh</span></div>
+                <div class="snapshot-id"><small>SNAPSHOT ID</small><strong>NET-20261101-0930</strong></div>
+                <dl><div><dt>Captured</dt><dd>09:30:12 UTC+7</dd></div><div><dt>Network version</dt><dd>v1,842</dd></div><div><dt>Mobility Hubs</dt><dd>6 active</dd></div><div><dt>Vehicles</dt><dd>218 tracked</dd></div><div><dt>Charging points</dt><dd>31 / 34 online</dd></div></dl>
+                <div class="isolation"><span>✓</span><div><strong>Isolated execution</strong><p>A deep copy of this snapshot will be used. No reservations, occupancy or charging records will be changed.</p></div></div>
+              </article>
+              <article class="card readiness">
+                <div class="readiness-head"><div><span class="pulse"></span><strong>Ready to run</strong></div><small>Est. 18 seconds</small></div>
+                <ul><li><span>✓</span>Required parameters validated</li><li><span>✓</span>Resources exist in baseline</li><li><span>✓</span>Simulation worker available</li></ul>
+                <button class="button primary wide" data-action="run">Create run from snapshot</button>
+              </article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view="results">
+          <div class="screen-head">
+            <div><p class="eyebrow">SIMULATION RESULT · UC-W03 / UC-W04</p><h1>Metro peak disruption · SIM-1101-04</h1><p>Completed against snapshot NET-20261101-0930 · 120-minute horizon.</p></div>
+            <div class="head-actions"><span class="badge green large">● Completed</span><button class="button secondary" data-screen="compare">Compare</button></div>
+          </div>
+
+          <div class="kpi-grid">
+            <article class="card kpi"><span>Service capacity</span><strong>82%</strong><small class="negative">−18% vs baseline</small></article>
+            <article class="card kpi"><span>Unserved arrivals</span><strong>146</strong><small>peak at 18:05</small></article>
+            <article class="card kpi"><span>Charging queue</span><strong>+31%</strong><small class="warning">11 requests delayed</small></article>
+            <article class="card kpi"><span>Parking peak</span><strong>96%</strong><small>Metro Hub · 17:52</small></article>
+          </div>
+
+          <div class="result-grid">
+            <article class="card impact-card">
+              <div class="section-title simple"><div><h2>Network impact over time</h2><p>Baseline vs simulated service capacity</p></div><span class="legend"><i></i>Baseline <i></i>Simulation</span></div>
+              <div class="chart">
+                <div class="ylabels"><span>100%</span><span>75%</span><span>50%</span><span>25%</span></div>
+                <div class="chart-area"><div class="gridline a"></div><div class="gridline b"></div><div class="gridline c"></div><svg viewBox="0 0 760 190" preserveAspectRatio="none"><polyline class="base-line" points="0,32 125,34 250,30 375,36 500,35 625,38 760,36"/><polyline class="sim-line" points="0,34 125,45 250,82 375,126 500,142 625,116 760,88"/><path class="sim-fill" d="M0 34 L125 45 L250 82 L375 126 L500 142 L625 116 L760 88 L760 190 L0 190 Z"/></svg><span class="event metro">17:00 · Surge</span><span class="event offline">17:30 · Offline</span></div>
+                <div class="xlabels"><span>16:30</span><span>17:00</span><span>17:30</span><span>18:00</span><span>18:30</span></div>
+              </div>
+              <table class="hub-table"><thead><tr><th>Hub</th><th>Baseline</th><th>Simulated peak</th><th>Constraint</th></tr></thead><tbody><tr><td><strong>Metro Station</strong></td><td>68% parking</td><td>96% parking</td><td><span class="badge amber">Capacity risk</span></td></tr><tr><td><strong>KTX Khu A</strong></td><td>6 charge points</td><td>Offline · 45m</td><td><span class="badge red">Unavailable</span></td></tr><tr><td><strong>Main Library</strong></td><td>14 vehicles</td><td>6 vehicles</td><td><span class="badge amber">Shortage</span></td></tr></tbody></table>
+            </article>
+
+            <aside class="card recommendation-card">
+              <div class="section-title simple"><div><h2>Coordination recommendations</h2><p>Generated from isolated results</p></div><span class="badge blue">3 actions</span></div>
+              <div class="recommendation"><span class="rank">1</span><div><strong>Redistribute 18 shared vehicles</strong><p>KTX Khu B → Metro Station before 16:50</p><small>Expected: restore service capacity from 82% to 93%</small></div></div>
+              <div class="recommendation"><span class="rank">2</span><div><strong>Reserve DC-01 and DC-03</strong><p>Protect two fast-charging points for low-SOC fleet</p><small>Expected: reduce delayed requests from 11 to 4</small></div></div>
+              <div class="recommendation"><span class="rank">3</span><div><strong>Redirect arrivals to KTX Khu B</strong><p>Show alternative Hub for 17:40–18:20 window</p><small>Expected: Metro parking peak falls to 84%</small></div></div>
+              <div class="live-warning"><span>i</span><p><strong>Review only — not applied</strong> Recommendations have not created live redistribution orders or charging changes.</p></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" data-view="compare">
+          <div class="screen-head">
+            <div><p class="eyebrow">SCENARIO COMPARISON · UC-W05</p><h1>Compare completed simulation runs</h1><p>Only measures with matching definitions and units are compared.</p></div>
+            <button class="button secondary">Export comparison</button>
+          </div>
+
+          <article class="card compare-controls"><div><label>Scenario A<select><option>SIM-1101-03 · Metro surge only</option></select></label><span>vs</span><label>Scenario B<select><option>SIM-1101-04 · Surge + Hub offline</option></select></label></div><span class="badge amber large">Comparable with warnings</span></article>
+
+          <div class="compare-grid">
+            <article class="card comparison-card">
+              <div class="section-title simple"><div><h2>Metric comparison</h2><p>Common schema: Mobility Impact Metrics v2.1</p></div><span class="badge green">7 common metrics</span></div>
+              <table class="comparison-table"><thead><tr><th>Measure</th><th>Baseline</th><th>Scenario A</th><th>Scenario B</th><th>Difference B − A</th></tr></thead><tbody><tr><td>Service capacity</td><td>100%</td><td>89%</td><td>82%</td><td class="bad">−7 pp</td></tr><tr><td>Unserved arrivals</td><td>0</td><td>78</td><td>146</td><td class="bad">+68</td></tr><tr><td>Parking peak</td><td>72%</td><td>91%</td><td>96%</td><td class="bad">+5 pp</td></tr><tr><td>Charging queue peak</td><td>2</td><td>5</td><td>11</td><td class="bad">+6</td></tr><tr><td>Average charging delay</td><td>4 min</td><td>12 min</td><td>26 min</td><td class="bad">+14 min</td></tr><tr><td>Available vehicles · 18:00</td><td>62</td><td>49</td><td>41</td><td class="bad">−8</td></tr><tr><td>Projected revenue</td><td>₫42.8m</td><td>₫39.9m</td><td>₫35.6m</td><td class="bad">−₫4.3m</td></tr></tbody></table>
+              <div class="bar-block"><div><span>Scenario A · predicted capacity</span><strong>89%</strong></div><div class="bar"><i style="width:89%"></i></div><div><span>Scenario B · predicted capacity</span><strong>82%</strong></div><div class="bar danger"><i style="width:82%"></i></div></div>
+            </article>
+
+            <aside class="side-stack compare-side">
+              <article class="card context-card"><div class="section-title simple"><div><h2>Comparability context</h2></div></div><dl><div><dt>Metric schema</dt><dd><span class="ok">✓</span> Same v2.1</dd></div><div><dt>Baseline snapshot</dt><dd><span class="warn">!</span> 15 min apart</dd></div><div><dt>Time horizon</dt><dd><span class="ok">✓</span> Both 120 min</dd></div><div><dt>Demand assumption</dt><dd><span class="ok">✓</span> +200% arrivals</dd></div><div><dt>Additional condition</dt><dd><span class="warn">!</span> B includes Hub offline</dd></div></dl></article>
+              <article class="card conclusion"><p class="eyebrow">DECISION SUPPORT</p><h2>Scenario B creates the higher operational risk.</h2><p>The additional Hub outage adds 14 minutes of charging delay and reduces projected revenue by ₫4.3m. Prioritize vehicle redistribution and user redirection before the peak window.</p><div class="live-warning"><span>i</span><p>Comparison is read-only and preserves both runs.</p></div></article>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </section>
+  </div>
+  <div class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>

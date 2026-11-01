@@ -1,0 +1,83 @@
+@startuml AD_CompareWhatIfScenarios
+title UC-W05 - Compare Completed What-if Scenarios
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+
+|Operator|
+start
+:Open scenario comparison;
+:Select two completed runs
+or one run and its baseline;
+
+|System / Controller|
+:Validate selection and permission;
+
+|Database|
+:Retrieve results, metric schemas,
+snapshots, assumptions and horizons;
+
+|System / Controller|
+if (Records available and completed?) then (yes)
+  :Find common metric
+  definitions and units;
+  if (Meaningful common measures?) then (yes)
+    fork
+      :Compare service capacity
+      and unserved demand;
+    fork again
+      :Compare parking utilization
+      and vehicle availability;
+    fork again
+      :Compare charging congestion,
+      delay and projected revenue;
+    end fork
+    :Detect snapshot, freshness,
+    assumption and horizon differences;
+    :Calculate deltas only for
+    compatible measures;
+    :Display side-by-side values,
+    baseline context and warnings;
+    |Operator|
+    :Review comparison
+    and limitations;
+  else (no)
+    :Explain incompatible
+    measure definitions;
+    :Do not produce a
+    misleading ranking;
+    |Operator|
+    :Choose other completed
+    runs or exit;
+  endif
+else (no)
+  :Identify missing, failed
+  or running record;
+  |Operator|
+  :Choose other completed
+  runs or exit;
+endif
+stop
+
+note right
+Comparison is read-only and preserves each run's original context.
+end note
+@enduml
