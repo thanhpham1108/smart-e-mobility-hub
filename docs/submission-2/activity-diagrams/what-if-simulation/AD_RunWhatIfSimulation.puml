@@ -1,0 +1,135 @@
+@startuml AD_RunWhatIfSimulation
+title UC-W02 - Execute What-if Simulation and Generate Recommendations
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam conditionEndStyle diamond
+skinparam ArrowColor #42566B
+skinparam activity {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  DiamondBackgroundColor #FFF4D6
+  DiamondBorderColor #A67C23
+  StartColor #253E55
+  EndColor #253E55
+}
+skinparam swimlane {
+  BorderColor #9AAABA
+  TitleBackgroundColor #E2EBF3
+  TitleFontColor #172B4D
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+}
+
+|Operator|
+start
+:Select a ReadyToRun scenario;
+:Request simulation run;
+
+|System / Controller|
+:Verify permission and
+revalidate configuration;
+if (Scenario still valid?) then (yes)
+  |Database|
+  :Create Queued SimulationRun;
+  |System / Controller|
+  :Return run ID;
+  :Continue asynchronously;
+
+  :UC-S06 - request a consistent,
+  timestamped network snapshot;
+  |Database|
+  :Read live vehicles, parking, charging,
+  commitments and data versions;
+  |System / Controller|
+  :Verify consistency and freshness;
+  if (Snapshot complete and consistent?) then (yes)
+    |Database|
+    :Store baseline metadata
+    and Running status;
+    |System / Controller|
+    :Deep-clone baseline into
+    isolated simulation state;
+
+    fork
+      :Apply demand and
+      Metro-arrival events;
+    fork again
+      :Apply parking and
+      vehicle-distribution events;
+    fork again
+      :Apply charging demand,
+      failed-point and offline-Hub events;
+    end fork
+
+    if (Simulated Hub offline?) then (yes)
+      :Pause simulated charging sessions;
+    endif
+
+    if (Engine timeout or execution failure?) then (yes)
+      |Database|
+      :Record Failed status
+      at Running stage;
+      |System / Controller|
+      :Show failed run;
+      :Publish no partial result;
+    else (no)
+      :UC-S07 - evaluate service capacity,
+      parking, vehicle and charging effects;
+      if (Evaluation successful?) then (yes)
+        :UC-S08 - generate redistribution,
+        charging and Hub-redirection actions;
+        if (Intervention required?) then (yes)
+          :Attach feasible recommendations
+          and expected effects;
+        else (no)
+          :Record No Intervention Required
+          with supporting measures;
+        endif
+        |Database|
+        :Atomically store Completed result,
+        assumptions and recommendations;
+        |System / Controller|
+        if (Save successful?) then (yes)
+          :Notify Operator that
+          results are ready;
+        else (no)
+          :Show persistence failure;
+          :Do not publish as Completed;
+        endif
+      else (no)
+        |Database|
+        :Record Failed status
+        at Evaluating stage;
+        |System / Controller|
+        :Show evaluation failure;
+        :Publish no partial result;
+      endif
+    endif
+  else (no)
+    |Database|
+    :Record Failed status
+    at Snapshotting stage;
+    |System / Controller|
+    :Explain unavailable or
+    inconsistent baseline;
+  endif
+else (no)
+  :Reject run request;
+  :Show validation errors;
+endif
+
+|Operator|
+:Review status or completed results;
+stop
+
+note right
+  Live records are read-only.
+  Hypothetical changes exist only in isolated simulation state.
+end note
+@enduml

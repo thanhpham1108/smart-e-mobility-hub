@@ -1,0 +1,47 @@
+@startuml SC_SimulationRun
+title What-if Scenario and SimulationRun Lifecycle
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam state {
+  BackgroundColor #F0F6FB
+  BorderColor #42566B
+  FontColor #172B4D
+  StartColor #253E55
+  EndColor #253E55
+}
+
+[*] --> Draft : Create scenario configuration
+Draft --> Draft : Edit conditions / invalid validation
+Draft --> ReadyToRun : Configuration validates and saves
+ReadyToRun --> Draft : Edit configuration
+ReadyToRun --> Queued : Operator requests a run
+Queued --> Snapshotting : Worker accepts run
+Queued --> Failed : Worker unavailable
+Snapshotting --> Running : Consistent baseline stored
+Snapshotting --> Failed : Snapshot unavailable / inconsistent
+Running --> Evaluating : Simulation horizon completed
+Running --> Failed : Timeout / engine error
+Evaluating --> Recommending : Impact measures calculated
+Evaluating --> Failed : Evaluation error
+Recommending --> Completed : Results and recommendations saved
+Recommending --> Failed : Recommendation or persistence error
+Completed --> Archived : Retention / Operator archive
+Failed --> Archived : Retention / Operator archive
+Archived --> [*]
+
+Completed : Immutable baseline, assumptions,
+Completed : results and recommendation outcome
+Failed : Failure stage and diagnostics retained
+
+note right of Running
+All state changes occur in an isolated simulation copy.
+The live network is never updated by this lifecycle.
+end note
+
+note right of Failed
+A retry creates a new run record so the failed run
+remains auditable and is never rewritten as Completed.
+end note
+@enduml
