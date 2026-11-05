@@ -22,7 +22,7 @@ Set the browser viewport to **1440 × 900**, reset the demo, and capture each vi
 
 ## Scope and Demo Data
 
-The assignment lists three mobile screens, while [UI guidelines](../ui_guidelines.md) explicitly standardize a single desktop application. These deliverables follow the guidelines' desktop layout and export format; the same source also adapts to narrow screens.
+The assignment lists three mobile screens, while [UI guidelines](../hud-identity/ui_guidelines.md) explicitly standardize a single desktop application. These deliverables follow the guidelines' desktop layout and export format; the same source also adapts to narrow screens.
 
 - Emerald primary actions, cyan/sky charging accents, slate backgrounds, rounded cards, a 64-pixel Student Portal navbar, Hub search and role switch follow the design system.
 - The clock is fixed at **24 October 2026, 09:07 (UTC+7)** for repeatable screenshots. All data is fictional and held in memory. Reloading the page or choosing **Reset demo** restores the fixtures.

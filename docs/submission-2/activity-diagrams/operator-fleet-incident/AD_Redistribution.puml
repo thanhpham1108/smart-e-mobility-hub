@@ -1,0 +1,68 @@
+@startuml AD_Redistribution
+title UC-F04 + UC-F05 - Plan and Complete Vehicle Redistribution
+|Operator|
+start
+:Select vehicles, source Hub and destination Hub;
+|System / Controller|
+:Check Operator permission;
+fork
+  |Database|
+  :Read current vehicle states and commitments;
+fork again
+  |Database|
+  :Read source/destination status and capacity;
+end fork
+|System / Controller|
+:Validate feasibility (UC-S03);
+if (Data current and transfer feasible?) then (yes)
+  |Operator|
+  :Review transfer summary;
+  if (Confirm assignment?) then (yes)
+    |System / Controller|
+    :Revalidate against current state;
+    if (Still feasible?) then (yes)
+      |Database|
+      :Atomically save assignment and vehicle commitments;
+      |System / Controller|
+      if (Save successful?) then (yes)
+        :Show Assigned order;
+        |Operator|
+        :Arrange physical transfer outside the system;
+        :Select order and confirmed arrived vehicles;
+        |System / Controller|
+        :Check order state and vehicle identities;
+        if (Arrivals valid?) then (yes)
+          |Database|
+          :Atomically update arrived vehicle locations,
+          Hub occupancy and order progress;
+          |System / Controller|
+          if (Update committed?) then (yes)
+            if (All vehicles arrived?) then (yes)
+              :Show Completed order;
+            else (no)
+              :Show PartiallyCompleted order;
+            endif
+          else (no)
+            :Show failure; retain last confirmed state;
+          endif
+        else (no)
+          :Reject mismatch or duplicate confirmation;
+        endif
+      else (no)
+        :Show save error; no order exists;
+      endif
+    else (no)
+      :Reject stale proposal and show reason;
+    endif
+  else (no)
+    :Leave state unchanged;
+  endif
+else (no)
+  :Show ineligible vehicles, stale data or capacity error;
+endif
+stop
+note right
+Creating an order never asserts physical arrival.
+Only confirmed arrivals change location and occupancy.
+end note
+@enduml

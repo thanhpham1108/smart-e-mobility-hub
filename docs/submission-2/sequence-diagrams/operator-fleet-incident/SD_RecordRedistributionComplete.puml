@@ -1,0 +1,59 @@
+@startuml SD_RecordRedistributionComplete
+title UC-F05 - Record Redistribution Completion
+hide footbox
+autonumber
+actor Operator
+boundary "Redistribution UI" as UI
+control "RedistributionController" as C
+entity "AssignmentRepository" as A
+entity "VehicleRepository" as V
+entity "HubRepository" as H
+
+Operator -> UI: Open incomplete assignment
+UI -> C: getAssignment(assignmentId)
+C -> A: findById(assignmentId)
+A --> C: Assignment and arrival records
+C --> UI: Assigned vehicles and destination
+Operator -> UI: Confirm arrived vehicle IDs
+UI -> C: recordArrival(assignmentId, arrivedIds)
+C -> A: Reload assignment with current version
+alt Missing or already completed
+  A --> C: Invalid state
+  C --> UI: Show current status; no changes
+else Assignment is incomplete
+  A --> C: Current assignment
+  loop Each confirmed vehicle ID
+    C -> V: Verify assigned identity and current location
+    V --> C: Vehicle state
+  end
+  alt Mismatched, duplicate, or unverified arrival
+    C --> UI: Reject invalid confirmation; allow correction
+  else All confirmed arrivals are valid
+    C -> H: Check destination capacity and occupancy
+    H --> C: Current Hub counts
+    C -> A: Begin atomic completion update
+    loop Each newly confirmed vehicle
+      C -> V: Set location to destination Hub
+      C -> H: Update source/destination occupancy once
+      C -> A: Mark vehicle arrived
+    end
+    alt All assigned vehicles have arrived
+      C -> A: Set assignment Completed
+    else Some assigned vehicles have not arrived
+      C -> A: Set assignment PartiallyCompleted
+    end
+    alt Any update fails
+      A --> C: Roll back all changes
+      C --> UI: Completion not recorded
+    else Update commits
+      A --> C: New assignment state and version
+      C --> UI: Show confirmed arrivals and remaining vehicles
+      UI --> Operator: Display completion result
+    end
+  end
+end
+note over C,H
+Only newly confirmed arrivals change location and occupancy.
+Retries do not double-count the same vehicle (FR-NI-05).
+end note
+@enduml

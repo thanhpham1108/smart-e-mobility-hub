@@ -128,7 +128,7 @@
           </div>
           <div>
             <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Mốc Thời Gian</div>
-            <div class="font-mono text-slate-800 font-semibold text-xs mt-0.5">Đến: 10:12</div>
+            <div class="font-mono text-slate-800 font-semibold text-xs mt-0.5">Gửi: 10:12</div>
             <div class="font-mono text-rose-600 font-bold text-[11px]">Hạn đi: 11:45 (còn 75p)</div>
           </div>
           <div>
@@ -183,7 +183,7 @@
             </div>
           </div>
 
-          <!-- Time Window & Target SOC Grid -->
+          <!-- Time window and target battery level -->
           <div class="grid grid-cols-2 gap-4">
             <!-- Khung giờ sạc -->
             <div>
@@ -201,16 +201,16 @@
               <div class="text-[10px] text-emerald-700 font-medium mt-1">✓ Thời lượng sạc: 30 phút (kịp trước 11:45)</div>
             </div>
 
-            <!-- Target SOC Override -->
+            <!-- Target battery level adjustment -->
             <div>
               <div class="flex justify-between items-center mb-1">
                 <label class="text-slate-700 font-semibold">3. Điều Chỉnh Mức Pin Mục Tiêu:</label>
-                <span class="font-mono font-bold text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">75% SOC</span>
+                <span class="font-mono font-bold text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">75%</span>
               </div>
               <input type="range" min="50" max="100" value="75" class="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-200 rounded-lg">
               <div class="flex justify-between text-[10px] text-slate-400 mt-1 font-mono">
                 <span>50% (Đủ đi 150km)</span>
-                <span class="text-emerald-700 font-semibold">75% (Tối ưu an toàn)</span>
+                <span class="text-emerald-700 font-semibold">75% (Mức đã chọn)</span>
                 <span>100% (Pin đầy)</span>
               </div>
             </div>
@@ -218,9 +218,9 @@
 
           <!-- Lý do can thiệp -->
           <div>
-            <label class="block text-slate-700 font-semibold mb-1">4. Lý Do Can Thiệp Ưu Tiên (Audit Log Note):</label>
+            <label class="block text-slate-700 font-semibold mb-1">4. Lý Do Điều Chỉnh Lịch:</label>
             <div class="relative">
-              <input type="text" value="Tài xế sinh viên có lịch bảo vệ đồ án tốt nghiệp lúc 11:45 tại Nhà B6 - Ưu tiên khẩn cấp" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+              <input type="text" value="Đổi sang cổng DC-03, giữ khung 10:35-11:05" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500">
             </div>
           </div>
         </div>

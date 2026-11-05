@@ -1,0 +1,95 @@
+@startuml
+title AD-02 - Find and Filter a Mobility Hub
+
+|Actor|
+start
+:Select Find a Mobility Hub;
+
+|System / Controller|
+:Display search and filter options;
+
+|Actor|
+:Choose location search method;
+
+if (Use current location?) then (Yes)
+    |System / Controller|
+    :Request current location;
+
+    if (Location available?) then (Yes)
+        :Receive current coordinates;
+    else (No)
+        |Actor|
+        :Enter location manually;
+
+        |System / Controller|
+        :Validate entered location;
+
+        if (Location valid?) then (Yes)
+            :Accept manual location;
+        else (No)
+            |Actor|
+            :Correct location information;
+            |System / Controller|
+            :Validate corrected location;
+        endif
+    endif
+
+else (No)
+    |Actor|
+    :Enter location manually;
+
+    |System / Controller|
+    :Validate entered location;
+
+    if (Location valid?) then (Yes)
+        :Accept manual location;
+    else (No)
+        |Actor|
+        :Correct location information;
+        |System / Controller|
+        :Validate corrected location;
+    endif
+endif
+
+|Actor|
+:Select required services and filters;
+:Submit search request;
+
+|System / Controller|
+:Validate search criteria;
+
+|Database|
+:Search Mobility Hubs;
+:Retrieve matching Hub records;
+
+|System / Controller|
+if (Matching Hubs found?) then (Yes)
+    :Prepare matching results;
+
+    |Actor|
+    :View matching Mobility Hubs;
+    :Select a Mobility Hub;
+    :Open Hub details;
+    stop
+
+else (No)
+    |Actor|
+    :View no-results message;
+    :Change location or filters;
+
+    |System / Controller|
+    :Process updated search criteria;
+
+    |Database|
+    :Search Mobility Hubs again;
+    :Return updated results;
+
+    |System / Controller|
+    :Display updated results;
+
+    |Actor|
+    :Review search results;
+    stop
+endif
+
+@enduml

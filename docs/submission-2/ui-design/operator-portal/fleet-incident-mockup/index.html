@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartHub Ops | Fleet & Incident Mockup</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Operator navigation">
+      <div class="brand"><div class="brand-mark">S</div><div><strong>SmartHub <span>Ops</span></strong><small>VNU-HCM mobility network</small></div></div>
+      <div class="workspace-label">WORKSPACE</div>
+      <nav class="main-nav" aria-label="Main">
+        <button class="nav-item active" data-screen="overview"><span class="nav-icon">▦</span> Network Map</button>
+        <button class="nav-item" data-screen="redistribution"><span class="nav-icon">⇄</span> Fleet & Redistribution</button>
+        <button class="nav-item" data-screen="incidents"><span class="nav-icon">⚑</span> Incidents <span class="nav-count" id="sidebar-incident-count">2</span></button>
+      </nav>
+      <div class="workspace-label second">OTHER MODULES</div>
+      <div class="nav-item inert"><span class="nav-icon">ϟ</span> Smart Charging</div>
+      <div class="nav-item inert"><span class="nav-icon">◇</span> What-if Simulation</div>
+      <div class="sidebar-bottom">
+        <div class="mini-avatar">OP</div>
+        <div><strong>Fleet Operator</strong><small>Operations role</small></div>
+        <span class="sidebar-more">···</span>
+      </div>
+    </aside>
+    <div class="content-shell">
+      <header class="topbar">
+        <div class="breadcrumb"><span>Smart E-Mobility Hub</span><b>/</b><strong id="breadcrumb-current">Network Map</strong></div>
+        <div class="top-actions">
+          <span class="connection"><i></i> Mock IoT connected</span>
+          <span class="top-date" id="top-date"></span>
+          <button class="icon-button notification-button" data-action="go-incidents" aria-label="View incident alerts">♢<span id="top-alert-count">2</span></button>
+          <button class="role-chip" type="button" title="Role switching is outside this module"><span class="role-dot">OP</span> Operator ▾</button>
+        </div>
+      </header>
+      <main class="main" id="screen-root" aria-live="polite"></main>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>

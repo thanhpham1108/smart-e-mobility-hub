@@ -31,7 +31,7 @@ Theo đề bài quy định:
 ## 3. Chi tiết nhiệm vụ từng thành viên
 
 ### Thành viên 1: Hub & Identity Management
-- **File kịch bản tham chiếu:** [docs/submission-1/use-case-scenarios/Management Usecases.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-1/use-case-scenarios/Management%20Usecases.md)
+- **File kịch bản tham chiếu:** [Management Usecases.md](../submission-1/use-case-scenarios/Management%20Usecases.md)
 - **Nhiệm vụ cụ thể:**
   1. **Sequence Diagrams (2-3 diagrams):**
      - `SD_SignIn_Auth`: Actor Student/Operator gửi credentials $\rightarrow$ AuthController kiểm tra DB $\rightarrow$ trả JWT token/session.
@@ -48,7 +48,7 @@ Theo đề bài quy định:
 ---
 
 ### Thành viên 2: Vehicle Rental
-- **File kịch bản tham chiếu:** [docs/submission-1/use-case-scenarios/vehicle_rental.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-1/use-case-scenarios/vehicle_rental.md)
+- **File kịch bản tham chiếu:** [vehicle_rental.md](../submission-1/use-case-scenarios/vehicle_rental.md)
 - **Nhiệm vụ cụ thể:**
   1. **Sequence Diagrams (3 diagrams):**
      - `SD_ReserveSharedVehicle`: Student chọn xe $\rightarrow$ RentalController kiểm tra tình trạng xe $\rightarrow$ nếu thành công thì tạo Reservation (khóa xe 15p), nếu thất bại thì gọi fallback `UC-X01` gợi ý Hub khác.
@@ -65,7 +65,7 @@ Theo đề bài quy định:
 ---
 
 ### Thành viên 3: Parking & Private EV
-- **File kịch bản tham chiếu:** [docs/submission-1/use-case-scenarios/parking_private_ev.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-1/use-case-scenarios/parking_private_ev.md)
+- **File kịch bản tham chiếu:** [parking_private_ev.md](../submission-1/use-case-scenarios/parking_private_ev.md)
 - **Nhiệm vụ cụ thể:**
   1. **Sequence Diagrams (3 diagrams):**
      - `SD_ReserveParkingSpace`: Chọn Hub, ngày giờ đến/đi $\rightarrow$ ParkingService kiểm tra **mọi slot 15 phút liên tục** $\rightarrow$ nếu đủ chỗ thì tạo booking, nếu thiếu dù chỉ 1 slot thì trả về hết chỗ & gọi alternative Hub.
@@ -82,7 +82,7 @@ Theo đề bài quy định:
 ---
 
 ### Thành viên 4: Operator Fleet & Incident Management
-- **File kịch bản tham chiếu:** [docs/submission-1/use-case-scenarios/operator_fleet_incident.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-1/use-case-scenarios/operator_fleet_incident.md)
+- **File kịch bản tham chiếu:** [operator_fleet_incident.md](../submission-1/use-case-scenarios/operator_fleet_incident.md)
 - **Nhiệm vụ cụ thể:**
   1. **Sequence Diagrams (3 diagrams):**
      - `SD_CoordinateRedistribution`: Operator chọn xe tại Hub thừa và Hub thiếu $\rightarrow$ hệ thống kiểm tra tính khả thi (`UC-S03`) $\rightarrow$ tạo lệnh điều phối.
@@ -99,7 +99,7 @@ Theo đề bài quy định:
 ---
 
 ### Thành viên 5: Smart Charging Scheduling
-- **File kịch bản tham chiếu:** [docs/submission-1/use-case-scenarios/smart_charging_scheduling.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-1/use-case-scenarios/smart_charging_scheduling.md)
+- **File kịch bản tham chiếu:** [smart_charging_scheduling.md](../submission-1/use-case-scenarios/smart_charging_scheduling.md)
 - **Nhiệm vụ cụ thể:**
   1. **Sequence Diagrams (3 diagrams):**
      - `SD_GenerateChargingSchedule` (UC-C02): Operator kích hoạt lập lịch $\rightarrow$ ChargingScheduler lấy các yêu cầu sạc $\rightarrow$ sắp xếp theo thời điểm gửi tăng dần (FCFS; nếu trùng chính xác thì xe pin yếu hơn được xét trước) $\rightarrow$ gán cổng và khung giờ khả dụng $\rightarrow$ lưu Schedule.
@@ -116,7 +116,7 @@ Theo đề bài quy định:
 ---
 
 ### Thành viên 6: What-if Simulation
-- **File kịch bản tham chiếu:** [docs/submission-1/use-case-scenarios/what_if_simulation.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-1/use-case-scenarios/what_if_simulation.md)
+- **File kịch bản tham chiếu:** [what_if_simulation.md](../submission-1/use-case-scenarios/what_if_simulation.md)
 - **Nhiệm vụ cụ thể:**
   1. **Sequence Diagrams (3 diagrams):**
      - `SD_ConfigureScenario`: Operator nhập tham số (giờ cao điểm Metro, lượng xe đến tăng 200%, hỏng 2 cổng sạc) $\rightarrow$ lưu kịch bản giả lập.
@@ -141,7 +141,7 @@ Theo đề bài quy định:
   - `docs/submission-2/state-chart-diagrams/`
 - **Hình ảnh xuất ra:** Đặt tên rõ ràng (ví dụ: `SD_ReserveSharedVehicle.png`), lưu tại thư mục tương ứng để tiện nhúng vào file báo cáo tổng hợp.
 - **UI Mockup (Figma hoặc Vibe-code):** 
-  - Xem hướng dẫn chi tiết về màu sắc, typography và prompt mẫu tại: [docs/submission-2/ui-design/ui_guidelines.md](file:///Users/macos/Desktop/BK/261/CNPM/BTL/github/smart-e-mobility-hub/docs/submission-2/ui-design/ui_guidelines.md).
+  - Xem hướng dẫn chi tiết về màu sắc, typography và prompt mẫu tại: [ui_guidelines.md](ui-design/hud-identity/ui_guidelines.md).
   - Có thể vibe-code trực tiếp giao diện (React / Tailwind) rồi chụp ảnh màn hình lưu vào `docs/submission-2/ui-design/mobile-app/` hoặc `docs/submission-2/ui-design/web-dashboard/`.
   - Nếu làm trên Figma, đính kèm link Figma dự án vào file `figma_links.md`.
 

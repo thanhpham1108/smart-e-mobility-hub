@@ -1,0 +1,106 @@
+.result-context {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1.15fr 1fr;
+  gap: 0;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  flex: 0 0 auto;
+}
+
+.result-context > div {
+  padding: 0 12px;
+  border-right: 1px solid #e2e8f0;
+  min-width: 0;
+}
+
+.result-context > div:first-child {
+  padding-left: 0;
+}
+
+.result-context > div:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.result-context small,
+.result-context strong,
+.result-context span {
+  display: block;
+}
+
+.result-context small {
+  font-size: 7px;
+  letter-spacing: .8px;
+  color: #94a3b8;
+  font-weight: 800;
+}
+
+.result-context strong {
+  font-size: 9px;
+  margin: 4px 0 2px;
+}
+
+.result-context span {
+  font-size: 7px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outcome-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.outcome-comparison > div {
+  display: grid;
+  grid-template-columns: 23px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 9px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+}
+
+.outcome-comparison > div > span {
+  width: 23px;
+  height: 23px;
+  border-radius: 7px;
+  background: #d1fae5;
+  color: #047857;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.outcome-comparison p {
+  margin: 0;
+  min-width: 0;
+}
+
+.outcome-comparison strong,
+.outcome-comparison small {
+  display: block;
+}
+
+.outcome-comparison strong {
+  font-size: 8px;
+}
+
+.outcome-comparison small {
+  font-size: 7px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outcome-comparison + .bar-block {
+  margin-top: 10px;
+}

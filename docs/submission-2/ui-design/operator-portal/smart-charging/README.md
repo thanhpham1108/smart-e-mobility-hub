@@ -2,7 +2,7 @@
 
 **Responsible Member:** Member 5 (Smart Charging Scheduling)  
 **Target Platform:** Operator Portal (Web Desktop `1440 x 900 px`)  
-**Design Guidelines Adherence:** [ui_guidelines.md](../../ui_guidelines.md)
+**Design Guidelines Adherence:** [ui_guidelines.md](../../hud-identity/ui_guidelines.md)
 
 ---
 
@@ -12,7 +12,7 @@
 | :---: | :--- | :--- | :--- | :--- |
 | **1** | [UI_OPERATOR_Charging_Schedule_Gantt.png](UI_OPERATOR_Charging_Schedule_Gantt.png) | [UI_OPERATOR_Charging_Schedule_Gantt.html](UI_OPERATOR_Charging_Schedule_Gantt.html) | **UC-C01 / UC-C02** | Biểu đồ Gantt trực quan lịch biểu 10 cổng sạc (DC 60kW & AC 11kW) theo trục thời gian 07:00 – 18:00, hiển thị đường thời gian thực `Now (10:30)` và trạng thái tải điện lưới. |
 | **2** | [UI_OPERATOR_Charging_Queue.png](UI_OPERATOR_Charging_Queue.png) | [UI_OPERATOR_Charging_Queue.html](UI_OPERATOR_Charging_Queue.html) | **UC-C01** | Giao diện Dual-Panel: Bảng hàng đợi sạc FCFS theo thời điểm gửi yêu cầu (Rank #1 đến #5) song song với bảng giám sát từ xa các phiên đang sạc thực tế (kW, A, %, nút ngắt an toàn). |
-| **3** | [UI_OPERATOR_Adjust_Schedule_Modal.png](UI_OPERATOR_Adjust_Schedule_Modal.png) | [UI_OPERATOR_Adjust_Schedule_Modal.html](UI_OPERATOR_Adjust_Schedule_Modal.html) | **UC-C03** | Hộp thoại Modal can thiệp thủ công: Đổi cổng sạc, điều chỉnh khung giờ, hạ target SOC khi khẩn cấp và chạy module tự động kiểm tra xung đột cổng/tải điện lưới. |
+| **3** | [UI_OPERATOR_Adjust_Schedule_Modal.png](UI_OPERATOR_Adjust_Schedule_Modal.png) | [UI_OPERATOR_Adjust_Schedule_Modal.html](UI_OPERATOR_Adjust_Schedule_Modal.html) | **UC-C03** | Hộp thoại điều chỉnh lịch thủ công: Đổi cổng sạc, khung giờ và mức pin mục tiêu; kiểm tra xung đột trước khi lưu. |
 
 ---
 
@@ -30,11 +30,11 @@
 * **Mục tiêu:** Phục vụ trực ban vận hành xử lý luồng xe đến trạm theo thuật toán FCFS và giám sát an toàn điện.
 * **Đặc điểm nổi bật:**
   * **Cột trái (Hàng đợi FCFS):** Hiển thị rõ biển số, dòng xe (VF e34, Dat Bike, Feliz), mức pin khởi điểm, giờ gửi yêu cầu, giờ hẹn khởi hành và thời gian ước tính được cấp cổng. Mức pin chỉ phân định thứ tự khi hai yêu cầu có cùng thời điểm gửi.
-  * **Cột phải (Giám sát telemetry 8 phiên đang sạc):** Hiển thị công suất tức thời (52.4 kW, 48.0 kW, 11.0 kW), điện lượng tích lũy (kWh), thanh tiến độ pin SOC và nút **Dừng khẩn cấp (`abortCharging()`)** màu đỏ rose.
+  * **Cột phải (Giám sát telemetry 8 phiên đang sạc):** Hiển thị công suất tức thời, điện lượng tích lũy, phần trăm pin và nút dừng khẩn cấp.
 
 ### Màn hình 3: Modal can thiệp điều chỉnh lịch sạc thủ công
-* **Mục tiêu:** Thực hiện Use Case `UC-C03`, cho phép kỹ sư vận hành linh hoạt can thiệp khi có trường hợp khẩn cấp mà không làm gãy vỡ hệ thống.
+* **Mục tiêu:** Thực hiện Use Case `UC-C03`, cho phép người vận hành điều chỉnh lịch khi cần và kiểm tra xung đột trước khi lưu.
 * **Đặc điểm nổi bật:**
   * **Thẻ lựa chọn cổng sạc:** Thể hiện rõ cổng trống khả dụng ngay (`DC-03`), cổng đang bận (`DC-01`), và cổng tốc độ thấp không kịp giờ (`AC-04`).
-  * **Thanh trượt điều chỉnh Target SOC:** Hạ mục tiêu từ 80% xuống 75% để rút ngắn thời gian sạc từ 45 phút xuống còn 30 phút, đảm bảo tài xế sinh viên kịp giờ bảo vệ đồ án tốt nghiệp lúc 11:45.
+  * **Thanh trượt mức pin mục tiêu:** Ví dụ điều chỉnh từ 80% xuống 75% khi thay đổi thời lượng sạc thủ công. Thao tác này không thay đổi quy tắc xếp hàng FCFS.
   * **Hộp xác nhận không xung đột (Conflict-Free Verification):** Kiểm tra tự động 3 tiêu chí an toàn (Cổng trống, Tải đỉnh lưới < 80%, Hoàn tất sớm hơn giờ khởi hành 40 phút).

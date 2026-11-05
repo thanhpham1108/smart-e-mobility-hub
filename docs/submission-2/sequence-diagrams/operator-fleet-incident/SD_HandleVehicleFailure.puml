@@ -1,0 +1,62 @@
+@startuml SD_HandleVehicleFailure
+title UC-I02 - Handle a Vehicle Failure
+hide footbox
+autonumber
+actor Operator
+boundary "Incident UI" as UI
+control "IncidentController" as C
+entity "IncidentRepository" as I
+entity "VehicleRepository" as V
+entity "CommitmentRepository" as R
+
+Operator -> UI: Open vehicle-failure ticket
+UI -> C: getIncident(ticketId)
+C -> I: findById(ticketId)
+I --> C: Ticket and evidence
+C -> V: getVehicle(vehicleId)
+V --> C: Condition, location, eligibility
+C -> R: getAffectedReservationsAndRental(vehicleId)
+R --> C: Active rental and reservations
+alt Ticket or vehicle cannot be verified
+  C --> UI: Error; no state change
+else Valid vehicle-failure incident
+  C --> UI: Fault, evidence, commitments, current status
+  Operator -> UI: Investigate and restrict unsafe use
+  UI -> C: restrictVehicle(ticketId, reason)
+  C -> V: Block new allocations if not already restricted
+  C -> I: Record investigation and restriction
+  alt Restriction/update fails
+    C --> UI: Keep last confirmed state; show error
+  else Restriction recorded
+    C --> UI: Vehicle restricted
+    loop Each affected commitment
+      Operator -> UI: Record response for affected user/rental
+      UI -> C: saveCommitmentResponse(ticketId, response)
+      C -> R: Record response under applicable policy
+    end
+    Operator -> UI: Record repair or recovery action
+    UI -> C: updateRepair(ticketId, evidence)
+    C -> I: Save corrective action and status
+    alt Repair is incomplete
+      I --> C: Ticket unresolved
+      C --> UI: Keep vehicle restricted
+    else Repair is confirmed complete
+      Operator -> UI: Request restoration
+      UI -> C: restoreEligibility(ticketId)
+      C -> I: Verify completed repair and resolution
+      C -> V: Verify no conflicting commitment or fault
+      alt Verification fails
+        C --> UI: Remain restricted; explain reason
+      else Verification succeeds
+        C -> V: Restore eligible operating state
+        C -> I: Set Resolved; record audit transition
+        C --> UI: Show resolved ticket and vehicle state
+      end
+    end
+  end
+end
+note over C,R
+FR-NI-02 may restrict the vehicle when telemetry first reports
+a fault. Operator handling resumes from that confirmed state.
+end note
+@enduml

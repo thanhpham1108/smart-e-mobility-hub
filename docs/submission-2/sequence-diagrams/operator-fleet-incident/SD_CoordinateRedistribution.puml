@@ -1,0 +1,58 @@
+@startuml SD_CoordinateRedistribution
+title UC-F04 - Coordinate Vehicle Redistribution
+hide footbox
+autonumber
+actor Operator
+boundary "Redistribution UI" as UI
+control "RedistributionController" as C
+control "FeasibilityService (UC-S03)" as F
+entity "VehicleRepository" as V
+entity "HubRepository" as H
+entity "AssignmentRepository" as A
+
+Operator -> UI: Select vehicles, source Hub, destination Hub
+Operator -> UI: Check feasibility
+UI -> C: validateTransfer(selection, sourceId, destinationId)
+C -> F: validate(selection, sourceId, destinationId)
+loop Each selected vehicle
+  F -> V: getCurrentStateAndCommitments(vehicleId)
+  V --> F: Location, condition, rental/reservation, assignment
+end
+F -> H: getSourceAndDestinationCapacity()
+H --> F: Hub status and available destination spaces
+alt Data is stale or unavailable
+  F --> C: Cannot safely validate
+  C --> UI: Validation unavailable; refresh required
+else Ineligible vehicles or insufficient capacity
+  F --> C: Rejected vehicle IDs and reasons
+  C --> UI: Show validation errors
+  opt Operator changes selection or destination
+    Operator -> UI: Revise request and retry
+  end
+else Feasible transfer
+  F --> C: Validated proposal + state version
+  C --> UI: Show feasible transfer summary
+  Operator -> UI: Confirm assignment
+  UI -> C: createAssignment(proposal, version)
+  C -> F: Revalidate current state (UC-S03)
+  alt Conflict arose before save
+    F --> C: Conflict reason
+    C --> UI: Reject stale proposal
+  else Still feasible
+    F --> C: Feasible
+    C -> A: Save assignment and commitments atomically
+    alt Save fails
+      A --> C: Error; no assignment committed
+      C --> UI: Show save error
+    else Save succeeds
+      A --> C: Assignment ID, Assigned state
+      C --> UI: Assignment created
+      UI --> Operator: Show assignment ID and status
+    end
+  end
+end
+note over C,A
+Creating an assignment does not change vehicle location
+or source/destination physical occupancy (UC-F04).
+end note
+@enduml

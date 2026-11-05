@@ -1,0 +1,82 @@
+@startuml SD_ConfigureScenario
+title UC-W01 - Configure a What-if Scenario
+hide footbox
+autonumber
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+}
+skinparam note {
+  BackgroundColor #FFFBEB
+  BorderColor #BBA86A
+}
+
+actor Operator as OP
+boundary "What-if Dashboard" as UI
+control "SimulationController" as C
+control "ScenarioValidationService" as V
+entity "NetworkResourceRepository" as NR
+entity "ScenarioRepository" as SR
+
+OP -> UI: Open Create Scenario
+UI -> C: getConfigurationOptions()
+C -> NR: listHubsAndResources()
+NR --> C: Hubs, charging points, resource versions
+C --> UI: Scenario types, resources, validation rules
+
+alt Configuration data unavailable
+  UI --> OP: Show unavailable message and retry action
+else Configuration data available
+  OP -> UI: Select conditions, affected resources,\nsimulation period and assumptions
+  UI -> C: validateDraft(configuration)
+  C -> V: validateFieldsAndPeriod(configuration)
+  V -> NR: verifyReferencedResources(resourceIds)
+  loop Each selected resource
+    NR --> V: Exists / unavailable / current version
+  end
+
+  alt Missing, contradictory or invalid parameter
+    V --> C: Validation errors by field
+    C --> UI: Display errors; retain editable values
+    UI --> OP: Correct configuration or cancel
+  else Configuration valid
+    V --> C: Validated configuration + resource versions
+    C --> UI: Show scenario summary and assumptions
+    OP -> UI: Confirm scenario
+    UI -> C: createScenario(configuration, versions)
+    C -> V: Revalidate before save
+    V -> NR: verifyCurrentResourceVersions()
+    alt Resource changed or became unavailable
+      NR --> V: Version conflict / unavailable resource
+      V --> C: Reject stale configuration
+      C --> UI: Refresh affected resource and reconfirm
+    else Still valid
+      NR --> V: Resources valid
+      V --> C: Valid
+      C -> SR: saveScenario(status = ReadyToRun)
+      alt Save fails
+        SR --> C: Error; no scenario committed
+        C --> UI: Show save error
+      else Save succeeds
+        SR --> C: Scenario ID + ReadyToRun
+        C --> UI: Scenario created
+        UI --> OP: Display ID and Ready to Run status
+      end
+    end
+  end
+end
+
+note over C,SR
+Configuration stores hypothetical inputs only.
+It does not read or modify live operational state.
+end note
+@enduml

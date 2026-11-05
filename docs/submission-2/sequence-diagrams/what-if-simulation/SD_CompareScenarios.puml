@@ -1,0 +1,62 @@
+@startuml SD_CompareScenarios
+title UC-W05 - Compare What-if Scenarios
+hide footbox
+autonumber
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam sequence {
+  ArrowColor #42566B
+  LifeLineBorderColor #8295A8
+  LifeLineBackgroundColor #D8EAFE
+  ParticipantBorderColor #42566B
+  ParticipantBackgroundColor #E8F1FA
+  GroupBorderColor #8295A8
+  GroupBackgroundColor #F4F7FA
+}
+
+actor Operator as OP
+boundary "Scenario Comparison UI" as UI
+control "SimulationController" as C
+control "ScenarioComparisonService" as CS
+entity "SimulationRunRepository" as RR
+
+OP -> UI: Open Compare Scenarios
+UI -> C: listCompletedRuns()
+C -> RR: findCompletedRuns()
+RR --> C: Run summaries + baseline option
+C --> UI: Available comparison targets
+
+OP -> UI: Select Run A and Run B or baseline
+UI -> C: compare(runAId, runBId | baseline)
+C -> RR: loadResultsAndMetadata(selection)
+RR --> C: Results, recommendation outcomes, metric schema,\nsnapshots, assumptions and time horizons
+
+alt Run missing, failed or not completed
+  C --> UI: Comparison unavailable with reason
+  UI --> OP: Select another completed run
+else Runs available
+  C -> CS: assessComparability(runA, runB)
+  CS -> CS: Match metric names, definitions and units
+  CS -> CS: Detect snapshot, freshness,\nassumption and horizon differences
+
+  alt No meaningful common measure
+    CS --> C: Incompatible measures + reasons
+    C --> UI: Reject misleading comparison
+    UI --> OP: Explain incompatibility
+  else Common measures available
+    CS -> CS: Compare only common measures
+    CS -> CS: Calculate deltas for service capacity, parking,\nvehicles, congestion, delay and projected revenue
+    CS -> CS: Compare recommendation outcomes and expected effects
+    CS --> C: Comparable values, outcomes, deltas and warnings
+    C --> UI: Render side-by-side comparison
+    UI --> OP: Show results and recommendation outcomes with\nbaseline context, assumptions and warnings
+  end
+end
+
+note over C,RR
+Comparison is read-only. It does not modify either run,
+its recommendations or the live network.
+end note
+@enduml

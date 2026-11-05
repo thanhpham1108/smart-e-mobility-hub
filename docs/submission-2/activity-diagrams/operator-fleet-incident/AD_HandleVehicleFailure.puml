@@ -1,0 +1,52 @@
+@startuml AD_HandleVehicleFailure
+title UC-I02 + FR-NI-02/07 - Handle Vehicle Failure
+|System / Controller|
+start
+:Receive Student report or valid fault telemetry;
+|Database|
+:Create or update one open incident;
+:Restrict vehicle from new allocation;
+:Flag affected redistribution order AtRisk;
+|Operator|
+:Open incident ticket;
+|System / Controller|
+:Check authorization and retrieve evidence;
+if (Ticket and vehicle found?) then (yes)
+  |Operator|
+  :Investigate cause and impact;
+  |System / Controller|
+  fork
+    |Database|
+    :Read affected reservations and active rental;
+  fork again
+    |Database|
+    :Read latest vehicle condition and fault evidence;
+  end fork
+  |Operator|
+  :Record response for affected commitments;
+  :Record corrective action and repair progress;
+  |Database|
+  :Save actions and incident status;
+  |System / Controller|
+  if (Repair complete and evidence valid?) then (yes)
+    |Operator|
+    :Request restoration;
+    |System / Controller|
+    :Check no unresolved fault or conflicting commitment;
+    if (Safe to restore?) then (yes)
+      |Database|
+      :Atomically mark incident Resolved and restore eligibility;
+      |Operator|
+      :Review resolution and close ticket;
+    else (no)
+      |System / Controller|
+      :Keep vehicle restricted and explain reason;
+    endif
+  else (no)
+    :Keep ticket open and vehicle restricted;
+  endif
+else (no)
+  :Show unavailable information; change no state;
+endif
+stop
+@enduml

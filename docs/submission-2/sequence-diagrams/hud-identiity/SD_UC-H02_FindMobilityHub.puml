@@ -1,0 +1,55 @@
+@startuml
+title UC-H02 - Find a Mobility Hub
+autonumber
+
+actor Student
+boundary "Hub Search Page" as UI
+control "Hub Search Controller" as HC
+participant "Location Service" as GPS
+database "Hub Database" as DB
+
+Student -> UI: Select Find a Mobility Hub
+UI --> Student: Display search and filter options
+
+Student -> UI: Specify location and required services
+UI -> HC: searchHubs(criteria)
+
+alt Use current location
+    HC -> GPS: getCurrentLocation()
+
+    alt Location available
+        GPS --> HC: Current coordinates
+    else Location unavailable
+        GPS --> HC: Location error
+        HC --> UI: Request manual location
+        UI --> Student: Ask Student to enter location
+        Student -> UI: Enter location manually
+        UI -> HC: submitLocation(location)
+    end
+
+else Use manually entered location
+    HC -> HC: Use specified location
+end
+
+HC -> DB: findMatchingHubs(criteria)
+DB --> HC: Matching Hub records
+
+alt Matching Hubs found
+    HC --> UI: Return matching Hubs
+    UI --> Student: Display Hub results
+
+    Student -> UI: Select a Hub
+    UI --> Student: Open selected Hub details
+
+else No matching Hubs
+    HC --> UI: Return empty result
+    UI --> Student: Display no-results message
+    Student -> UI: Change location or search range
+    UI -> HC: Search again with updated criteria
+    HC -> DB: findMatchingHubs(updatedCriteria)
+    DB --> HC: Updated results
+    HC --> UI: Return updated results
+    UI --> Student: Display updated results
+end
+
+@enduml

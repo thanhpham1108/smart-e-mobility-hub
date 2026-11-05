@@ -1,0 +1,20 @@
+@startuml SC_IncidentTicket
+title IncidentTicket lifecycle (UC-I02, FR-NI-02)
+[*] --> Reported : Valid Student report or fault telemetry
+Reported : Vehicle restricted from new allocation
+Reported --> Investigating : Operator opens and accepts ticket
+Reported --> Reported : Duplicate fault evidence / append once
+Investigating --> ActionAssigned : Record corrective action or repair plan
+ActionAssigned --> InRepair : Repair work begins
+InRepair --> InRepair : Progress update; repair incomplete
+InRepair --> Resolved : Repair complete AND safe restoration verified
+ActionAssigned --> Resolved : Recovery complete AND safe restoration verified
+Resolved --> Closed : Operator closes ticket
+Resolved --> Investigating : Fault recurs before closure
+Closed --> [*]
+note right of Resolved
+Vehicle eligibility is restored only after
+completed repair/recovery is recorded and
+no conflicting commitment or fault remains.
+end note
+@enduml
