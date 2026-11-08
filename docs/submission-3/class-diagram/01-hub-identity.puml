@@ -1,0 +1,109 @@
+@startuml 01-hub-identity
+title Smart E-Mobility Hub â€” Hub & Identity Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+package "Hub & Identity" {
+
+class User {
+  - userId: String
+  - name: String
+  - email: String
+  - phone: String
+  - role: Role
+  + updatePermittedProfile(email: String, phone: String): void
+}
+
+enum Role {
+  STUDENT
+  OPERATOR
+}
+
+class Session {
+  - sessionId: String
+  - userId: String
+  - role: Role
+  - createdAt: DateTime
+  - expiresAt: DateTime
+  + isActive(now: DateTime): boolean
+}
+
+class MobilityHub {
+  - hubId: String
+  - name: String
+  - location: Location
+  - operationalStatus: HubStatus
+  - vehicleCapacity: int
+  - availableVehicles: int
+  - parkingCapacity: int
+  - occupiedParking: int
+  - chargingPointCapacity: int
+  - availableChargingPoints: int
+  - lastUpdated: DateTime
+}
+
+enum HubStatus {
+  ACTIVE
+  PEAK_LOAD
+  MAINTENANCE
+  OFFLINE
+}
+
+class Location {
+  - latitude: double
+  - longitude: double
+  - address: String
+}
+
+class AuthService {
+  + authenticate(identifier: String, credential: String): Session
+  + authorize(session: Session, requiredRole: Role): boolean
+  + endSession(sessionId: String): void
+}
+
+class HubService {
+  + findHubs(criteria: HubSearchCriteria): List<MobilityHub>
+  + getHubStatus(hubId: String): MobilityHub
+  + findAlternativeHubs(criteria: HubSearchCriteria): List<MobilityHub>
+}
+
+class HubSearchCriteria {
+  - location: Location
+  - radiusKm: double
+  - requiredServices: Set<String>
+}
+
+}
+
+User "1" -- "0..*" Session : owns
+Session --> Role
+User --> Role
+MobilityHub "1" *-- "1" Location
+MobilityHub --> HubStatus
+AuthService ..> User : authenticates
+AuthService ..> Session : creates/ends
+HubService --> MobilityHub : queries
+HubService --> HubSearchCriteria : uses
+HubService ..> Location : filters by
+
+note right of User
+Identity and role are preserved.
+Only permitted profile fields
+may be changed.
+end note
+
+note right of MobilityHub
+Single ownership of Hub state.
+Other modules reference the Hub
+through HubService/contracts.
+end note
+
+note bottom of HubService
+UC-H02: find/filter Hubs
+UC-H03: view Hub status
+UC-X01: find alternative Hubs
+end note
+
+@enduml
