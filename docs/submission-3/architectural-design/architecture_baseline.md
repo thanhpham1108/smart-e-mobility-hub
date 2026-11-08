@@ -32,3 +32,15 @@ The [implementation diagram](../development-view/Implementation_View.puml) separ
 6. **Simulation isolation:** Clone the live network snapshot for each run. Recommendations are reviewable outputs and never apply themselves to live operations.
 
 The method catalogues should describe the inputs, outputs, effects, and failure behavior necessary to enforce these rules. Every operation drawn in a class diagram must have exactly one matching description.
+
+## Member 4 detailed design contribution
+
+The [Fleet & Incident class design](../class-diagram/04-fleet-incident.puml) retains member 4 ownership of `RedistributionOrder`, `IncidentTicket`, `FleetService` and `TelemetryAdapter`, and adds `IncidentService` to separate incident recovery from transfer coordination. This is a refinement within the existing Fleet & Incident module. Its DTOs, lifecycle guards, owner contracts and all operation descriptions are defined in [the method catalogue](../method-design/04-fleet-incident.md).
+
+The Implementation view now makes incident handling, telemetry routing to all three resource owners, and internal freshness/imbalance evaluation explicit. Fleet reads Hub/Charging status, checks capacity through Parking and updates vehicle state through Rental. IncidentService applies resource restrictions/restoration through Rental or Charging. TelemetryAdapter does not own parking or charging sessions. Simulation receives copied, versioned Fleet/Incident data through the shared snapshot contract.
+
+For this single-process MVP, all authoritative owner writes participate in one staged Unit of Work guarded by the application state lock. Commit publishes resource changes, request/event result and audit together; failure discards the working copy. Idempotency is scoped by principal/provider, operation/event ID and payload hash. Identical retries return the original result; conflicting payload reuse rejects. This guarantee lasts for the process lifetime with in-memory storage. A persistent backend would need to persist both state and idempotency records atomically.
+
+Telemetry's observed location is distinct from confirmed redistribution arrival; UC-F05 remains the authority for transfer completion. A healthy or idle observation cannot clear unresolved incidents, rentals or future allocations. Dashboard freshness becomes stale at the configured interval boundary; non-duplicate equal-timestamp observations are rejected by the proposed strict ordering policy. These are explicit design decisions to review with the resource owners.
+
+The updated architectural views are member 4's integration contribution for group review. They do not certify implementation or completion of the other five class designs. Review handoff: member 1 for Hub/projections and deployment aggregation; member 2 for vehicle commitments; member 3 for capacity/reconciliation; member 5 for point/session faults and recovery; member 6 for copied snapshots.

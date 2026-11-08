@@ -1,0 +1,90 @@
+@startuml 04-fleet-incident
+title Fleet & Incident - Class Design (Mai Hoang Phuong Dong, 2452265)
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 35
+skinparam ranksep 50
+hide empty members
+
+package "Fleet & Incident - owner: member 4" {
+  class FleetService <<application service>> {
+    + getNetworkOverview(ctx: Context): NetworkOverview
+    + inspectVehicle(ctx: Context, vehicleId: String): VehicleView
+    + inspectChargingPoint(ctx: Context, pointId: String): PointView
+    + validateRedistribution(ctx: Context, request: TransferRequest): Proposal
+    + createRedistribution(ctx: Context, proposal: Proposal): RedistributionOrder
+    + recordArrival(ctx: Context, orderId: String, vehicleIds: Set<String>): RedistributionOrder
+    + updateOrder(ctx: Context, orderId: String, action: OrderAction): RedistributionOrder
+    + evaluateNetworkHealth(now: DateTime): List<OperationalAlert>
+  }
+  class IncidentService <<application service>> {
+    + getIncident(ctx: Context, ticketId: String): IncidentView
+    + reportFailure(ctx: Context, report: FailureReport): IncidentTicket
+    + updateIncident(ctx: Context, ticketId: String, update: IncidentUpdate): IncidentTicket
+    + resolveIncident(ctx: Context, ticketId: String): IncidentTicket
+    + closeIncident(ctx: Context, ticketId: String): IncidentTicket
+  }
+  class TelemetryAdapter <<intake adapter>> {
+    + validateEvent(source: SourceIdentity, event: TelemetryEvent): ValidationResult
+    + ingestVehicle(source: SourceIdentity, event: TelemetryEvent): EventResult
+    + ingestParking(source: SourceIdentity, event: TelemetryEvent): EventResult
+    + ingestChargingPoint(source: SourceIdentity, event: TelemetryEvent): EventResult
+  }
+  class RedistributionOrder <<entity>> {
+    - orderId: String
+    - sourceHubId: String
+    - destinationHubId: String
+    - assignedVehicleIds: Set<String>
+    - arrivedVehicleIds: Set<String>
+    - status: OrderStatus
+    - resumeStatus: OrderStatus
+    - riskReason: String
+    - version: Integer
+    - createdAt: DateTime
+    + recordArrivals(vehicleIds: Set<String>): void
+    + markAtRisk(reason: String): void
+    + transition(target: OrderStatus): void
+  }
+  class IncidentTicket <<entity>> {
+    - ticketId: String
+    - resourceType: ResourceType
+    - resourceId: String
+    - faultKey: String
+    - status: IncidentStatus
+    - severity: Severity
+    - evidence: List<Evidence>
+    - responseRefs: Set<String>
+    - repairEvidence: RepairEvidence
+    - version: Integer
+    - reportedAt: DateTime
+    + appendEvidence(evidence: Evidence): Boolean
+    + transition(target: IncidentStatus): void
+  }
+}
+
+package "Resource owners - references only" {
+  class MobilityHub <<external: member 1>>
+  class SharedVehicle <<external: member 2>>
+  class ChargingPoint <<external: member 5>>
+}
+
+FleetService ..> RedistributionOrder : coordinates transactions
+FleetService .right.> IncidentService : reads incident impact
+IncidentService ..> IncidentTicket : manages
+TelemetryAdapter ..> IncidentService : fault intake
+TelemetryAdapter ..> FleetService : assignment risk / health
+RedistributionOrder "0..*" --> "1" MobilityHub : source
+RedistributionOrder "0..*" --> "1" MobilityHub : destination
+RedistributionOrder "0..*" --> "1..*" SharedVehicle : assigned (history)
+IncidentTicket "0..*" --> "0..1" SharedVehicle : vehicle incident
+IncidentTicket "0..*" --> "0..1" ChargingPoint : point incident
+legend bottom
+  IncidentTicket targets SharedVehicle XOR ChargingPoint; equivalent open faults share one ticket.
+  arrivedVehicleIds is a subset of assignedVehicleIds; only recordArrival confirms physical movement.
+  One active transfer per vehicle. A new fault before closure invalidates recovery and reopens investigation.
+  External state is accessed through owner contracts, not direct repository writes.
+  DTOs, enums, transaction rules and errors: method-design/04-fleet-incident.md.
+  Entity methods enforce local transitions; application services enforce cross-resource safety.
+endlegend
+@enduml

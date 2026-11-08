@@ -1,65 +1,46 @@
 @startuml Implementation_View
-title Smart E-Mobility Hub — Development / Implementation View (Submission 3)
-left to right direction
+title Smart E-Mobility Hub - Development / Implementation View
+top to bottom direction
 skinparam shadowing false
 skinparam componentStyle rectangle
 skinparam packageStyle rectangle
-
-package "Presentation" {
+skinparam nodesep 55
+skinparam ranksep 60
+package "Presentation" as Presentation {
   [Student Portal] as StudentUI
   [Operator Portal] as OperatorUI
 }
-
-package "Application and domain modules" {
-  [Hub & Identity] as Hub
+component "API handlers\nSession / source authorization" as API
+package "Application and domain modules" as Domain {
+  [Fleet & Incident\nFleetService / IncidentService\nTelemetryAdapter] as Fleet
   [Vehicle Rental] as Rental
   [Parking & Private EV] as Parking
-  [Fleet & Incident] as Fleet
   [Smart Charging] as Charging
+  [Hub & Identity] as Hub
   [What-if Simulation] as Simulation
 }
-
-package "Shared contracts and adapters" {
-  [API handlers / role checks] as API
-  [Snapshot contract] as Snapshot
-  [Repository contracts] as Repository
-  [JSON / in-memory adapter] as DataAdapter
-  [Telemetry intake adapter] as Telemetry
-}
-
-StudentUI --> API : student requests
-OperatorUI --> API : operator requests
-API --> Hub : authenticate / Hub queries
-API --> Rental : rental requests
-API --> Parking : parking requests
-API --> Fleet : operations
-API --> Charging : schedule requests
-API --> Simulation : simulation requests
-
-Rental --> Hub : Hub availability
-Parking --> Hub : Hub capacity / alternatives
-Parking --> Charging : submit / cancel charging request
-Fleet --> Rental : vehicle restriction contract
-Fleet --> Charging : point fault contract
-Telemetry --> Fleet : verified observations
-
-Simulation --> Snapshot : read-only network state
-Snapshot --> Hub
-Snapshot --> Rental
-Snapshot --> Parking
-Snapshot --> Fleet
-Snapshot --> Charging
-
-Hub --> Repository
-Rental --> Repository
-Parking --> Repository
-Fleet --> Repository
-Charging --> Repository
-Simulation --> Repository
-Repository --> DataAdapter : persistence adapter
-
-note bottom of Simulation
-  Each run works on a copied snapshot;
-  recommendations do not change live operations.
-end note
+component "Repository + Unit of Work contracts\nVersioned snapshot contract" as Contracts
+component "JSON seed / in-memory adapter\nState lock, command/event ledger, audit" as Data
+component "Internal health scheduler" as Scheduler
+Presentation --> API : role-scoped requests
+API --> Domain : route to owning service
+API ..> Hub : authentication
+Scheduler --> Fleet : freshness / imbalance
+Fleet --> Rental : vehicle operations
+Fleet --> Parking : capacity / observations
+Fleet --> Charging : point status / incidents
+Fleet --> Hub : network status
+Rental --> Hub : status / alternatives
+Parking --> Hub : status / alternatives
+Parking --> Charging : charging requests
+Charging ..> Parking : parking eligibility
+Domain --> Contracts : owner writes / consistent reads
+Simulation ..> Contracts : copy snapshot for each run
+Contracts --> Data : atomic publication
+legend bottom
+  Fleet & Incident owns intake; Rental/Parking/Charging own resource transitions.
+  Inter-module arrows are in-process contract dependencies, not separate deployments.
+  Simulation modifies its copied snapshot only; recommendations do not dispatch live work.
+  Exact Fleet contracts are in architecture_baseline.md and 04-fleet-incident.md.
+endlegend
 @enduml
