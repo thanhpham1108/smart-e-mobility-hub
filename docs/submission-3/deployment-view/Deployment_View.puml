@@ -1,6 +1,8 @@
 @startuml Deployment_View
 title Smart E-Mobility Hub — Deployment View (Submission 3)
-left to right direction
+top to bottom direction
+skinparam nodesep 45
+skinparam ranksep 55
 skinparam shadowing false
 skinparam componentStyle rectangle
 skinparam defaultTextAlignment center
@@ -20,7 +22,9 @@ node "Operator device" <<device>> as OperatorDevice {
 node "Application host" <<device>> as ApplicationHost {
   node "Web/API process" <<executionEnvironment>> as ApplicationProcess {
     artifact "API handlers and role checks" as API
-    artifact "Six domain modules" as Domain
+    artifact "Parking & Private EV module" as Parking
+    artifact "Smart Charging module" as Charging
+    artifact "Other four domain modules" as Domain
     artifact "In-memory operational state" as State
   }
   artifact "JSON seed fixtures" as Fixtures
@@ -34,6 +38,10 @@ StudentBrowser --> ApplicationProcess : HTTPS — Student operations
 OperatorBrowser --> ApplicationProcess : HTTPS — Operator operations
 SimulatorHost --> ApplicationProcess : authenticated mock telemetry events
 Fixtures --> State : load seed data
+API --> Parking : parking commands and queries
+Parking --> Charging : in-process charging calls
+Parking --> State : slot holds and parking visits
+Charging --> State : linked requests and allocations
 
 note bottom of ApplicationHost
   The brief does not require a production database.

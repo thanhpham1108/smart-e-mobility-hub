@@ -4,22 +4,26 @@ left to right direction
 skinparam shadowing false
 skinparam componentStyle rectangle
 skinparam packageStyle rectangle
+skinparam nodesep 45
+skinparam ranksep 45
 
 package "Presentation" {
   [Student Portal] as StudentUI
   [Operator Portal] as OperatorUI
 }
 
-package "Application and domain modules" {
-  [Hub & Identity] as Hub
-  [Vehicle Rental] as Rental
-  [Parking & Private EV] as Parking
-  [Fleet & Incident] as Fleet
-  [Smart Charging] as Charging
+package "Application and domain modules" as Modules {
+  package "Operational modules" as Operational {
+    [Hub & Identity] as Hub
+    [Vehicle Rental] as Rental
+    [Parking & Private EV] as Parking
+    [Fleet & Incident] as Fleet
+    [Smart Charging] as Charging
+  }
   [What-if Simulation] as Simulation
 }
 
-package "Shared contracts and adapters" {
+package "Shared contracts and adapters" as Shared {
   [API handlers / role checks] as API
   [Snapshot contract] as Snapshot
   [Repository contracts] as Repository
@@ -29,33 +33,20 @@ package "Shared contracts and adapters" {
 
 StudentUI --> API : student requests
 OperatorUI --> API : operator requests
-API --> Hub : authenticate / Hub queries
-API --> Rental : rental requests
-API --> Parking : parking requests
-API --> Fleet : operations
-API --> Charging : schedule requests
-API --> Simulation : simulation requests
-
+API --> Modules : route authorized requests
+API --> Hub : authenticate
 Rental --> Hub : Hub availability
-Parking --> Hub : Hub capacity / alternatives
-Parking --> Charging : submit / cancel charging request
-Fleet --> Rental : vehicle restriction contract
-Fleet --> Charging : point fault contract
+Rental --> Parking : return capacity
+Parking --> Hub : status / alternatives
+Parking --> Charging : submit / read / cancel\nrequests or stop charging
+Charging --> Parking : linked parking window\nand eligibility
+Fleet --> Parking : validated occupancy
+Fleet --> Rental : vehicle restrictions
+Fleet --> Charging : point faults
 Telemetry --> Fleet : verified observations
-
-Simulation --> Snapshot : read-only network state
-Snapshot --> Hub
-Snapshot --> Rental
-Snapshot --> Parking
-Snapshot --> Fleet
-Snapshot --> Charging
-
-Hub --> Repository
-Rental --> Repository
-Parking --> Repository
-Fleet --> Repository
-Charging --> Repository
-Simulation --> Repository
+Simulation --> Snapshot : read versioned state
+Snapshot --> Operational : read all five providers
+Modules --> Repository : load / save module state
 Repository --> DataAdapter : persistence adapter
 
 note bottom of Simulation

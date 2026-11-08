@@ -22,6 +22,19 @@ The [implementation diagram](../development-view/Implementation_View.puml) separ
 | Charging request and schedule | Smart Charging | Parking submits/cancels private-EV requests; Fleet reports point faults; What-if receives a snapshot. |
 | Network snapshot | What-if Simulation | Reads versioned state from Hub, Rental, Parking, Fleet, and Charging. A simulation run mutates only its own snapshot. |
 
+### Parking and Smart Charging handoff
+
+ParkingService owns per-slot parking holds and actual occupancy. It checks capacity across the full interval for reservation review and confirmation. Rental can query capacity for returns, and Fleet forwards validated occupancy observations for comparison with the parking ledger. A discrepancy is available for operator review and cannot itself admit or check out a vehicle. The Student Portal sends the selected reference or QR to the API. The optional gate visualization runs only after a logical check-in succeeds.
+
+| Caller → provider | Data and decision |
+| --- | --- |
+| Parking → Hub & Identity | Verify the Student session and obtain Hub status. On request, obtain alternative Hubs and recheck the chosen Hub's full parking interval. |
+| Parking → Smart Charging | Submit the owned parking reference, Hub, vehicle, battery levels and requested window. Read back the request status and allocation for booking details. Charging owns creation, cancellation, allocation release and any confirmed stop. |
+| Smart Charging → Parking | Read the linked parking window and current eligibility before accepting or starting charging. Serialize the final decision with parking cancellation, checkout and no-show expiry. |
+| Parking and Smart Charging → shared in-memory state | Within the single application process, commit a parking transition and its dependent charging cancellations/releases as one update. A charging-only cancellation leaves the parking holds intact. Stopping Active charging for checkout is a separate confirmed step. |
+
+[Parking class diagram](../class-diagram/03-parking-private-ev.puml) · [Method contracts](../method-design/03-parking-private-ev.md) · [Acceptance cases](../test-cases/03-parking-private-ev.md)
+
 ## Shared design rules
 
 1. **Single ownership:** One module defines each entity and its state transitions. Other modules use identifiers and service/port contracts rather than duplicate class definitions.
