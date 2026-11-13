@@ -7,3 +7,5 @@ This directory contains the shared starting point for the team. The [task assign
 Each member should place their module class diagram in `class-diagram/`, its complete method catalogue in `method-design/`, and its bonus test cases in `test-cases/`. Keep editable `.puml` sources alongside exported diagram images. Names and states must match the approved use-case catalogue and Submission 2 diagrams.
 
 The reference architecture uses browser clients, one application process, JSON fixtures/in-memory state, and a telemetry simulator. These are logical deployment choices for the design document; no specific programming framework or production database is required by the brief.
+
+Member 4's [Fleet & Incident contribution](04-fleet-incident.md) includes the class diagram, complete 22-operation catalogue, 14 bonus test specifications, architectural-view integration and a reproducible individual PDF report. The shared views now include that contribution and remain subject to cross-module owner review.

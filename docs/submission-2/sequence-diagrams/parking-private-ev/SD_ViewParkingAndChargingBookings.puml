@@ -104,7 +104,7 @@ UI --> ST: Generic unavailable message; return to refreshed owned-record list
 else retrieval failed
 UI --> ST: Offer retry; mark retained details as not refreshed
 else current owned details retrieved
-UI --> ST: Show latest details and actions; distinguish Pending, Scheduled and Active
+UI --> ST: Show latest details and actions; distinguish Scheduled and Active
 end
 end
 deactivate UI

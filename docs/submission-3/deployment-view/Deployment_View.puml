@@ -20,32 +20,34 @@ node "Operator device" <<device>> as OperatorDevice {
 }
 
 node "Application host" <<device>> as ApplicationHost {
-  node "Web/API process" <<executionEnvironment>> as ApplicationProcess {
-    artifact "API handlers and role checks" as API
+  node "One Web/API process" <<executionEnvironment>> as Process {
+    artifact "API handlers\nSession and source checks" as API
+    artifact "Fleet & Incident module\nFleetService / IncidentService\nTelemetryAdapter / health scheduler" as Fleet
     artifact "Parking & Private EV module" as Parking
-    artifact "Smart Charging module" as Charging
-    artifact "Other four domain modules" as Domain
-    artifact "In-memory operational state" as State
+    artifact "Other four domain modules\nHub / Rental / Charging / Simulation" as Domain
+    artifact "Authoritative in-memory state\nShared lock + staged Unit of Work\nCommand/event results + audit" as State
   }
   artifact "JSON seed fixtures" as Fixtures
 }
 
-node "Telemetry simulator" <<device>> as SimulatorHost {
-  artifact "Timestamped mock event producer" as Producer
+node "Telemetry simulator host" <<device>> as SimulatorHost {
+  artifact "Timestamped mock event producer\nVehicle / parking / charging point" as Producer
 }
 
-StudentBrowser --> ApplicationProcess : HTTPS — Student operations
-OperatorBrowser --> ApplicationProcess : HTTPS — Operator operations
-SimulatorHost --> ApplicationProcess : authenticated mock telemetry events
-Fixtures --> State : load seed data
-API --> Parking : parking commands and queries
-Parking --> Charging : in-process charging calls
-Parking --> State : slot holds and parking visits
-Charging --> State : linked requests and allocations
+StudentBrowser --> API : HTTPS / Student requests
+OperatorBrowser --> API : HTTPS / Operator requests
+Producer --> API : HTTPS / authenticated telemetry
+Fixtures --> State : initialize on startup
+API -[hidden]-> Fleet
+Fleet -[hidden]-> Parking
+Parking -[hidden]-> Domain
+Domain -[hidden]-> State
 
-note bottom of ApplicationHost
-  The brief does not require a production database.
-  Authoritative bookings, schedules and sessions
-  are decided inside the application process.
-end note
+legend bottom
+  Artifacts inside the Web/API process use in-process calls and the same state lock.
+  Browser state holds UI selections; resource commitments are decided by the application.
+  No production database or physical IoT gateway is required for this MVP design.
+  State and deduplication results last for the process lifetime; restart reloads fixtures.
+  The simulator and application may share one laptop during demonstration.
+endlegend
 @enduml

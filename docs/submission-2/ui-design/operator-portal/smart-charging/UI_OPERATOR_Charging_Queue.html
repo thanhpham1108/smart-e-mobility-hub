@@ -243,8 +243,8 @@
             </div>
             <div>
               <div class="font-bold text-slate-900 text-sm flex items-center gap-2">
-                Hàng Đợi Chờ Sạc Thông Minh
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-100 text-amber-800">5 xe đang đợi</span>
+                Request Đã Xếp Lịch (FCFS)
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-100 text-amber-800">5 request đã gán</span>
               </div>
               <div class="text-[11px] text-slate-500">Sắp xếp theo thời điểm gửi (FCFS); trùng thời điểm thì xét pin yếu hơn</div>
             </div>
@@ -264,7 +264,7 @@
                 <th class="py-2.5 px-3">Phương tiện & Chủ xe</th>
                 <th class="py-2.5 px-3 w-32">Mức pin (%)</th>
                 <th class="py-2.5 px-3 w-28">Giờ gửi / Đi</th>
-                <th class="py-2.5 px-3 w-28">Cổng dự kiến</th>
+                <th class="py-2.5 px-3 w-28">Cổng đã gán</th>
                 <th class="py-2.5 px-3 text-right w-24">Thao tác</th>
               </tr>
             </thead>
@@ -300,11 +300,11 @@
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-cyan-50 text-cyan-800 font-semibold border border-cyan-200">
                     <span class="w-1.5 h-1.5 rounded-full bg-cyan-600"></span> DC-03 (Trống)
                   </span>
-                  <div class="text-[10px] text-slate-400 mt-0.5">Cấp slot: ~3 phút</div>
+                  <div class="text-[10px] text-slate-400 mt-0.5">Đã gán khi gửi</div>
                 </td>
                 <td class="py-3 px-3 text-right">
                   <button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-semibold transition cursor-pointer">
-                    Vào sạc
+                    Xem lịch
                   </button>
                 </td>
               </tr>
@@ -337,7 +337,7 @@
                 </td>
                 <td class="py-3 px-3">
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-                    DC-01 (Chờ xong)
+                    DC-01 (Đã gán)
                   </span>
                   <div class="text-[10px] text-slate-400 mt-0.5">Dự kiến: 11:15</div>
                 </td>
@@ -382,7 +382,7 @@
                 </td>
                 <td class="py-3 px-3 text-right">
                   <button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-semibold transition cursor-pointer">
-                    Vào sạc
+                    Xem lịch
                   </button>
                 </td>
               </tr>
@@ -472,7 +472,7 @@
         <!-- Panel Footer -->
         <div class="h-10 bg-slate-50 border-t border-slate-200 px-4 flex items-center justify-between text-xs text-slate-500 shrink-0">
           <span>Tiêu chí sắp xếp: <strong class="text-slate-700">FCFS</strong> (Thời điểm gửi); chỉ dùng mức pin khi thời điểm trùng nhau</span>
-          <span class="font-mono text-[11px]">Cập nhật hàng đợi: 15s trước</span>
+          <span class="font-mono text-[11px]">Cập nhật lịch: 15s trước</span>
         </div>
       </div>
 

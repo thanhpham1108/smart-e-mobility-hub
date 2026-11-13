@@ -60,7 +60,7 @@ repeat
 :Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
 if () then ([overdue Confirmed records])
   |Database|
-  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nPending/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nScheduled requests; release remaining\nholds and future allocations ONCE;
   |System|
   if () then ([cleanup failed, unknown or Active conflict])
     :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;

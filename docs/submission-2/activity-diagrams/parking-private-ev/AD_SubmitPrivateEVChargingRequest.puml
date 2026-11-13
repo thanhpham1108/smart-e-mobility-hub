@@ -52,7 +52,7 @@ else ([data retrieved])
 :Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
 if () then ([overdue Confirmed records])
   |Database|
-  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nPending/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nScheduled requests; release remaining\nholds and future allocations ONCE;
   |System|
   if () then ([cleanup failed, unknown or Active conflict])
     :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;
@@ -113,7 +113,7 @@ end note
   if () then ([charging inputs invalid])
     :Identify invalid values;
   else ([charging inputs valid])
-    :Display summary; explain that submission does\nNOT guarantee a charging slot;
+    :Display summary; explain that submission\nassigns a slot or returns Full;
     |Actor|
     :Review summary; choose confirm, edit or cancel;
     if () then ([cancel selected])
@@ -148,11 +148,16 @@ end note
         :Display existing request and current status;\ncreate no duplicate;
       else ([no equivalent request])
 |Database|
-:Guarded atomic create: recheck ownership, parking\neligibility and deadline against expiry/cancel;\nreturn equivalent request if present, otherwise\ncreate ONE Pending request without slot\nallocation;
+:Recheck parking eligibility and available\ncharging points in the requested window;\napply FCFS and estimate charging duration;
 |System|
-note right
-  Busy charging points can still accept Pending requests.
-end note
+        if () then ([no feasible slot])
+          :Report Full or insufficient charging time;\nsave no request or allocation;
+          stop
+        else ([feasible slot])
+        endif
+|Database|
+:Guarded atomic create: recheck eligibility\nand slot; save ONE Scheduled request with\nits allocation, or return equivalent result;
+|System|
         if () then ([confirmation response lost])
 |Database|
 :Retrieve the original operation's result; do not\nrepeat the update;
@@ -174,7 +179,7 @@ end note
           stop
         else ([created or equivalent request returned])
         endif
-        :Display returned request reference, vehicle, Hub,\ninterval and current status (Pending if created);
+        :Display returned request reference, vehicle, Hub,\nassigned point, interval and Scheduled status;
       endif
       stop
     else ([edit selected])

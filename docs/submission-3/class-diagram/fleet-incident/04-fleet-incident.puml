@@ -1,0 +1,127 @@
+@startuml 04-fleet-incident-review
+title Fleet & Incident — Class Diagram Review
+top to bottom direction
+skinparam classAttributeIconSize 0
+skinparam classHeaderBackgroundColor #D9EFD9
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 95
+skinparam ranksep 75
+hide empty members
+
+package "Fleet & Incident - owner: member 4" {
+  class FleetService <<application service>> {
+    + getNetworkOverview(ctx: Context): NetworkOverview
+    + inspectVehicle(ctx: Context, vehicleId: String): VehicleView
+    + inspectChargingPoint(ctx: Context, pointId: String): PointView
+    + validateRedistribution(ctx: Context, request: TransferRequest): Proposal
+    + createRedistribution(ctx: Context, proposal: Proposal): RedistributionOrder
+    + recordArrival(ctx: Context, orderId: String, vehicleIds: Set<String>): RedistributionOrder
+    + updateOrder(ctx: Context, orderId: String, action: OrderAction): RedistributionOrder
+    + evaluateNetworkHealth(now: DateTime): List<OperationalAlert>
+  }
+
+  class IncidentService <<application service>> {
+    + getIncident(ctx: Context, ticketId: String): IncidentView
+    + reportFailure(ctx: Context, report: FailureReport): IncidentTicket
+    + updateIncident(ctx: Context, ticketId: String, update: IncidentUpdate): IncidentTicket
+    + resolveIncident(ctx: Context, ticketId: String): IncidentTicket
+    + closeIncident(ctx: Context, ticketId: String): IncidentTicket
+  }
+
+  class TelemetryAdapter <<intake adapter>> {
+    + validateEvent(source: SourceIdentity, event: TelemetryEvent): ValidationResult
+    + ingestVehicle(source: SourceIdentity, event: TelemetryEvent): EventResult
+    + ingestParking(source: SourceIdentity, event: TelemetryEvent): EventResult
+    + ingestChargingPoint(source: SourceIdentity, event: TelemetryEvent): EventResult
+  }
+
+  class RedistributionOrder <<entity>> {
+    - orderId: String
+    - sourceHubId: String
+    - destinationHubId: String
+    - assignedVehicleIds: Set<String>
+    - arrivedVehicleIds: Set<String>
+    - status: OrderStatus
+    - resumeStatus: OrderStatus
+    - riskReason: String
+    - version: Integer
+    - createdAt: DateTime
+    + recordArrivals(vehicleIds: Set<String>): void
+    + markAtRisk(reason: String): void
+    + transition(target: OrderStatus): void
+  }
+
+  class IncidentTicket <<entity>> {
+    - ticketId: String
+    - resourceType: ResourceType
+    - resourceId: String
+    - faultKey: String
+    - status: IncidentStatus
+    - severity: Severity
+    - evidence: List<Evidence>
+    - responseRefs: Set<String>
+    - repairEvidence: RepairEvidence
+    - version: Integer
+    - reportedAt: DateTime
+    + appendEvidence(evidence: Evidence): Boolean
+    + transition(target: IncidentStatus): void
+  }
+
+  enum OrderAction <<enumeration>> {
+    DISPATCH
+    REVALIDATE
+    CANCEL
+  }
+  enum OrderStatus <<enumeration>> {
+    ASSIGNED
+    IN_TRANSIT
+    PARTIALLY_COMPLETED
+    AT_RISK
+    COMPLETED
+    CANCELLED
+  }
+  enum ResourceType <<enumeration>> {
+    VEHICLE
+    CHARGING_POINT
+  }
+  enum IncidentStatus <<enumeration>> {
+    REPORTED
+    INVESTIGATING
+    ACTION_ASSIGNED
+    IN_REPAIR
+    RESOLVED
+    CLOSED
+  }
+  enum Severity <<enumeration>> {
+    LOW
+    MEDIUM
+    HIGH
+  }
+}
+
+package "Resource owners - references only" {
+  class MobilityHub <<external: member 1>>
+  class SharedVehicle <<external: member 2>>
+  class ChargingPoint <<external: member 5>>
+}
+
+FleetService ..> RedistributionOrder : coordinates transactions
+FleetService .right.> IncidentService : reads incident impact
+IncidentService ..> IncidentTicket : manages
+TelemetryAdapter ..> IncidentService : fault intake
+TelemetryAdapter ..> FleetService : assignment risk / health
+
+RedistributionOrder "0..*" --> "1" MobilityHub : source
+RedistributionOrder "0..*" --> "1" MobilityHub : destination
+RedistributionOrder "0..*" --> "1..*" SharedVehicle : assigned (history)
+IncidentTicket "0..*" --> "0..1" SharedVehicle : vehicle incident
+IncidentTicket "0..*" --> "0..1" ChargingPoint : point incident
+
+FleetService --> OrderAction : uses
+RedistributionOrder --> OrderStatus
+IncidentTicket --> ResourceType
+IncidentTicket --> IncidentStatus
+IncidentTicket --> Severity
+@enduml

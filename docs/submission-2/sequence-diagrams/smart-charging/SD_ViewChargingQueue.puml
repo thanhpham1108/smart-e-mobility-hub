@@ -23,9 +23,9 @@ activate UI
 UI -> Ctrl : getQueueAndSchedule(hubId)
 activate Ctrl
 
-Ctrl -> Req : findPendingRequests(hubId)
+Ctrl -> Req : findAcceptedRequests(hubId)
 activate Req
-Req -->> Ctrl : pendingRequests
+Req -->> Ctrl : acceptedRequests
 deactivate Req
 
 Ctrl -> Point : getChargingPointsStatus(hubId)
@@ -42,10 +42,9 @@ alt Database Connection Failure
     Ctrl -->> UI : showError("Failed to retrieve charging data")
     UI -->> Op : Display error alert
 else Data Retrieved Successfully
-    Ctrl -> Ctrl : sortPendingBySubmissionTime(pendingRequests)\nFCFS; lower battery first only for equal timestamps
-    Ctrl -> Ctrl : identifyUnscheduledRequests(pendingRequests, currentSchedule)
-    Ctrl -->> UI : displayQueueAndSchedule(sortedPendingRequests, currentSchedule, chargingPointsList)
-    UI -->> Op : Render schedule Gantt chart, port status, and waiting queue
+    Ctrl -> Ctrl : sortAcceptedBySubmissionTime(acceptedRequests)\nFCFS; lower battery first only for equal timestamps
+    Ctrl -->> UI : displayQueueAndSchedule(sortedAcceptedRequests, currentSchedule, chargingPointsList)
+    UI -->> Op : Render schedule Gantt chart, port status, and accepted requests
 end
 
 deactivate Ctrl

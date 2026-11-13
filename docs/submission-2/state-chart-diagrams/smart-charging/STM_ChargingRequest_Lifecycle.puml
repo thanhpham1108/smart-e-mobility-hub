@@ -23,11 +23,6 @@ title State Machine Diagram: ChargingRequest Lifecycle
 ' ========================================================
 ' TRỤC CHÍNH (TIẾN TRÌNH PHÁT TRIỂN TIẾP - ĐI THẲNG XUỐNG)
 ' ========================================================
-state "Pending" as Pending #E0F2FE {
-  Pending : entry / Enqueue in FCFS arrival queue
-  Pending : do / Await scheduling cycle
-}
-
 state "Scheduled" as Scheduled #E0E7FF {
   Scheduled : entry / Assign portId & time slot
   Scheduled : entry / Reserve electrical capacity
@@ -48,11 +43,6 @@ state "Completed" as Completed #DCFCE7 {
 ' ========================================================
 ' NHÁNH RẼ NGANG (TRƯỜNG HỢP NEGATIVE / NGOẠI LỆ)
 ' ========================================================
-state "Unscheduled" as Unscheduled #FEF3C7 {
-  Unscheduled : entry / Log exclusion reason
-  Unscheduled : do / Await capacity release
-}
-
 state "Suspended" as Suspended #FFE4E6 {
   Suspended : entry / Open relay & raise alert
   Suspended : do / Await hardware diagnostics
@@ -64,9 +54,7 @@ state "Cancelled" as Cancelled #F1F5F9 {
 }
 
 ' 1. CỘT TRUNG TÂM: TIẾN TRÌNH CHÍNH (ĐI XUỐNG THẲNG ĐỨNG)
-[*] -down-> Pending : submitRequest()
-
-Pending -down-> Scheduled : schedule() [slot available]
+[*] -down-> Scheduled : submitRequest() [slot available]
 
 Scheduled -down-> Charging : connectVehicle()
 
@@ -75,18 +63,13 @@ Charging -down-> Completed : targetReached()
 Completed -down-> [*]
 
 ' 2. RẼ NGANG: CÁC TRƯỜNG HỢP NEGATIVE
-Pending -right-> Unscheduled : schedule() [no slot]
-
-Unscheduled -left-> Scheduled : adjustSchedule()
-
 Charging -left[#D97706]-> Suspended : <font color="#B45309"><b>hardwareFault()</b></font>
 Suspended -right[#059669]-> Charging : <font color="#047857"><b>faultCleared()</b></font>
+Suspended -down-> Cancelled : stopCharging()
 
 Scheduled -right-> Cancelled : cancelReservation()
 
 Charging -right[#DC2626,bold]-> Cancelled : <font color="#DC2626"><b>abortCharging()</b></font>
-
-Unscheduled -down-> Cancelled : cancelRequest()
 
 Cancelled -down-> [*]
 

@@ -7,50 +7,43 @@ skinparam packageStyle rectangle
 skinparam nodesep 45
 skinparam ranksep 45
 
-package "Presentation" {
+package "Presentation" as Presentation {
   [Student Portal] as StudentUI
   [Operator Portal] as OperatorUI
 }
-
-package "Application and domain modules" as Modules {
-  package "Operational modules" as Operational {
-    [Hub & Identity] as Hub
-    [Vehicle Rental] as Rental
-    [Parking & Private EV] as Parking
-    [Fleet & Incident] as Fleet
-    [Smart Charging] as Charging
-  }
+component "API handlers\nSession / source authorization" as API
+package "Application and domain modules" as Domain {
+  [Fleet & Incident\nFleetService / IncidentService\nTelemetryAdapter] as Fleet
+  [Vehicle Rental] as Rental
+  [Parking & Private EV] as Parking
+  [Smart Charging] as Charging
+  [Hub & Identity] as Hub
   [What-if Simulation] as Simulation
 }
+component "Repository + Unit of Work contracts\nVersioned snapshot contract" as Contracts
+component "JSON seed / in-memory adapter\nState lock, command/event ledger, audit" as Data
+component "Internal health scheduler" as Scheduler
 
-package "Shared contracts and adapters" as Shared {
-  [API handlers / role checks] as API
-  [Snapshot contract] as Snapshot
-  [Repository contracts] as Repository
-  [JSON / in-memory adapter] as DataAdapter
-  [Telemetry intake adapter] as Telemetry
-}
-
-StudentUI --> API : student requests
-OperatorUI --> API : operator requests
-API --> Modules : route authorized requests
-API --> Hub : authenticate
-Rental --> Hub : Hub availability
-Rental --> Parking : return capacity
+Presentation --> API : role-scoped requests
+API --> Domain : route to owning service
+API ..> Hub : authentication
+Scheduler --> Fleet : freshness / imbalance
+Fleet --> Rental : vehicle operations
+Fleet --> Parking : capacity / observations
+Fleet --> Charging : point status / incidents
+Fleet --> Hub : network status
+Rental --> Hub : status / alternatives
 Parking --> Hub : status / alternatives
-Parking --> Charging : submit / read / cancel\nrequests or stop charging
-Charging --> Parking : linked parking window\nand eligibility
-Fleet --> Parking : validated occupancy
-Fleet --> Rental : vehicle restrictions
-Fleet --> Charging : point faults
-Telemetry --> Fleet : verified observations
-Simulation --> Snapshot : read versioned state
-Snapshot --> Operational : read all five providers
-Modules --> Repository : load / save module state
-Repository --> DataAdapter : persistence adapter
+Parking --> Charging : charging requests
+Charging ..> Parking : parking eligibility
+Domain --> Contracts : owner writes / consistent reads
+Simulation ..> Contracts : copy snapshot for each run
+Contracts --> Data : atomic publication
 
-note bottom of Simulation
-  Each run works on a copied snapshot;
-  recommendations do not change live operations.
-end note
+legend bottom
+  Fleet & Incident owns intake; Rental, Parking and Charging own resource transitions.
+  Inter-module arrows are in-process contract dependencies, not separate deployments.
+  Simulation modifies its copied snapshot only; recommendations do not dispatch live work.
+  Exact module contracts are defined in their method catalogues and architecture_baseline.md.
+endlegend
 @enduml

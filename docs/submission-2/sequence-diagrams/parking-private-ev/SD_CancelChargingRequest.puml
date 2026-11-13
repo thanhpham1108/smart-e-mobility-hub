@@ -47,7 +47,7 @@ activate DATA #E2E7ED
 DATA --> SVC: Current states, allocations and summary version / unavailable / retrieval error
 deactivate DATA
 opt owned record retrieved and not already Cancelled
-SVC -> SVC: Check status is Pending or Scheduled
+SVC -> SVC: Check status is Scheduled
 activate SVC #D8EEDC
 SVC --> SVC: Cancellable / ineligible
 deactivate SVC
@@ -86,7 +86,7 @@ SVC --> SVC: No update attempted
 deactivate SVC
 else session valid and permission granted
 critical Recheck charging request and cancel its allocation
-SVC -> DATA: Cancel owned Pending/Scheduled request only if\ncurrent allocation matches confirmed summary
+SVC -> DATA: Cancel owned Scheduled request only if\ncurrent allocation matches confirmed summary
 activate DATA #E2E7ED
 note over SVC,DATA
   Release an existing future charging allocation once.

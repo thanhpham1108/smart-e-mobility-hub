@@ -104,7 +104,7 @@ repeat
   else ([no Active charging])
   endif
   :If past reserved departure, flag timing discrepancy;\nkeep occupancy until confirmed checkout;
-  :Display checkout summary and unused\nPending/Scheduled requests to cancel;
+  :Display checkout summary and unused\nScheduled requests to cancel;
 
   |Actor|
   :Review checkout summary; confirm or decline\ndeparture;
@@ -141,7 +141,7 @@ repeat
     :Keep parking Active; reload charging state;\nrepeat stop flow and obtain departure\nconfirmation again;
   else ([no Active charging])
 |Database|
-:Guarded atomic checkout: recheck ownership, no\nActive charging and reviewed dependents; close\nsession, mark reservation Completed, record\nactual departure; cancel unused Pending/Scheduled\nrequests; release occupied space, ALL remaining\nparking holds and future charging allocations\nONCE;
+:Guarded atomic checkout: recheck ownership, no\nActive charging and reviewed dependents; close\nsession, mark reservation Completed, record\nactual departure; cancel unused Scheduled\nrequests; release occupied space, ALL remaining\nparking holds and future charging allocations\nONCE;
 |System|
 note right
   Early checkout also releases unused reserved time.
