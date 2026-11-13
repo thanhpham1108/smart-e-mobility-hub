@@ -1,9 +1,14 @@
 @startuml 01-hub-identity
-title Smart E-Mobility Hub â€” Hub & Identity Class Diagram
+title Smart E-Mobility Hub — Hub & Identity Class Diagram
 
 skinparam classAttributeIconSize 0
+skinparam classHeaderBackgroundColor #D9EFD9
 skinparam shadowing false
 skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 70
+skinparam ranksep 75
+hide circle
 
 package "Hub & Identity" {
 
@@ -16,7 +21,7 @@ class User {
   + updatePermittedProfile(email: String, phone: String): void
 }
 
-enum Role {
+enum Role <<enumeration>> {
   STUDENT
   OPERATOR
 }
@@ -44,7 +49,7 @@ class MobilityHub {
   - lastUpdated: DateTime
 }
 
-enum HubStatus {
+enum HubStatus <<enumeration>> {
   ACTIVE
   PEAK_LOAD
   MAINTENANCE
@@ -87,23 +92,5 @@ AuthService ..> Session : creates/ends
 HubService --> MobilityHub : queries
 HubService --> HubSearchCriteria : uses
 HubService ..> Location : filters by
-
-note right of User
-Identity and role are preserved.
-Only permitted profile fields
-may be changed.
-end note
-
-note right of MobilityHub
-Single ownership of Hub state.
-Other modules reference the Hub
-through HubService/contracts.
-end note
-
-note bottom of HubService
-UC-H02: find/filter Hubs
-UC-H03: view Hub status
-UC-X01: find alternative Hubs
-end note
 
 @enduml
