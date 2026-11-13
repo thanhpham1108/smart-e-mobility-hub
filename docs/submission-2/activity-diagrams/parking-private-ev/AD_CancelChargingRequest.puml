@@ -64,7 +64,7 @@ repeat
   if () then ([other state])
     :Reject and display current status; Active\ncharging requires an interruption procedure;
     stop
-  else ([Pending or Scheduled])
+  else ([Scheduled])
   endif
   :Display cancellation summary, any allocation\nto release and unchanged parking context;
 note right
@@ -101,13 +101,13 @@ end note
   if () then ([no longer cancellable])
     :Reject; display current status; retain parking\nunchanged;
     stop
-  else ([still Pending or Scheduled])
+  else ([still Scheduled])
   endif
   if () then ([summary changed])
     :Refresh summary; require confirmation again;
   else ([summary unchanged])
 |Database|
-:Guarded atomic cancellation: recheck ownership,\nPending/Scheduled state and reviewed allocation;\nmark request Cancelled and release future\nallocation ONCE; keep parking unchanged;
+:Guarded atomic cancellation: recheck ownership,\nScheduled state and reviewed allocation;\nmark request Cancelled and release future\nallocation ONCE; keep parking unchanged;
 |System|
 
     if () then ([confirmation response lost])

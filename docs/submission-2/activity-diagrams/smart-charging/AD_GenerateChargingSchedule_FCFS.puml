@@ -4,85 +4,61 @@ skinparam conditionStyle insideDiamond
 skinparam activityShape rounded
 skinparam roundCorner 14
 skinparam defaultFontName sans-serif
-
 skinparam ActivityBorderColor #0369A1
 skinparam ActivityBackgroundColor #FFFFFF
 skinparam ActivityDiamondBorderColor #B45309
 skinparam ActivityDiamondBackgroundColor #FEF3C7
 skinparam ArrowColor #1E293B
-
 skinparam activity<<status>> {
   RoundCorner 4
   BackgroundColor #F8FAFC
   BorderColor #64748B
 }
 
-title Detailed Activity Diagram: Smart Charging Scheduling (FCFS Policy)
+title Activity Diagram: Automatic FCFS Charging Allocation
 
-|#E0F2FE|Operator|
-|#F0FDF4|ChargingController|
-|#FEF3C7|Database|
-
-|Operator|
+|#E0F2FE|Student / Parking|
 start
-:Select Mobility Hub on Dashboard;
-:Click "Generate Charging Schedule";
+:Submit charging draft;
 
-|ChargingController|
-:Validate Operator privileges;
-
-|Database|
-:Fetch pending requests, charging ports,
-and active hub reservations;
-
-|ChargingController|
-if (
-      Active charging requests      
-      found in queue?      
-) then (no)
-  |Operator|
-  :No Pending Requests; <<status>>
+|#F0FDF4|ChargingController|
+:Validate parking, battery values
+and requested window;
+if (Valid draft?) then (no)
+  :Show validation error; <<status>>
   stop
 endif
-->yes;
+:Record submission instant;
+:Estimate energy from configured
+battery capacity;
 
-|ChargingController|
-:Sort requests in FCFS arrival order
-(Exact timestamp tie: lower battery first);
+|#FEF3C7|Database|
+:Read point status, power
+and existing allocations;
 
-:Initialize allocation plan
-and unscheduled list;
+|#F0FDF4|ChargingController|
+if (Required data available?) then (no)
+  :Show data error; keep old schedule; <<status>>
+  stop
+endif
+:Find feasible point and interval
+in FCFS order;
+if (Slot fits requested window?) then (no)
+  :Show Full or insufficient time; <<status>>
+  stop
+endif
 
-repeat
-  :Extract next request in FCFS arrival order;
-  if (
-      Operational port available with      
-      open slot before departure?      
-) then (yes)
-    :Assign port and time slot,
-and reserve port capacity;
-  else (no)
-    :Set request status: Unscheduled
-(No available port or insufficient charging time); <<status>>
-  endif
-repeat while (
-      Pending requests remain      
-      in queue?      
-) is (yes)
-->no;
+|#FEF3C7|Database|
+:Save Scheduled request and
+allocation together;
 
-:Compile charging schedule
-and unscheduled requests summary;
+|#F0FDF4|ChargingController|
+if (Save succeeded?) then (no)
+  :Show error; keep old schedule; <<status>>
+  stop
+endif
 
-|Database|
-:Persist charging schedule allocations
-and update all request statuses;
-
-|ChargingController|
-:Format schedule for Gantt visualization;
-
-|Operator|
-:Render charging Gantt chart
-and unscheduled requests;
+|#E0F2FE|Student / Parking|
+:Show assigned point and interval; <<status>>
 stop
 @enduml

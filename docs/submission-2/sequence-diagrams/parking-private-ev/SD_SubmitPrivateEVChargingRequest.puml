@@ -92,7 +92,7 @@ UI --> ST: Reject request / report read error; parking unchanged
 else eligible context but invalid inputs
 UI --> ST: Show field errors; correct battery values or requested interval
 else eligible context and valid inputs
-UI --> ST: Review request summary; submission does not guarantee a charging slot
+UI --> ST: Review request summary; a feasible slot is assigned now; otherwise Full
 end
 deactivate UI
 break context or inputs invalid, Hub unsupported or retrieval failed
@@ -116,10 +116,10 @@ SVC --> SVC: No update attempted
 deactivate SVC
 else session valid and permission granted
 critical Recheck parking and create one linked request
-SVC -> DATA: Create Pending without a slot if owned parking, Hub and inputs remain eligible;\nConfirmed parking requires now < expiresAt; serialize with expiry/cancellation\n(or return equivalent existing active request)
+SVC -> DATA: Check a feasible point/interval and save Scheduled request plus allocation together if eligible;\nConfirmed parking requires now < expiresAt; serialize with expiry/cancellation\n(or return equivalent existing active request)
 activate DATA #E2E7ED
 
-DATA --> SVC: New Pending / equivalent existing / rejected / save failure
+DATA --> SVC: New Scheduled / Full with no request / equivalent existing / save failure
 deactivate DATA
 end
 opt update outcome uncertain / response lost
@@ -139,15 +139,17 @@ else save failed
 UI --> ST: Report failure; no partial update; retry after reload and revalidation
 else parking, Hub or inputs no longer eligible
 UI --> ST: Reject creation; reload parking and revise request; parking unchanged
+else no feasible charging slot
+UI --> ST: Show Full; no request saved; parking unchanged
 else new request created
-UI --> ST: Show reference, vehicle, Hub, interval and Pending status
+UI --> ST: Show reference, assigned point, interval and Scheduled status
 else equivalent active request exists
 UI --> ST: Show existing request and status; no duplicate or allocation change
 end
 end
 deactivate UI
 note over ST,DATA
-  Busy points may accept Pending requests; scheduling is separate.
+  If no slot fits, report Full and save no request; scheduling runs on submission.
 end note
 
 footer Smart E-Mobility Hub | Submission 2 | Parking & Private EVs

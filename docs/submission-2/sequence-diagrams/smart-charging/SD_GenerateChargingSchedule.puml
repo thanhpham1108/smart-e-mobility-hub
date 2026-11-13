@@ -3,77 +3,64 @@ skinparam style strictuml
 skinparam sequenceMessageAlign center
 skinparam boxPadding 10
 skinparam maxMessageSize 200
-
 skinparam sequenceLifeLineBorderColor #0284C7
 skinparam sequenceLifeLineBackgroundColor #BAE6FD
 
-title Sequence Diagram: Generate Charging Schedule (UC-C02) - FCFS Policy
+title Sequence Diagram: Generate Charging Schedule (UC-C02) - Automatic FCFS
 
-actor "Operator" as Op
-participant "Charging Dashboard UI" as UI #E0F2FE
+actor "Student / Parking Service" as Caller
+participant "Charging Request UI" as UI #E0F2FE
 participant "Charging Controller" as Ctrl #F0FDF4
 participant "Charging Request" as Req #FEF3C7
 participant "Charging Point" as Point #FEF3C7
 participant "Charging Schedule" as Sched #FEF3C7
 
-activate Op
-Op -> UI : Click "Generate Schedule"
+Caller -> UI : Submit charging draft
 activate UI
-
-UI -> Ctrl : generateChargingSchedule(hubId)
+UI -> Ctrl : submitRequest(draft)
 activate Ctrl
-
-Ctrl -> Req : getPendingRequests(hubId)
+Ctrl -> Req : validateDraftAndTimestamp(draft)
 activate Req
-Req -->> Ctrl : requestList or retrievalError
+Req -->> Ctrl : valid draft / validation error
 deactivate Req
-
-Ctrl -> Point : getAvailablePoints(hubId)
-activate Point
-Point -->> Ctrl : availablePoints or retrievalError
-deactivate Point
-
-alt Request or charging-point retrieval failed
-    Ctrl -->> UI : showError("Charging data unavailable")
-    UI -->> Op : Display error; keep previous schedule
-else Charging data retrieved
-== First-Come First-Served Ordering (FCFS) ==
-Ctrl -> Ctrl : sortQueueBySubmissionTime(requestList)\nFor exact timestamp ties, lower battery first
-
-== Slot Allocation (FCFS) ==
-loop for each request in arrival order
-    Ctrl -> Ctrl : findFeasiblePointAndSlot(request, availablePoints)
-    alt Feasible Port & Time Found
-        Ctrl -> Ctrl : assignSlot(request, pointId, timeInterval)
-    else Port Busy or Insufficient Time
-        Ctrl -> Ctrl : markUnscheduled(request, reason)
+alt Invalid draft
+  Ctrl -->> UI : Show validation error
+else Valid draft
+  Ctrl -> Sched : loadCurrentAllocations(hubId)
+  activate Sched
+  Sched -->> Ctrl : committed allocations / read failure
+  deactivate Sched
+  Ctrl -> Point : getOperationalPointsAndPower(hubId)
+  activate Point
+  Point -->> Ctrl : points / read failure
+  deactivate Point
+  alt Required data unavailable
+    Ctrl -->> UI : Show data error; keep previous schedule
+  else Data available
+    Ctrl -> Ctrl : estimateDuration(draft, pointPower)
+    Ctrl -> Ctrl : findFeasibleSlotFCFS(draft, allocations, points)
+    note right of Ctrl
+      Submission timestamp orders requests.
+      Lower battery breaks only an exact timestamp tie.
+    end note
+    alt No feasible slot in requested window
+      Ctrl -->> UI : Full / InsufficientChargingTime
+      UI -->> Caller : Show reason; no request saved
+    else Feasible point and interval
+      Ctrl -> Sched : saveRequestAndAllocationAtomically(draft, point, interval)
+      activate Sched
+      Sched -->> Ctrl : Scheduled request / save failure
+      deactivate Sched
+      alt Save failed
+        Ctrl -->> UI : Show error; old schedule unchanged
+      else Save succeeded
+        Ctrl -->> UI : Show assigned point and interval
+        UI -->> Caller : Request is Scheduled
+      end
     end
-end
-
-== Save Schedule ==
-Ctrl -> Sched : saveNewSchedule(generatedSchedule)
-activate Sched
-
-alt Database Save Failure
-    Sched -->> Ctrl : saveFailed
-    deactivate Sched
-    Ctrl -->> UI : showError("Failed to save schedule")
-    UI -->> Op : Display error alert
-else Save Succeeded
-    Sched -->> Ctrl : saveSuccess
-    deactivate Sched
-
-    Ctrl -> Req : updateRequestStatuses(scheduledList, unscheduledList)
-    activate Req
-    Req -->> Ctrl : updateSuccess
-    deactivate Req
-
-    Ctrl -->> UI : displayResult(generatedSchedule, unscheduledList)
-    UI -->> Op : Update Gantt chart and unscheduled requests
-end
+  end
 end
 
 deactivate Ctrl
 deactivate UI
-deactivate Op
 @enduml

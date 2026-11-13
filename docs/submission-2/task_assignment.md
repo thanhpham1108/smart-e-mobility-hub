@@ -111,7 +111,7 @@ Theo đề bài quy định:
   3. **UI Mockup:**
      - Thiết kế 3 màn hình Web Dashboard: (1) Biểu đồ Gantt lịch biểu các cổng sạc; (2) Hàng đợi xe chờ sạc theo FCFS; (3) Modal điều chỉnh lịch sạc thủ công.
   4. **State-Chart (Bonus):**
-     - Vòng đời yêu cầu sạc `ChargingRequest` (`Pending` $\rightarrow$ `Scheduled` $\rightarrow$ `Charging` $\rightarrow$ `Completed` / `Interrupted`).
+     - Vòng đời yêu cầu sạc `ChargingRequest` (`Scheduled` $\rightarrow$ `Charging` $\rightarrow$ `Completed` / `Cancelled`).
 
 ---
 

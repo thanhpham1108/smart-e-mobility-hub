@@ -55,10 +55,10 @@ Parking arrival and departure times are selected from available time points, spa
 | ID | Use case | Description |
 | --- | --- | --- |
 | UC-P01 | Reserve a Parking Space | Select a Hub, provide vehicle information, and select arrival and departure times from the available time points. Display availability for the entire selected interval and a request summary before the Student confirms. Recheck capacity at confirmation and create one reservation for the whole interval without overbooking or partial allocation. If capacity is unavailable, allow the Student to request alternative Hubs. |
-| UC-P02 | Submit a Private-EV Charging Request | Submit the vehicle, Hub, expected arrival/departure times, and charging needs. Validate and record the request for scheduling. Acceptance of a request does not guarantee a confirmed charging slot. |
-| UC-P03 | View My Parking and Charging Bookings | View the Student's parking reservations and charging requests, including Hub, time interval, status, and assigned charging schedule where available. Distinguish pending requests from confirmed allocations. |
+| UC-P02 | Submit a Private-EV Charging Request | Submit the vehicle, Hub, expected arrival/departure times, and charging needs. Automatically assign a feasible charging point and interval using FCFS, then save a Scheduled request with its allocation. If no slot fits, report Full and save no request. |
+| UC-P03 | View My Parking and Charging Bookings | View the Student's parking reservations and charging requests, including Hub, time interval, status, and assigned charging schedule where available. Show the allocation of each accepted Scheduled request. |
 | UC-P04 | Cancel a Parking Reservation | Cancel an eligible reservation belonging to the Student and release its reserved capacity. Apply the cancellation policy to any dependent charging request. An active parking session must be ended through checkout. |
-| UC-P05 | Cancel a Charging Request | Cancel an eligible pending or scheduled request belonging to the Student and release its charging allocation. Parking remains unchanged. Active charging sessions follow the applicable interruption procedure. |
+| UC-P05 | Cancel a Charging Request | Cancel an eligible scheduled request belonging to the Student and release its charging allocation. Parking remains unchanged. Active charging sessions follow the applicable interruption procedure. |
 | UC-P06 | Check In a Private EV | Confirm arrival against a valid parking reservation and start the parking session. Update occupancy without counting the reservation and its occupied space twice. Reject invalid, expired, or mismatched reservations. |
 | UC-P07 | Check Out a Private EV | Confirm departure, close the Student's active parking session, and release the space once. Handle any active charging session according to the completion or interruption procedure. |
 
@@ -98,9 +98,9 @@ Parking arrival and departure times are selected from available time points, spa
 
 | ID | Use case | Description |
 | --- | --- | --- |
-| UC-C01 | View the Charging Queue and Schedule | View charging requests ordered by submission time (FCFS), allocated points and intervals, and requests that remain unscheduled. When timestamps are identical, show the lower-battery request first. |
-| UC-C02 | Generate a Charging Schedule | Produce or refresh a schedule by processing requests in submission-time order (FCFS). Only for requests with identical timestamps, process the lower-battery request first; then assign available equipment and non-conflicting intervals and identify requests that remain unscheduled. |
-| UC-C03 | Adjust a Charging Schedule | Modify a permitted queue position, interval, or charging-point assignment in an existing schedule. Validate resource availability and conflicts before accepting the change and record its effect on the request. |
+| UC-C01 | View the Charging Queue and Schedule | View accepted charging requests in submission-time (FCFS) order with assigned points, intervals and current point status. Identical timestamps use lower battery level as a tie-breaker. |
+| UC-C02 | Generate a Charging Schedule | Automatically check and assign a feasible charging point/interval when a request is submitted, using FCFS. If no slot fits, report Full or insufficient charging time and do not save the request. |
+| UC-C03 | Adjust a Charging Schedule | Modify a charging interval or charging-point assignment in an existing schedule while preserving FCFS order. Validate resource availability and conflicts before accepting the change and record its effect on the request. |
 
 ### 2.9 What-if Simulation
 

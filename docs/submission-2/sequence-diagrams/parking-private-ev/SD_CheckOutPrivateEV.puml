@@ -128,7 +128,7 @@ activate DATA #E2E7ED
 DATA --> SVC: Current states and summary version / already closed / inaccessible / retrieval error
 deactivate DATA
 opt owned Active parking and current linked states verified
-loop each linked Pending/Scheduled charging request
+loop each linked Scheduled charging request
 SVC -> SVC: Collect request and allocation to cancel in the summary
 activate SVC #D8EEDC
 SVC --> SVC: Append current request/version and affected allocation
@@ -142,7 +142,7 @@ UI --> ST: Show existing completion result; no second release
 else latest state unavailable, inaccessible or charging Active again
 UI --> ST: No checkout; resolve state/access and repeat stop flow if charging is Active
 else owned Active parking verified with no Active charging
-UI --> ST: Review departure, unused Pending/Scheduled requests and all releases
+UI --> ST: Review departure, unused Scheduled requests and all releases
 end
 deactivate UI
 break visit already closed, latest state unavailable, inaccessible or charging Active again
