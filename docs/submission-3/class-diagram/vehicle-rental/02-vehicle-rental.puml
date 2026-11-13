@@ -1,0 +1,168 @@
+
+@startuml 02-vehicle-rental
+title Smart E-Mobility Hub - Vehicle Rental Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+package "Vehicle Rental" {
+
+    class SharedVehicle {
+        - vehicleId: String
+        - vehicleType: VehicleType
+        - currentHubId: String
+        - batteryLevel: int
+        - status: VehicleStatus
+        - condition: VehicleCondition
+        - lastUpdated: DateTime
+        --
+        + isAvailable(): boolean
+        + isOperational(): boolean
+        + reserve(): void
+        + releaseReservation(): void
+        + startRental(): void
+        + completeReturn(hubId: String, condition: VehicleCondition): void
+    }
+
+    enum VehicleType {
+        ELECTRIC_BICYCLE
+        ELECTRIC_MOTORCYCLE
+        OTHER
+    }
+
+    enum VehicleStatus {
+        AVAILABLE
+        RESERVED
+        IN_USE
+        UNDER_MAINTENANCE
+        REDISTRIBUTING
+    }
+
+    enum VehicleCondition {
+        OPERATIONAL
+        FAULTED
+    }
+
+    class VehicleReservation {
+        - reservationId: String
+        - studentId: String
+        - vehicleId: String
+        - createdAt: DateTime
+        - expiresAt: DateTime
+        - status: ReservationStatus
+        --
+        + isExpired(now: DateTime): boolean
+        + isEligibleForPickup(now: DateTime): boolean
+        + isEligibleForCancellation(now: DateTime): boolean
+        + markPickedUp(): void
+        + cancel(): void
+        + expire(): void
+    }
+
+    enum ReservationStatus {
+        CONFIRMED
+        PICKED_UP
+        CANCELLED
+        EXPIRED
+    }
+
+    class RentalTrip {
+        - tripId: String
+        - reservationId: String
+        - studentId: String
+        - vehicleId: String
+        - startHubId: String
+        - endHubId: String [0..1]
+        - startTime: DateTime
+        - endTime: DateTime [0..1]
+        - durationMinutes: long [0..1]
+        - distanceKm: double [0..1]
+        - status: TripStatus
+        --
+        + isActive(): boolean
+        + completeTrip(hubId: String, endTime: DateTime, distanceKm: double): void
+    }
+
+    enum TripStatus {
+        ACTIVE
+        COMPLETED
+    }
+
+    class RentalService {
+        - reservationHoldMinutes: int = 15
+        --
+        + findVehicles(hubId: String, vehicleType: VehicleType, minBatteryLevel: int): List<SharedVehicle>
+        + getVehicleDetails(vehicleId: String): SharedVehicle
+        + reserveVehicle(studentId: String, vehicleId: String): VehicleReservation
+        + pickupVehicle(studentId: String, reservationId: String, vehicleId: String): RentalTrip
+        + returnVehicle(studentId: String, vehicleId: String, hubId: String, parkingSpaceId: String): RentalTrip
+        + getMyReservations(studentId: String): List<VehicleReservation>
+        + getMyTrips(studentId: String): List<RentalTrip>
+        + cancelReservation(studentId: String, reservationId: String): void
+        + reportVehicleProblem(studentId: String, vehicleId: String, description: String): IncidentTicket
+        + expireReservations(now: DateTime): void
+        + findAlternativeHubs(criteria: HubSearchCriteria): List<MobilityHub>
+        + updateVehicleTelemetry(vehicleId: String, hubId: String, batteryLevel: int, condition: VehicleCondition, observedAt: DateTime): void
+        + setVehicleCondition(vehicleId: String, condition: VehicleCondition): void
+    }
+
+}
+
+package "Hub & Identity" {
+    class User <<external>>
+    class MobilityHub <<external>>
+    class HubService <<external>>
+    class HubSearchCriteria <<external>>
+}
+
+package "Parking & Private EV" {
+    class ParkingService <<external>>
+    class ParkingSpace <<external>>
+}
+
+package "Fleet & Incident" {
+    class FleetService <<external>>
+    class IncidentTicket <<external>>
+}
+
+' Domain relationships
+
+SharedVehicle --> VehicleType
+SharedVehicle --> VehicleStatus
+SharedVehicle --> VehicleCondition
+
+VehicleReservation --> ReservationStatus
+RentalTrip --> TripStatus
+
+SharedVehicle "1" -- "0..*" VehicleReservation : reserved through
+SharedVehicle "1" -- "0..*" RentalTrip : used in
+VehicleReservation "1" -- "0..1" RentalTrip : starts
+
+' Identity and Hub references
+
+User "1" -- "0..*" VehicleReservation : makes
+User "1" -- "0..*" RentalTrip : takes
+
+SharedVehicle "0..*" --> "0..1" MobilityHub : current Hub
+
+RentalTrip "0..*" --> "1" MobilityHub : start Hub
+RentalTrip "0..*" --> "0..1" MobilityHub : end Hub
+
+' Service dependencies
+
+RentalService ..> SharedVehicle : manages
+RentalService ..> VehicleReservation : creates / expires
+RentalService ..> RentalTrip : starts / completes
+
+RentalService ..> HubService : Hub status / alternatives
+RentalService ..> HubSearchCriteria : uses
+RentalService ..> ParkingService : validates / coordinates parking
+RentalService ..> ParkingSpace : return space
+RentalService ..> FleetService : submits problem reports
+RentalService ..> IncidentTicket : returns report result
+
+FleetService ..> RentalService : telemetry / restrictions
+
+@enduml
