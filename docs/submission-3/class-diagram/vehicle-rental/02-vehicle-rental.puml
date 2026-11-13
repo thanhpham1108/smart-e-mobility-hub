@@ -3,9 +3,14 @@
 title Smart E-Mobility Hub - Vehicle Rental Class Diagram
 
 skinparam classAttributeIconSize 0
+skinparam classHeaderBackgroundColor #D9EFD9
 skinparam shadowing false
 skinparam packageStyle rectangle
 skinparam linetype ortho
+skinparam nodesep 70
+skinparam ranksep 75
+hide circle
+hide empty members
 
 package "Vehicle Rental" {
 
@@ -26,13 +31,13 @@ package "Vehicle Rental" {
         + completeReturn(hubId: String, condition: VehicleCondition): void
     }
 
-    enum VehicleType {
+    enum VehicleType <<enumeration>> {
         ELECTRIC_BICYCLE
         ELECTRIC_MOTORCYCLE
         OTHER
     }
 
-    enum VehicleStatus {
+    enum VehicleStatus <<enumeration>> {
         AVAILABLE
         RESERVED
         IN_USE
@@ -40,7 +45,7 @@ package "Vehicle Rental" {
         REDISTRIBUTING
     }
 
-    enum VehicleCondition {
+    enum VehicleCondition <<enumeration>> {
         OPERATIONAL
         FAULTED
     }
@@ -61,7 +66,7 @@ package "Vehicle Rental" {
         + expire(): void
     }
 
-    enum ReservationStatus {
+    enum ReservationStatus <<enumeration>> {
         CONFIRMED
         PICKED_UP
         CANCELLED
@@ -85,7 +90,7 @@ package "Vehicle Rental" {
         + completeTrip(hubId: String, endTime: DateTime, distanceKm: double): void
     }
 
-    enum TripStatus {
+    enum TripStatus <<enumeration>> {
         ACTIVE
         COMPLETED
     }
@@ -110,59 +115,16 @@ package "Vehicle Rental" {
 
 }
 
-package "Hub & Identity" {
-    class User <<external>>
-    class MobilityHub <<external>>
-    class HubService <<external>>
-    class HubSearchCriteria <<external>>
-}
-
-package "Parking & Private EV" {
-    class ParkingService <<external>>
-    class ParkingSpace <<external>>
-}
-
-package "Fleet & Incident" {
-    class FleetService <<external>>
-    class IncidentTicket <<external>>
-}
-
 ' Domain relationships
-
-SharedVehicle --> VehicleType
-SharedVehicle --> VehicleStatus
-SharedVehicle --> VehicleCondition
-
-VehicleReservation --> ReservationStatus
-RentalTrip --> TripStatus
 
 SharedVehicle "1" -- "0..*" VehicleReservation : reserved through
 SharedVehicle "1" -- "0..*" RentalTrip : used in
 VehicleReservation "1" -- "0..1" RentalTrip : starts
-
-' Identity and Hub references
-
-User "1" -- "0..*" VehicleReservation : makes
-User "1" -- "0..*" RentalTrip : takes
-
-SharedVehicle "0..*" --> "0..1" MobilityHub : current Hub
-
-RentalTrip "0..*" --> "1" MobilityHub : start Hub
-RentalTrip "0..*" --> "0..1" MobilityHub : end Hub
 
 ' Service dependencies
 
 RentalService ..> SharedVehicle : manages
 RentalService ..> VehicleReservation : creates / expires
 RentalService ..> RentalTrip : starts / completes
-
-RentalService ..> HubService : Hub status / alternatives
-RentalService ..> HubSearchCriteria : uses
-RentalService ..> ParkingService : validates / coordinates parking
-RentalService ..> ParkingSpace : return space
-RentalService ..> FleetService : submits problem reports
-RentalService ..> IncidentTicket : returns report result
-
-FleetService ..> RentalService : telemetry / restrictions
 
 @enduml
