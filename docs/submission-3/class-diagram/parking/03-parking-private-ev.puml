@@ -1,0 +1,84 @@
+@startuml 03-parking-private-ev-review
+title Parking & Private EV — Class Diagram Review
+top to bottom direction
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam classHeaderBackgroundColor #D9EFD9
+skinparam classFontStyle bold
+skinparam nodesep 55
+skinparam ranksep 55
+skinparam linetype ortho
+hide empty members
+
+package "Parking & Private EV" {
+  class ParkingService <<application service>> {
+    + reviewReservation(actor: Session, draft: ParkingDraft): ParkingReview
+    + reserve(actor: Session, review: ParkingReview, key: String): ParkingReservation
+    + submitCharging(actor: Session, request: ChargingDraft, key: String): ChargingRequest
+    + listBookings(actor: Session, filter: BookingFilter): List<BookingSummary>
+    + getBooking(actor: Session, ref: String): BookingDetails
+    + cancelReservation(actor: Session, action: ReviewedAction): ParkingReservation
+    + cancelCharging(actor: Session, action: ReviewedAction): ChargingRequest
+    + checkIn(actor: Session, arrival: ArrivalProof, key: String): ParkingSession
+    + checkOut(actor: Session, action: ReviewedAction): ParkingSession
+    + reconcileExpiry(reservationId: String): ParkingReservation
+  }
+
+  class ParkingReservation <<entity>> {
+    - reservationId: String
+    - studentId: String
+    - hubId: String
+    - vehicleId: String
+    - arrivalTime: DateTime
+    - departureTime: DateTime
+    - heldSlotStarts: Set<DateTime>
+    - graceMinutes: int
+    - expiresAt: DateTime
+    - expiredAt: DateTime [0..1]
+    - expiryReason: String [0..1]
+    - status: ReservationStatus
+    + isCheckInWindowOpen(now: DateTime): boolean
+  }
+
+  class ParkingSession <<entity>> {
+    - sessionId: String
+    - actualArrival: DateTime
+    - actualDeparture: DateTime [0..1]
+    - status: ParkingSessionStatus
+  }
+
+  class ParkingSpace <<entity>> {
+    - spaceId: String
+    - hubId: String
+    - inService: boolean
+  }
+
+  enum ReservationStatus <<enumeration>> {
+    Confirmed
+    Checked In
+    Completed
+    Cancelled
+    Expired
+  }
+  enum ParkingSessionStatus <<enumeration>> {
+    Active
+    Closed
+  }
+}
+
+package "External module references" {
+  class HubService <<external: Hub & Identity>>
+  class ChargingService <<external: Smart Charging>>
+  class ChargingRequest <<external: Smart Charging>>
+}
+
+ParkingService ..> HubService
+ParkingService ..> ChargingService
+ParkingService --> ParkingReservation : manages
+ParkingService ..> ParkingSession : opens / closes
+ParkingReservation "1" -- "0..1" ParkingSession : admits
+ParkingSpace "1" -- "0..*" ParkingSession : visit history
+ParkingReservation "0..1" -- "0..*" ChargingRequest : linked private-EV requests
+ParkingReservation --> ReservationStatus
+ParkingSession --> ParkingSessionStatus
+@enduml

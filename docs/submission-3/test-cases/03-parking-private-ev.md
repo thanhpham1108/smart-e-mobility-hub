@@ -2,7 +2,7 @@
 
 **Owner:** Nguyễn Phước Nhật Duy — 2452205
 
-**Design under test:** [Methods](../method-design/03-parking-private-ev.md) · [Class diagram](../class-diagram/03-parking-private-ev.png)
+**Design under test:** [Methods](../method-design/03-parking-private-ev.md) · [Class diagram](../class-diagram/parking/03-parking-private-ev.png)
 
 Each case starts with a fresh fixture. All times below are on 2026-11-09 at GMT+7. The Student is signed in, the Hub is operational, and both the parking grid and the check-in grace are set to 15 minutes.
 

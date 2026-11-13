@@ -33,7 +33,7 @@ ParkingService owns per-slot parking holds and actual occupancy. It checks capac
 | Smart Charging → Parking | Read the linked parking window and current eligibility before accepting or starting charging. Serialize the final decision with parking cancellation, checkout and no-show expiry. |
 | Parking and Smart Charging → shared in-memory state | Within the single application process, commit a parking transition and its dependent charging cancellations/releases as one update. A charging-only cancellation leaves the parking holds intact. Stopping Active charging for checkout is a separate confirmed step. |
 
-[Parking class diagram](../class-diagram/03-parking-private-ev.puml) · [Method contracts](../method-design/03-parking-private-ev.md) · [Acceptance cases](../test-cases/03-parking-private-ev.md)
+[Parking class diagram](../class-diagram/parking/03-parking-private-ev.puml) · [Method contracts](../method-design/03-parking-private-ev.md) · [Acceptance cases](../test-cases/03-parking-private-ev.md)
 
 ## Shared design rules
 

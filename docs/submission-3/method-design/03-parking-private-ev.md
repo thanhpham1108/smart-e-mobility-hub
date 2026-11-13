@@ -4,7 +4,7 @@
 
 **Scope:** UC-P01 through UC-P07, including UC-S02 and the no-show policy (FR-NI-13).
 
-**Design:** [Class diagram](../class-diagram/03-parking-private-ev.png) · [Editable source](../class-diagram/03-parking-private-ev.puml) · [Test cases](../test-cases/03-parking-private-ev.md)
+**Design:** [Class diagram](../class-diagram/parking/03-parking-private-ev.png) · [Editable source](../class-diagram/parking/03-parking-private-ev.puml) · [Test cases](../test-cases/03-parking-private-ev.md)
 
 ## Inputs and results
 
