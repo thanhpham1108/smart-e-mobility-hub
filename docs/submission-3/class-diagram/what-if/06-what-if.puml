@@ -1,0 +1,96 @@
+@startuml 06-what-if-review
+title What-if Simulation — Class Diagram Review
+left to right direction
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam classHeaderBackgroundColor #D9EFD9
+skinparam linetype ortho
+skinparam nodesep 75
+skinparam ranksep 80
+hide empty members
+
+package "What-if Simulation" {
+  class SimulationService <<application service>> {
+    + configureScenario(draft: ScenarioDraft): WhatIfScenario
+    + runScenario(scenarioId: String): SimulationRun
+    + getResult(runId: String): SimulationResult
+    + getRecommendations(runId: String): List<Recommendation>
+    + compareRuns(firstRunId: String, secondRunId: String [0..1]): SimulationComparison
+  }
+
+  class WhatIfScenario <<entity>> {
+    - scenarioId: String
+    - name: String
+    - conditions: List<ScenarioCondition>
+    - periodStart: DateTime
+    - periodEnd: DateTime
+    - assumptions: List<String>
+    - status: ScenarioStatus
+    + isReadyToRun(): boolean
+  }
+
+  class NetworkSnapshot <<entity>> {
+    - snapshotId: String
+    - sourceSnapshotId: String [0..1]
+    - capturedAt: DateTime
+    - sourceVersions: Map<String, String>
+    - hubState: HubState
+    - vehicleState: VehicleState
+    - parkingState: ParkingState
+    - chargingState: ChargingState
+    - incidentState: IncidentState
+    + copyForSimulation(): NetworkSnapshot
+  }
+
+  class SimulationRun <<entity>> {
+    - runId: String
+    - status: RunStatus
+    - startedAt: DateTime [0..1]
+    - completedAt: DateTime [0..1]
+    - failureReason: String [0..1]
+    + isCompleted(): boolean
+  }
+
+  class SimulationResult <<entity>> {
+    - resultId: String
+    - serviceCapacity: double
+    - parkingUtilization: double
+    - vehicleAvailability: int
+    - chargingCongestion: double
+    - unservedDemand: int
+  }
+
+  class Recommendation <<entity>> {
+    - recommendationId: String
+    - type: RecommendationType
+    - targetHubId: String [0..1]
+    - description: String
+    - expectedEffect: String
+  }
+
+  enum ScenarioStatus <<enumeration>> {
+    Draft
+    ReadyToRun
+  }
+
+  enum RunStatus <<enumeration>> {
+    Queued
+    Snapshotting
+    Running
+    Evaluating
+    Recommending
+    Completed
+    Failed
+    Archived
+  }
+}
+
+WhatIfScenario "1" -- "0..*" SimulationRun
+SimulationRun "0..*" -- "0..1" NetworkSnapshot
+SimulationRun "1" -- "0..1" SimulationResult
+SimulationResult "1" -- "0..*" Recommendation
+SimulationService ..> WhatIfScenario
+SimulationService ..> SimulationRun
+WhatIfScenario --> ScenarioStatus
+SimulationRun --> RunStatus
+@enduml

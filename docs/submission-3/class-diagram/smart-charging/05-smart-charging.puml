@@ -1,0 +1,92 @@
+@startuml 05-smart-charging-review
+title Smart Charging — Class Diagram Review
+left to right direction
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam classHeaderBackgroundColor #D9EFD9
+skinparam linetype ortho
+skinparam nodesep 75
+skinparam ranksep 80
+hide empty members
+
+package "Smart Charging" {
+  class ChargingService <<application service>> {
+    + getQueueAndSchedule(hubId: String): ChargingOverview
+    + generateSchedule(hubId: String): ChargingSchedule
+    + adjustAllocation(allocationId: String, pointId: String, startTime: DateTime, endTime: DateTime, expectedVersion: int): ChargingAllocation
+    + submitRequest(draft: ChargingDraft, key: String): ChargingRequest
+    + cancelRequest(requestId: String): ChargingRequest
+    + stopCharging(requestId: String, confirmedAt: DateTime): ChargingRequest
+    + reconcileSessionEvent(event: ChargingSessionEvent): ChargingRequest
+    + recordPointObservation(pointId: String, status: PointStatus, observedAt: DateTime): ChargingPoint
+    + setPointRestriction(pointId: String, incidentId: String, active: boolean): ChargingPoint
+    + getChargingSnapshot(): ChargingSnapshot
+  }
+
+  class ChargingRequest <<entity>> {
+    - requestId: String
+    - hubId: String
+    - vehicleId: String
+    - parkingReservationId: String [0..1]
+    - submittedAt: DateTime
+    - currentBatteryPercent: int
+    - targetBatteryPercent: int
+    - requestedStart: DateTime
+    - requestedEnd: DateTime
+    - estimatedEnergyKwh: double
+    - activeSessionId: String [0..1]
+    - status: RequestStatus
+  }
+
+  class ChargingSchedule <<entity>> {
+    - scheduleId: String
+    - hubId: String
+    - periodStart: DateTime
+    - periodEnd: DateTime
+    - generatedAt: DateTime
+    - version: int
+    + hasConflict(pointId: String, vehicleId: String, startTime: DateTime, endTime: DateTime, excludeAllocationId: String): boolean
+  }
+
+  class ChargingAllocation <<entity>> {
+    - allocationId: String
+    - startTime: DateTime
+    - endTime: DateTime
+    + overlaps(other: ChargingAllocation): boolean
+  }
+
+  class ChargingPoint <<entity>> {
+    - pointId: String
+    - hubId: String
+    - status: PointStatus
+    - activeRestrictionIds: Set<String>
+    - reconciliationHold: boolean
+    - statusObservedAt: DateTime
+    - ratedPowerKw: double
+    + isOperational(): boolean
+  }
+
+  enum RequestStatus <<enumeration>> {
+    Scheduled
+    Charging
+    Completed
+    Suspended
+    Cancelled
+  }
+
+  enum PointStatus <<enumeration>> {
+    Operational
+    Faulty
+    Offline
+  }
+}
+
+ChargingSchedule "1" -- "0..*" ChargingAllocation
+ChargingRequest "1" -- "1" ChargingAllocation
+ChargingPoint "1" -- "0..*" ChargingAllocation
+ChargingService ..> ChargingRequest
+ChargingService ..> ChargingSchedule
+ChargingService ..> ChargingPoint
+ChargingRequest --> RequestStatus
+ChargingPoint --> PointStatus
+@enduml
