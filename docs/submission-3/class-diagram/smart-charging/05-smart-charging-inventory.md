@@ -4,9 +4,9 @@
 
 ## 1. Quy tắc thiết kế đã có nguồn
 
-- `ChargingRequest` là nhu cầu sạc được ghi nhận. Request chỉ được lưu khi hệ thống gán ngay một cổng và khoảng thời gian phù hợp; nếu kín suất thì báo Full và không lưu request.
+- `ChargingRequest` là nhu cầu sạc được ghi nhận. Request hợp lệ được lưu Scheduled khi cấp được allocation ngay; nếu Hub đầy thì lưu Waiting không allocation, báo Full và vị trí waitlist. Thiếu thời lượng vẫn báo lỗi, không vào hàng; hết khung giờ yêu cầu thì Waiting thành Expired và báo Student.
 - `ChargingSchedule` là **kế hoạch sạc của một Hub trong một kỳ lập lịch**, chứa nhiều `ChargingAllocation`. Một allocation mới là lần gán **một request + một charging point + một khoảng thời gian**. Không gọi một khoảng thời gian riêng là toàn bộ schedule.
-- UC-C02 xếp request theo `submittedAt` tăng dần (FCFS). Chỉ khi timestamp **bằng hệt nhau** mới xét pin thấp hơn, rồi `requestId` để ổn định thứ tự. Allocation trên cùng point **hoặc cùng vehicle** không được chồng thời gian; service kiểm tra thêm commitment của xe tại Hub khác. Request không xếp được nhận thông báo Full/InsufficientChargingTime và không được lưu.
+- UC-C02 xếp request theo `submittedAt` tăng dần (FCFS). Chỉ khi timestamp **bằng hệt nhau** mới xét pin thấp hơn, rồi `requestId` để ổn định thứ tự. Allocation trên cùng point **hoặc cùng vehicle** không được chồng thời gian; service kiểm tra thêm commitment của xe tại Hub khác. Request hợp lệ bị chặn vì Hub đầy được lưu Waiting, không có allocation và có vị trí queue; hết requested window thì Expired và thông báo Student. InsufficientChargingTime vẫn không được lưu hoặc waitlist.
 - UC-C01 chỉ đọc; UC-C02 được kích hoạt tự động khi gửi request; UC-C03 chỉ lưu điều chỉnh khi point hoạt động và khoảng thời gian hợp lệ. Lỗi lấy dữ liệu hoặc lưu dữ liệu không được làm mất lịch hợp lệ trước đó.
 - Parking sở hữu thời gian đỗ, reservation và checkout. Smart Charging sở hữu request, point, schedule, allocation và việc giải phóng allocation. Fleet sở hữu incident/telemetry intake; trạng thái cổng và các cam kết sạc do Smart Charging kiểm soát. What-if chỉ đọc snapshot/bản sao.
 
@@ -14,7 +14,7 @@
 
 | Class | Trách nhiệm duy nhất | Thuộc tính cốt lõi dự kiến | Operation cần xem xét khi vẽ | Chứng cứ |
 | --- | --- | --- | --- | --- |
-| `ChargingRequest` | Lưu nhu cầu sạc, thứ tự FCFS và trạng thái vòng đời của một yêu cầu. | `requestId`, `hubId`, `vehicleId`, `submittedAt`, `currentBatteryPercent`, `targetBatteryPercent`, `requestedStart`, `requestedEnd`, `estimatedEnergyKwh` (ước lượng theo dung lượng pin giả định của loại xe), `activeSessionId [0..1]`, `status`, `parkingReservationId [0..1]` (chỉ với xe tư nhân). | Trạng thái được `ChargingService` cập nhật sau khi gán suất thành công, nhận sự kiện phiên hoặc hủy. | UC-C01–C03; Parking `ChargingDraft`; state chart request. |
+| `ChargingRequest` | Lưu nhu cầu sạc, thứ tự FCFS và trạng thái vòng đời của một yêu cầu. | `requestId`, `hubId`, `vehicleId`, `submittedAt`, `currentBatteryPercent`, `targetBatteryPercent`, `requestedStart`, `requestedEnd`, `estimatedEnergyKwh` (ước lượng theo dung lượng pin giả định của loại xe), `activeSessionId [0..1]`, `status` (Waiting, Scheduled, Charging, Completed, Suspended, Cancelled, Expired), `parkingReservationId [0..1]` (chỉ với xe tư nhân). | Waiting giữ thứ tự FCFS tới khi được cấp allocation, Student hủy hoặc hết requested window; vị trí được tính động và queue được hiển thị trong UC-C01. | UC-C01–C03; Parking `ChargingDraft`; state chart request. |
 | `ChargingPoint` | Giữ danh tính, Hub và tình trạng vận hành của một cổng. | `pointId`, `hubId`, `status`, `activeRestrictionIds: Set<String>`, `reconciliationHold`, `statusObservedAt`, `ratedPowerKw`. | `isOperational()`; tiếp nhận tình trạng vật lý, hạn chế theo từng incident và giữ cổng khi telemetry chưa đối chiếu được. | UC-C01–C03; Fleet/Telemetry UC-T03, UC-I03. |
 | `ChargingAllocation` | Biểu diễn **một** suất sạc đã gán cho request trên point trong khoảng thời gian. | `allocationId`, `startTime`, `endTime`; liên kết tới `ChargingRequest` và `ChargingPoint`; trạng thái allocation nếu cần lưu lịch sử. | `overlaps(other)` hoặc kiểm tra xung đột qua service; không tự quyết định ưu tiên FCFS. | UC-C02 cấp slot; UC-C03 đổi point/interval; Gantt view. |
 | `ChargingSchedule` | Gom các allocation của một Hub thành kế hoạch hiện hành. | `scheduleId`, `hubId`, `periodStart`, `periodEnd`, `generatedAt`, `allocations`; `version` nếu cần phát hiện cập nhật đồng thời của UC-C03. | Truy vấn allocation theo request/point; kiểm tra xung đột của một đề xuất. Việc lưu/đổi toàn bộ lịch nên do service điều phối. | UC-C01 tải lịch hiện tại; UC-C02 lưu lịch; UC-C03 sửa lịch. |
@@ -27,7 +27,7 @@
 | Quan hệ | Multiplicity dự kiến | Ý nghĩa |
 | --- | --- | --- |
 | `ChargingSchedule` — `ChargingAllocation` | Một schedule có `0..*` allocation; mỗi allocation thuộc `1` schedule hiện hành. | Lịch là tập các lần phân bổ, không phải một time slot. Chưa dùng composition cho tới khi quyết định vòng đời allocation khi tạo lại lịch. |
-| `ChargingRequest` — `ChargingAllocation` | Một request đã lưu có `1` allocation; mỗi allocation dành cho `1` request. | Request đã lưu luôn có một allocation; hủy hoặc hoàn thành vẫn giữ tham chiếu lịch sử, còn suất hiện hành được giải phóng. |
+| `ChargingRequest` — `ChargingAllocation` | Một request có `0..1` allocation; request Scheduled/Charging có `1`, request Waiting có `0` cho tới khi được cấp suất. Mỗi allocation thuộc đúng `1` request. | Khi được cấp suất, request thành Scheduled; khi hủy/hết hạn thì rời queue. Hủy/hoàn thành vẫn giữ lịch sử, còn allocation hiện hành được giải phóng. |
 | `ChargingPoint` — `ChargingAllocation` | Một point có `0..*` allocation ở các thời điểm khác nhau; mỗi allocation dùng `1` point. | Quy tắc không chồng thời gian là constraint riêng, không thể suy ra chỉ từ multiplicity. |
 | `ChargingService` → ba entity và schedule | Dependency, không phải aggregation. | Service đọc, kiểm tra và cập nhật các đối tượng thuộc module. Chỉ vẽ đường cần thiết để hình dễ đọc. |
 
@@ -37,7 +37,7 @@ Các class ngoài module chỉ tham chiếu nếu diagram cần thể hiện đi
 
 | Bên gọi / bên đọc | Smart Charging phải cung cấp hoặc tiếp nhận | Ranh giới sở hữu |
 | --- | --- | --- |
-| Parking → Charging | Tạo request từ parking reference, Hub, xe, pin hiện tại/mục tiêu và requested window; trả request Scheduled cùng allocation hoặc báo Full mà không lưu request. Đọc trạng thái và allocation để hiển thị booking. | Parking kiểm tra quyền sở hữu, khoảng đỗ và khả năng đỗ; Charging giữ request và chỉ cấp suất khi lập lịch. |
+| Parking → Charging | Tạo request từ parking reference, Hub, xe, pin hiện tại/mục tiêu và requested window; trả Scheduled cùng allocation hoặc Waiting cùng vị trí hàng khi capacity đầy; thiếu thời lượng không được waitlist. Đọc trạng thái và allocation để hiển thị booking. | Parking kiểm tra quyền sở hữu, khoảng đỗ và khả năng đỗ; Charging giữ request và chỉ cấp suất khi lập lịch. |
 | Parking → Charging | Hủy request Scheduled, giải phóng allocation tương ứng; xử lý dừng Charging/Suspended như bước riêng trước checkout. | Hủy riêng request không hủy parking. Hủy parking/no-show/checkout phải đồng bộ việc giải phóng cam kết sạc. |
 | Fleet/Telemetry → Charging | Chuyển observation đã xác minh về point/session, báo lỗi và yêu cầu bỏ hạn chế sau khi incident được giải quyết. | Fleet giữ incident và evidence; Charging quyết định point có còn được cấp mới hay không, giữ các allocation đã cam kết và xác nhận giải phóng. “Idle” không tự hủy lịch tương lai. |
 | What-if ← Charging | Snapshot **chỉ đọc** của point, request, allocation/schedule và mức độ tắc nghẽn cần cho mô phỏng. | What-if thay đổi bản sao, không đổi lịch thật. |
