@@ -1,43 +1,45 @@
 @startuml Deployment_View
-title Smart E-Mobility Hub — Deployment View (Submission 3)
-left to right direction
+title Smart E-Mobility Hub - Deployment View
+top to bottom direction
 skinparam shadowing false
 skinparam componentStyle rectangle
 skinparam defaultTextAlignment center
-
+skinparam nodesep 40
+skinparam ranksep 50
 node "Student device" <<device>> as StudentDevice {
   node "Browser" <<executionEnvironment>> as StudentBrowser {
-    artifact "Student Portal\n(UI + in-progress selection)" as StudentUI
+    artifact "Student Portal" as StudentUI
   }
 }
-
 node "Operator device" <<device>> as OperatorDevice {
   node "Browser" <<executionEnvironment>> as OperatorBrowser {
-    artifact "Operator Portal\n(UI + in-progress selection)" as OperatorUI
+    artifact "Operator Portal\nDashboard / transfers / incident desk" as OperatorUI
   }
 }
-
+node "Telemetry simulator host" <<device>> as SimulatorHost {
+  artifact "Timestamped mock event producer\nVehicle / parking / charging point" as Producer
+}
 node "Application host" <<device>> as ApplicationHost {
-  node "Web/API process" <<executionEnvironment>> as ApplicationProcess {
-    artifact "API handlers and role checks" as API
-    artifact "Six domain modules" as Domain
-    artifact "In-memory operational state" as State
+  node "One Web/API process" <<executionEnvironment>> as Process {
+    artifact "API handlers\nSession and source checks" as API
+    artifact "Fleet & Incident module\nFleetService / IncidentService\nTelemetryAdapter / health scheduler" as Fleet
+    artifact "Other five domain modules\nHub / Rental / Parking\nCharging / Simulation" as Domain
+    artifact "Authoritative in-memory state\nShared lock + staged Unit of Work\nCommand/event results + audit" as State
   }
   artifact "JSON seed fixtures" as Fixtures
 }
-
-node "Telemetry simulator" <<device>> as SimulatorHost {
-  artifact "Timestamped mock event producer" as Producer
-}
-
-StudentBrowser --> ApplicationProcess : HTTPS — Student operations
-OperatorBrowser --> ApplicationProcess : HTTPS — Operator operations
-SimulatorHost --> ApplicationProcess : authenticated mock telemetry events
-Fixtures --> State : load seed data
-
-note bottom of ApplicationHost
-  The brief does not require a production database.
-  Authoritative bookings, schedules and sessions
-  are decided inside the application process.
-end note
+StudentBrowser --> API : HTTPS / Student requests
+OperatorBrowser --> API : HTTPS / Operator requests
+Producer --> API : HTTPS / authenticated telemetry
+Fixtures --> State : initialize on startup
+API -[hidden]-> Fleet
+Fleet -[hidden]-> Domain
+Domain -[hidden]-> State
+legend bottom
+  Artifacts inside the Web/API process use in-process calls and the same state lock.
+  Browser state holds UI selections; resource commitments are decided by the application.
+  No production database or physical IoT gateway is required for this MVP design.
+  State and deduplication results last for the process lifetime; restart reloads fixtures.
+  The simulator and application may share one laptop during demonstration.
+endlegend
 @enduml
