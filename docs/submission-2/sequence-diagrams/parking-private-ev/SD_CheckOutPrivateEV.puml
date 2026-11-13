@@ -1,6 +1,7 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
+skinparam linetype ortho
 skinparam defaultFontName SansSerif
 skinparam defaultFontSize 13
 skinparam titleFontSize 20
@@ -128,8 +129,8 @@ activate DATA #E2E7ED
 DATA --> SVC: Current states and summary version / already closed / inaccessible / retrieval error
 deactivate DATA
 opt owned Active parking and current linked states verified
-loop each linked Scheduled charging request
-SVC -> SVC: Collect request and allocation to cancel in the summary
+loop each linked Waiting/Scheduled charging request
+SVC -> SVC: Collect request, queue position or allocation to cancel
 activate SVC #D8EEDC
 SVC --> SVC: Append current request/version and affected allocation
 deactivate SVC
@@ -142,7 +143,7 @@ UI --> ST: Show existing completion result; no second release
 else latest state unavailable, inaccessible or charging Active again
 UI --> ST: No checkout; resolve state/access and repeat stop flow if charging is Active
 else owned Active parking verified with no Active charging
-UI --> ST: Review departure, unused Scheduled requests and all releases
+UI --> ST: Review departure, unused Waiting/Scheduled requests and all releases
 end
 deactivate UI
 break visit already closed, latest state unavailable, inaccessible or charging Active again

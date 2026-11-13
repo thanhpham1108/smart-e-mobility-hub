@@ -18,7 +18,7 @@ Open `http://localhost:8000/parking-private-ev/`. The three views are available 
 
 ## Export Screenshots
 
-Set the browser viewport to **1440 × 900**, reset the demo, and capture each view as PNG using the filenames in the table. The supplied images use that exact resolution.
+Set the browser viewport to **1440 × 900** and capture each view as PNG using the filenames in the table. The supplied ticket and booking screenshots show a Waiting request; reproduce them with `?preview=waitlist#ticket` and `?preview=waitlist#bookings` respectively. This preview query only changes the local demo fixture.
 
 ## Scope and Demo Data
 
@@ -28,7 +28,7 @@ The assignment lists three mobile screens, while [UI guidelines](../hud-identity
 - The clock is fixed at **24 October 2026, 09:07 (UTC+7)** for repeatable screenshots. All data is fictional and held in memory. Reloading the page or choosing **Reset demo** restores the fixtures.
 - Check-in uses the displayed deadline and is unavailable before arrival or at/after expiry. Parking capacity is checked across the entire selected interval in the mock data. KTX Khu A is full from 12:00–13:00; Ga Metro ĐHQG is full from 10:00–11:00. KTX Khu B provides an alternative.
 - The demo allows one extra reservation (`PK-1024-082`) per reset. An equivalent active reservation returns the existing ticket. QR assets encode the matching demo reference and are explicitly invalid for real entry.
-- Charging submission automatically assigns a feasible slot and creates a Scheduled request; if no slot fits, the system reports Full and saves no request. Cancelling parking also cancels linked Scheduled charging. An Active charging session must stop before checkout; declining checkout afterwards keeps charging stopped and parking active.
+- Charging submission automatically assigns a feasible slot and creates a Scheduled request; when valid capacity is full, it reports Full, saves a Waiting request and shows the current Hub queue position. Insufficient charging time is rejected without queueing. Students can cancel while waiting; cancellation, expiry, parking cancellation, or checkout removes the request from the waitlist. An Active charging session must stop before checkout; declining checkout afterwards keeps charging stopped and parking active.
 - The role switch provides a read-only Operator preview. Rental screens, real authentication, camera scanning, physical barriers, backend storage and real scheduling are outside this mockup.
 
 Verified interactions: invalid times, full-interval alternatives, new reservation and QR reference, early check-in rejection, valid check-in/checkout, battery validation, charging request, cancellation cascade, stopping charging before checkout, retaining stopped charging after declining checkout, search/filter, role switch and 390-pixel layout overflow. All three primary views fit within 1440 × 900 with no page overflow.

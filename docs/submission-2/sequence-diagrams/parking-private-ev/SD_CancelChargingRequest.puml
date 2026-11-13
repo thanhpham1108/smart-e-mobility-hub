@@ -1,6 +1,7 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
+skinparam linetype ortho
 skinparam defaultFontName SansSerif
 skinparam defaultFontSize 13
 skinparam titleFontSize 20
@@ -47,7 +48,7 @@ activate DATA #E2E7ED
 DATA --> SVC: Current states, allocations and summary version / unavailable / retrieval error
 deactivate DATA
 opt owned record retrieved and not already Cancelled
-SVC -> SVC: Check status is Scheduled
+SVC -> SVC: Check status is Waiting or Scheduled
 activate SVC #D8EEDC
 SVC --> SVC: Cancellable / ineligible
 deactivate SVC
@@ -61,7 +62,7 @@ UI --> ST: Show existing cancellation; do not release resources again
 else owned record exists but is not cancellable
 UI --> ST: Reject request cancellation; Active charging needs its interruption procedure
 else eligible for cancellation
-UI --> ST: Review assigned slot (if any); parking will remain unchanged
+UI --> ST: Review queue position or assigned slot; parking unchanged
 end
 deactivate UI
 break record unavailable, read failed, already Cancelled or not cancellable
@@ -85,8 +86,8 @@ activate SVC #D8EEDC
 SVC --> SVC: No update attempted
 deactivate SVC
 else session valid and permission granted
-critical Recheck charging request and cancel its allocation
-SVC -> DATA: Cancel owned Scheduled request only if\ncurrent allocation matches confirmed summary
+critical Recheck request and cancel its queue entry or allocation
+SVC -> DATA: Cancel owned Waiting/Scheduled request; remove from\nqueue or release matching allocation
 activate DATA #E2E7ED
 note over SVC,DATA
   Release an existing future charging allocation once.

@@ -44,7 +44,7 @@ note top of Confirmed
 end note
 
 Confirmed -down-> CheckedIn : checkInConfirmed (UC-P06)\n[authorized owner && matching Hub/vehicle\n&& arrival <= now < expiresAt && allocation can be honoured]\n/ create one Active session; account occupancy against existing holds
-Confirmed -left-> Cancelled : cancellationConfirmed (UC-P04)\n[authorized owner && cancellation permitted\n&& now < expiresAt && dependents cancellable && summary still current]\n/ cancel reservation and Scheduled dependents; release holds once
+Confirmed -left-> Cancelled : cancellationConfirmed (UC-P04)\n[authorized owner && cancellation permitted\n&& now < expiresAt && dependents cancellable && summary still current]\n/ cancel reservation and Waiting/Scheduled dependents; release holds once
 Confirmed -right-> Expired : expiryCheck (FR-NI-13)\n[now >= expiresAt && no Active parking/charging session]\n/ expire as NoShow; cancel unused charging; release remaining holds once
 
 CheckedIn -down-> Completed : departureConfirmed (UC-P07)\n[authorized owner && latest states verified\n&& no Active charging && summary still current]\n/ close visit; cancel unused requests; release remaining allocations once

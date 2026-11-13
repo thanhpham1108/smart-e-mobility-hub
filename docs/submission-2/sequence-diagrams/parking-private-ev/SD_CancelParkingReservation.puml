@@ -1,6 +1,7 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
+skinparam linetype ortho
 skinparam defaultFontName SansSerif
 skinparam defaultFontSize 13
 skinparam titleFontSize 20
@@ -61,7 +62,7 @@ UI --> ST: Show existing cancellation; do not release resources again
 else owned record exists but is not cancellable
 UI --> ST: Reject combined cancellation; checked-in parking uses UC-P07; resolve active dependent charging
 else eligible for cancellation
-UI --> ST: Review parking, dependent Scheduled requests and all allocations to release
+UI --> ST: Review parking, dependent Waiting/Scheduled requests and all allocations to release
 end
 deactivate UI
 break record unavailable, read failed, already Cancelled or not cancellable
@@ -89,7 +90,7 @@ critical Recheck and cancel parking with its dependents
 SVC -> DATA: Cancel owned reservation and displayed eligible requests\nonly if now < expiresAt, states and confirmed consequences still match
 activate DATA #E2E7ED
 note over SVC,DATA
-  Cancel parking and Scheduled dependents together;
+  Cancel parking and Waiting/Scheduled dependents together;
   release their remaining holds and allocations once.
 end note
 DATA --> SVC: Cancelled / already cancelled / summary changed / ineligible / save failure

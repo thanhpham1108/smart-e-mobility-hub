@@ -98,7 +98,7 @@
           <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <span class="flex-1">Lập lịch sạc thông minh</span>
+          <span class="flex-1">Lịch sạc FCFS</span>
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         </a>
 
@@ -150,7 +150,7 @@
         <div class="flex items-center gap-2 text-xs text-slate-500">
           <span>Vận hành</span>
           <span class="text-slate-300">/</span>
-          <span class="text-slate-900 font-semibold">Lập lịch sạc thông minh</span>
+          <span class="text-slate-900 font-semibold">Lịch sạc FCFS</span>
           <span class="text-slate-300">/</span>
           <span class="text-emerald-700 font-medium">Hàng đợi & Giám sát phiên</span>
         </div>
@@ -243,7 +243,7 @@
             </div>
             <div>
               <div class="font-bold text-slate-900 text-sm flex items-center gap-2">
-                Request Đã Xếp Lịch (FCFS)
+                Hàng đợi & Lịch sạc FCFS
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-100 text-amber-800">5 request đã gán</span>
               </div>
               <div class="text-[11px] text-slate-500">Sắp xếp theo thời điểm gửi (FCFS); trùng thời điểm thì xét pin yếu hơn</div>
@@ -269,6 +269,25 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium">
+              <tr class="bg-amber-50/70 border-t-2 border-amber-200">
+                <td colspan="6" class="py-2.5 px-3 text-[11px] font-semibold text-amber-900">FCFS WAITLIST · valid requests waiting for capacity · positions update as requests are promoted, cancelled, or expire</td>
+              </tr>
+              <tr class="bg-white">
+                <td class="py-2.5 px-3 text-center"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300">1</span></td>
+                <td class="py-2.5 px-3"><div class="font-mono font-bold text-slate-900 text-xs">59B-405.22 <span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px]">Đang chờ</span></div><div class="text-[11px] text-slate-500 mt-0.5">VinFast Feliz • Nguyễn Thảo Vy (K22)</div></td>
+                <td class="py-2.5 px-3 text-[11px] font-mono">22% → 80%</td>
+                <td class="py-2.5 px-3 text-[11px] font-mono"><div>Gửi: 10:34</div><div class="text-slate-500">Cần đi: 15:30</div></td>
+                <td class="py-2.5 px-3 text-[10px] text-slate-500">Chưa gán</td>
+                <td class="py-2.5 px-3 text-right text-[10px] text-slate-500">Tự gán khi có suất</td>
+              </tr>
+              <tr class="bg-white">
+                <td class="py-2.5 px-3 text-center"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200">2</span></td>
+                <td class="py-2.5 px-3"><div class="font-mono font-bold text-slate-900 text-xs">59C-771.88 <span class="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[9px]">Đang chờ</span></div><div class="text-[11px] text-slate-500 mt-0.5">Yadea VoltGuard • Vũ Đức Trí (K23)</div></td>
+                <td class="py-2.5 px-3 text-[11px] font-mono">45% → 80%</td>
+                <td class="py-2.5 px-3 text-[11px] font-mono"><div>Gửi: 10:38</div><div class="text-slate-500">Cần đi: 16:00</div></td>
+                <td class="py-2.5 px-3 text-[10px] text-slate-500">Chưa gán</td>
+                <td class="py-2.5 px-3 text-right text-[10px] text-slate-500">Tự gán khi có suất</td>
+              </tr>
 
               <!-- ROW 1: earliest submitted request -->
               <tr class="hover:bg-amber-50/40 transition">
@@ -464,7 +483,6 @@
                   </button>
                 </td>
               </tr>
-
             </tbody>
           </table>
         </div>

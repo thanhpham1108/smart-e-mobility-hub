@@ -1,6 +1,6 @@
 # Smart Charging — Sequence diagrams
 
-The diagrams keep the existing UI/Controller/Request/Point/Schedule lifelines and FCFS rule. UC-C02 now runs automatically when a charging draft is submitted: an available point and interval produce a saved `Scheduled` request; otherwise the caller receives `Full` and no request is created. No Operator click or `Unscheduled` waiting queue is needed.
+The diagrams retain the existing UI/Controller/Request/Point/Schedule lifelines and FCFS rule. UC-C01 includes `Waiting` requests and their current Hub positions. UC-C02 runs automatically when a charging draft is submitted: valid requests blocked by full capacity enter the per-Hub waitlist; insufficient charging time is rejected without saving a request.
 
 | Use case | Editable PlantUML | Rendered image |
 | --- | --- | --- |

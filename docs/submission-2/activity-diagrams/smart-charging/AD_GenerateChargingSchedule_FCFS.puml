@@ -1,5 +1,6 @@
 @startuml AD_GenerateChargingSchedule_FCFS
 skinparam style strictuml
+skinparam linetype ortho
 skinparam conditionStyle insideDiamond
 skinparam activityShape rounded
 skinparam roundCorner 14
@@ -43,22 +44,31 @@ if (Required data available?) then (no)
 endif
 :Find feasible point and interval
 in FCFS order;
-if (Slot fits requested window?) then (no)
-  :Show Full or insufficient time; <<status>>
+if (Charging time sufficient?) then (no)
+  :Show Insufficient Charging Time; <<status>>
   stop
 endif
-
-|#FEF3C7|Database|
-:Save Scheduled request and
-allocation together;
-
-|#F0FDF4|ChargingController|
-if (Save succeeded?) then (no)
-  :Show error; keep old schedule; <<status>>
+if (Point and interval available?) then (yes)
+  |#FEF3C7|Database|
+  :Save Scheduled request and allocation together;
+  |#F0FDF4|ChargingController|
+  if (Save succeeded?) then (no)
+    :Show save error; keep old schedule; <<status>>
+    stop
+  endif
+  |#E0F2FE|Student / Parking|
+  :Show assigned point and interval; <<status>>
+  stop
+else (no)
+  |#FEF3C7|Database|
+  :Save Waiting request without allocation;
+  |#F0FDF4|ChargingController|
+  if (Save succeeded?) then (no)
+    :Show save error; keep old schedule; <<status>>
+    stop
+  endif
+  |#E0F2FE|Student / Parking|
+  :Show Full and Hub waitlist position; <<status>>
   stop
 endif
-
-|#E0F2FE|Student / Parking|
-:Show assigned point and interval; <<status>>
-stop
 @enduml

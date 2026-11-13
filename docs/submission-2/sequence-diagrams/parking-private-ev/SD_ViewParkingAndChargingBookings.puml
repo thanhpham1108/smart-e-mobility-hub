@@ -1,6 +1,7 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
+skinparam linetype ortho
 skinparam defaultFontName SansSerif
 skinparam defaultFontSize 13
 skinparam titleFontSize 20
@@ -66,7 +67,7 @@ UI --> ST: Report read error, not no bookings; retained data is not refreshed
 else query succeeded with no matches
 UI --> ST: Show valid empty state; leave or start a separate use case
 else query succeeded with matching records
-UI --> ST: Show Hub, vehicle, intervals, check-in deadline, statuses and charging allocations
+UI --> ST: Show Hub, vehicle, intervals, check-in deadline, statuses, waitlist position and charging allocations
 end
 deactivate UI
 break session expired, retrieval failed or no matching records
@@ -104,7 +105,7 @@ UI --> ST: Generic unavailable message; return to refreshed owned-record list
 else retrieval failed
 UI --> ST: Offer retry; mark retained details as not refreshed
 else current owned details retrieved
-UI --> ST: Show latest details and actions; distinguish Scheduled and Active
+UI --> ST: Show latest details and actions; distinguish Waiting, Scheduled and Active
 end
 end
 deactivate UI

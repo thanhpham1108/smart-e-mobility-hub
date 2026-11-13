@@ -1,6 +1,7 @@
 @startuml SD_ViewChargingQueue
 skinparam style strictuml
 skinparam sequenceMessageAlign center
+skinparam linetype ortho
 skinparam boxPadding 10
 skinparam maxMessageSize 200
 
@@ -23,9 +24,9 @@ activate UI
 UI -> Ctrl : getQueueAndSchedule(hubId)
 activate Ctrl
 
-Ctrl -> Req : findAcceptedRequests(hubId)
+Ctrl -> Req : findScheduledAndWaitingRequests(hubId)
 activate Req
-Req -->> Ctrl : acceptedRequests
+Req -->> Ctrl : scheduledAndWaitingRequests
 deactivate Req
 
 Ctrl -> Point : getChargingPointsStatus(hubId)
@@ -42,9 +43,10 @@ alt Database Connection Failure
     Ctrl -->> UI : showError("Failed to retrieve charging data")
     UI -->> Op : Display error alert
 else Data Retrieved Successfully
-    Ctrl -> Ctrl : sortAcceptedBySubmissionTime(acceptedRequests)\nFCFS; lower battery first only for equal timestamps
-    Ctrl -->> UI : displayQueueAndSchedule(sortedAcceptedRequests, currentSchedule, chargingPointsList)
-    UI -->> Op : Render schedule Gantt chart, port status, and accepted requests
+    Ctrl -> Ctrl : sortBySubmissionTime(scheduledAndWaitingRequests)\nFCFS; lower battery first only for equal timestamps
+    Ctrl -> Ctrl : calculateWaitingPositions(hubId)
+    Ctrl -->> UI : displayQueueAndSchedule(sortedRequests, waitingPositions, currentSchedule, chargingPointsList)
+    UI -->> Op : Render schedule, port status and Waiting positions
 end
 
 deactivate Ctrl

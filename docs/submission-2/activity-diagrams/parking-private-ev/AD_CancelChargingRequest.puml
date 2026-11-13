@@ -1,6 +1,7 @@
 @startuml
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
+skinparam linetype ortho
 skinparam defaultFontName SansSerif
 skinparam defaultFontSize 14
 skinparam conditionEndStyle diamond
@@ -64,11 +65,11 @@ repeat
   if () then ([other state])
     :Reject and display current status; Active\ncharging requires an interruption procedure;
     stop
-  else ([Scheduled])
+  else ([Waiting or Scheduled])
   endif
   :Display cancellation summary, any allocation\nto release and unchanged parking context;
 note right
-  No allocation means no capacity release.
+  Waiting has no allocation; remove it from the Hub queue.
 end note
   |Actor|
   :Review summary and confirm or decline\ncancellation;
@@ -101,13 +102,13 @@ end note
   if () then ([no longer cancellable])
     :Reject; display current status; retain parking\nunchanged;
     stop
-  else ([still Scheduled])
+  else ([still Waiting or Scheduled])
   endif
   if () then ([summary changed])
     :Refresh summary; require confirmation again;
   else ([summary unchanged])
 |Database|
-:Guarded atomic cancellation: recheck ownership,\nScheduled state and reviewed allocation;\nmark request Cancelled and release future\nallocation ONCE; keep parking unchanged;
+:Guarded atomic cancellation: recheck ownership,\nWaiting/Scheduled state and reviewed details;\nmark Cancelled, remove queue entry or release\nfuture allocation ONCE; keep parking unchanged;
 |System|
 
     if () then ([confirmation response lost])

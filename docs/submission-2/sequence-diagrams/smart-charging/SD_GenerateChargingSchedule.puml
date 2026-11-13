@@ -1,6 +1,7 @@
 @startuml SD_GenerateChargingSchedule
 skinparam style strictuml
 skinparam sequenceMessageAlign center
+skinparam linetype ortho
 skinparam boxPadding 10
 skinparam maxMessageSize 200
 skinparam sequenceLifeLineBorderColor #0284C7
@@ -40,12 +41,23 @@ else Valid draft
     Ctrl -> Ctrl : estimateDuration(draft, pointPower)
     Ctrl -> Ctrl : findFeasibleSlotFCFS(draft, allocations, points)
     note right of Ctrl
-      Submission timestamp orders requests.
-      Lower battery breaks only an exact timestamp tie.
+      FCFS by submission time; lower battery
+      breaks exact timestamp ties only.
     end note
-    alt No feasible slot in requested window
-      Ctrl -->> UI : Full / InsufficientChargingTime
-      UI -->> Caller : Show reason; no request saved
+    alt Insufficient charging time
+      Ctrl -->> UI : InsufficientChargingTime; no request saved
+      UI -->> Caller : Revise charging window or target
+    else Hub capacity full
+      Ctrl -> Sched : saveWaitingRequest(draft, submittedAt)
+      activate Sched
+      Sched -->> Ctrl : Waiting request and queue position / save failure
+      deactivate Sched
+      alt Save failed
+        Ctrl -->> UI : Show error; old schedule unchanged
+      else Saved
+        Ctrl -->> UI : Full, Waiting and queue position
+        UI -->> Caller : Show waitlist position; no allocation
+      end
     else Feasible point and interval
       Ctrl -> Sched : saveRequestAndAllocationAtomically(draft, point, interval)
       activate Sched

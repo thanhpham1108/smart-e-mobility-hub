@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1440, initial-scale=1.0">
-  <title>SmartHub Ops - Lịch biểu Gantt Sạc Thông Minh</title>
+  <title>SmartHub Ops - Lịch biểu Gantt Sạc FCFS</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts: Inter & JetBrains Mono -->
@@ -95,7 +95,7 @@
           <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <span class="flex-1">Lập lịch sạc thông minh</span>
+          <span class="flex-1">Lịch sạc FCFS</span>
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         </a>
 
@@ -150,7 +150,7 @@
         <div class="flex items-center gap-2 text-xs text-slate-500">
           <span>Vận hành</span>
           <span class="text-slate-300">/</span>
-          <span class="text-slate-900 font-semibold">Lập lịch sạc thông minh</span>
+          <span class="text-slate-900 font-semibold">Lịch sạc FCFS</span>
         </div>
 
         <div class="h-4 w-px bg-slate-200"></div>
@@ -645,7 +645,7 @@
               Thuật toán xếp lịch: <span class="font-mono font-semibold text-emerald-800">FCFS theo thời điểm gửi</span>
             </span>
             <span class="text-slate-300">|</span>
-            <span class="text-slate-500 text-[11px]">Lập lịch tự động khi gửi request; hết suất trả Full</span>
+            <span class="text-slate-500 text-[11px]">Tự gán khi có suất; đầy cổng thì báo Full và đưa vào hàng chờ FCFS</span>
           </div>
 
           <div class="flex items-center gap-3">

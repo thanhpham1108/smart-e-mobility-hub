@@ -1,76 +1,37 @@
-@startuml STM_ChargingRequest_Lifecycle
+@startuml
+left to right direction
 skinparam style strictuml
+skinparam linetype ortho
+skinparam shadowing false
 skinparam defaultFontName sans-serif
 skinparam roundCorner 8
-skinparam shadowing false
-skinparam linetype ortho
-skinparam nodesep 140
-skinparam ranksep 70
-
+skinparam ArrowFontSize 11
 skinparam state {
   BorderColor #334155
-  BorderThickness 1.2
-  ArrowColor #334155
-  ArrowThickness 1.2
-  FontSize 12
+  FontSize 13
   BackgroundColor #F8FAFC
-  AttributeFontSize 10
 }
-skinparam ArrowFontSize 10
-
-title State Machine Diagram: ChargingRequest Lifecycle
-
-' ========================================================
-' TRỤC CHÍNH (TIẾN TRÌNH PHÁT TRIỂN TIẾP - ĐI THẲNG XUỐNG)
-' ========================================================
-state "Scheduled" as Scheduled #E0E7FF {
-  Scheduled : entry / Assign portId & time slot
-  Scheduled : entry / Reserve electrical capacity
-  Scheduled : exit / Unlock reserved capacity
-}
-
-state "Charging" as Charging #D1FAE5 {
-  Charging : entry / Lock connector & engage relay
-  Charging : do / Monitor battery SOC & power
-  Charging : exit / Open relay & calculate energy
-}
-
-state "Completed" as Completed #DCFCE7 {
-  Completed : entry / Unlock connector & release port
-  Completed : entry / Finalize transaction & billing
-}
-
-' ========================================================
-' NHÁNH RẼ NGANG (TRƯỜNG HỢP NEGATIVE / NGOẠI LỆ)
-' ========================================================
-state "Suspended" as Suspended #FFE4E6 {
-  Suspended : entry / Open relay & raise alert
-  Suspended : do / Await hardware diagnostics
-}
-
-state "Cancelled" as Cancelled #F1F5F9 {
-  Cancelled : entry / Release allocated resources
-  Cancelled : entry / Notify driver via app
-}
-
-' 1. CỘT TRUNG TÂM: TIẾN TRÌNH CHÍNH (ĐI XUỐNG THẲNG ĐỨNG)
-[*] -down-> Scheduled : submitRequest() [slot available]
-
-Scheduled -down-> Charging : connectVehicle()
-
-Charging -down-> Completed : targetReached()
-
-Completed -down-> [*]
-
-' 2. RẼ NGANG: CÁC TRƯỜNG HỢP NEGATIVE
-Charging -left[#D97706]-> Suspended : <font color="#B45309"><b>hardwareFault()</b></font>
-Suspended -right[#059669]-> Charging : <font color="#047857"><b>faultCleared()</b></font>
-Suspended -down-> Cancelled : stopCharging()
-
-Scheduled -right-> Cancelled : cancelReservation()
-
-Charging -right[#DC2626,bold]-> Cancelled : <font color="#DC2626"><b>abortCharging()</b></font>
-
-Cancelled -down-> [*]
-
+title ChargingRequest lifecycle
+state Waiting #FEF3C7
+state Scheduled #E0E7FF
+state Charging #D1FAE5
+state Completed #DCFCE7
+state Suspended #FFE4E6
+state Cancelled #F1F5F9
+state Expired #F1F5F9
+[*] --> Waiting : valid request; Hub full
+[*] --> Scheduled : point available
+Waiting --> Scheduled : capacity opens [FCFS head]
+Waiting --> Cancelled : cancel
+Waiting --> Expired : requested window ends
+Scheduled --> Charging : start signal
+Scheduled --> Cancelled : cancel, 15-minute timeout
+Charging --> Completed : target reached, Student completes early
+Charging --> Cancelled : cancel
+Charging --> Suspended : fault
+Suspended --> Charging : resume
+Suspended --> Cancelled : stop
+Completed --> [*]
+Cancelled --> [*]
+Expired --> [*]
 @enduml
