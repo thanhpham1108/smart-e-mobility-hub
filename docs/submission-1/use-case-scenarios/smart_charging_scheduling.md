@@ -2,7 +2,7 @@
 
 ## Shared rule
 
-A submitted charging draft is checked against point availability and the requested time window. If a feasible slot exists, the system automatically saves one `Scheduled` request with one allocation, ordered by FCFS. If all suitable slots are full or the interval is too short, it reports `Full`/`Insufficient Charging Time` and saves no request. There is no waiting `Unscheduled` request and no Operator refresh requirement. For identical submission timestamps only, lower battery level breaks the tie; request ID breaks a remaining tie.
+A valid charging draft is checked against point availability and its requested time window. If a feasible slot exists, the system saves one `Scheduled` request with one allocation. If all suitable capacity is occupied, it saves the request as `Waiting` in that Hub’s FCFS waitlist, reports that the Hub is full, and shows the Student their queue position. When capacity becomes available, the earliest eligible request is assigned automatically. Insufficient charging time remains an error and does not enter the waitlist. Identical submission timestamps use lower battery as a tie-breaker, then request ID for stability.
 
 # UC-C01 — View the Charging Queue and Schedule
 
@@ -12,15 +12,15 @@ A submitted charging draft is checked against point availability and the request
 
 **Main flow:**
 
-1. The system reads accepted charging requests, current point status and the saved schedule for the Hub.
-2. It displays requests in FCFS submission order, their assigned point and interval, and point availability.
+1. The system reads Scheduled and Waiting requests, current point status and the saved schedule for the Hub.
+2. It displays scheduled assignments and the Waiting list in FCFS order, including each waiting request’s current position, assigned point/interval when available, and point availability.
 3. The Operator reviews the schedule. This use case does not change any request or allocation.
 
 **Alternative:** If there are no accepted requests, display an empty schedule and current point status.
 
 **Exception:** If required data cannot be read, display an error rather than a partial schedule.
 
-# UC-C02 — Generate a Charging Schedule
+# UC-C02 — Generate an FCFS Charging Schedule
 
 **Actors:** Student or an authorized internal requester; Smart Charging System. **Trigger:** Submit a charging request. The scheduling step runs automatically.
 
@@ -34,7 +34,9 @@ A submitted charging draft is checked against point availability and the request
 4. If a feasible point and interval exist, it saves the request as `Scheduled` with exactly one `ChargingAllocation` and updates the current schedule together.
 5. It returns the request reference, point and interval. Operator can later view the saved plan through UC-C01.
 
-**Alternative — Full or insufficient time:** No point/interval fits. Show `Full` or `Insufficient Charging Time`; save no request or allocation. The Student may submit a new request with another window, which receives a new submission instant.
+**Alternative — Hub capacity full:** If the request is valid but no capacity fits because the Hub is full, save it as `Waiting` without an allocation, show `Full` and its current waitlist position. Allocate it automatically when it becomes eligible at the head of the Hub’s FCFS queue.
+
+**Alternative — Insufficient charging time:** Show `Insufficient Charging Time`; do not save or waitlist the request. The Student may revise the requested interval and submit again.
 
 **Alternative — No charging required:** If current battery already meets the target, reject the draft with `No Charging Required`; save no request.
 

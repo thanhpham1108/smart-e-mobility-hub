@@ -4,9 +4,9 @@
 
 - Parking arrival and departure times are selected from the system's available time points, spaced 15 minutes apart by default (e.g., 08:00, 08:15, 08:30). One reservation covers a continuous interval from arrival up to, but not including, departure, comprising all consecutive parking slots in that interval. Capacity must be available in every covered slot.
 - A charging request is linked to a confirmed parking reservation or an active parking session for the same Student, vehicle, and Hub. Its requested charging interval is the window within which the system may schedule charging, not an allocated charging slot, and must fit within the associated parking interval. The parking time increment does not require charging schedules to use 15-minute increments.
-- Parking reservations can be cancelled before check-in. Cancelling a parking reservation also cancels its linked scheduled charging requests. Cancelling only a charging request leaves parking unchanged.
+- Parking reservations can be cancelled before check-in. Cancelling a parking reservation also cancels its linked Waiting or Scheduled charging requests; a Waiting request is removed from its Hub queue. Cancelling only a charging request leaves parking unchanged.
 - Check-in and checkout are confirmed through the application; physical events may be simulated. Actual arrival and departure times are recorded without rounding to parking time points. Arrival must satisfy the parking-expiry policy below. For example, with the default 15-minute grace period and a reservation from 08:00 to 09:00, check-in at 08:07 is recorded as 08:07; check-in at 08:15 is rejected as overdue.
-- Checkout requires active charging to have ended. It also cancels unused scheduled charging requests linked to the departing parking session. Completed charging records remain unchanged.
+- Checkout requires active charging to have ended. It also cancels unused Waiting or Scheduled charging requests linked to the departing parking session, removing Waiting requests from their Hub queue. Completed charging records remain unchanged.
 
 ## Parking Reservation Expiry Policy
 
@@ -100,19 +100,20 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 2. The system displays the vehicle, Hub, parking interval, and charging-request form.
 3. The Student enters the current battery level, target battery level, and requested charging interval within the parking interval. This interval defines when the system may assign a charging slot and need not use the parking time increment.
 4. The system validates the charging inputs, confirms that the Hub accepts charging requests, and checks the associated parking record's current eligibility, including `now < expiresAt` for an unused Confirmed reservation.
-5. The system displays a request summary and states that a full charging schedule will reject the submission.
+5. The system displays a request summary and explains that a full Hub returns a waitlist position for a valid request.
 6. The Student confirms submission.
-7. The system rechecks parking eligibility and automatically finds a feasible charging point and interval. It saves one linked **Scheduled** request and its allocation together. If no slot fits, it reports Full and saves no charging request. Concurrent parking cancellation or expiry must not leave a live request linked to an ineligible reservation.
-8. The system displays the request reference, assigned point and interval, and **Scheduled** status.
+7. The system rechecks parking eligibility and charging-window validity. If a feasible charging point and interval are available, it saves one linked **Scheduled** request and allocation. If capacity is full, it saves the valid request as **Waiting** without an allocation and returns the current Hub waitlist position. Insufficient charging time remains an error and creates no request. Concurrent parking cancellation or expiry must cancel a linked Waiting or Scheduled request.
+8. The system displays the request reference and either its assigned point/interval with **Scheduled** status, or **Full**, **Waiting**, and its queue position.
 
 ### Alternative Flow
 
 | ID | Branch | Actions and continuation |
 | --- | --- | --- |
 | P02-A1 | The vehicle is already checked in at Step 1 | Use the active parking session as the request context. Limit the requested charging interval to the remaining permitted parking interval and continue at Step 2. |
-| P02-A2 | No feasible charging slot fits the requested window | Report Full and create no charging request. The Student may change the interval and submit again. |
-| P02-A3 | An equivalent active request is found before creation at Step 7 | Display the existing request and its current status. End without creating another request or changing an existing allocation. |
-| P02-A4 | Student changes or abandons the request at Step 5 | Return to Step 3 for changes, or end without creating a request. |
+| P02-A2 | Hub capacity is full for a valid requested window | Report Full, save the request as Waiting without an allocation, and show its current position in that Hub’s FCFS waitlist. Promote automatically when capacity opens; expire and notify the Student when the requested window ends. |
+| P02-A3 | Insufficient charging time for the target | Report Insufficient Charging Time and save no request. The Student may revise the window or target and submit again. |
+| P02-A4 | An equivalent active request is found before creation at Step 7 | Display the existing request and its current status. End without creating another request or changing an existing allocation. |
+| P02-A5 | Student changes or abandons the request at Step 5 | Return to Step 3 for changes, or end without creating a request. |
 
 ### Exception Flow
 
@@ -146,10 +147,10 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 
 1. The system verifies the Student's session.
 2. The system retrieves only the Student's parking reservations, parking sessions, and charging requests.
-3. The system displays summaries containing the vehicle, Hub, time interval, current status, check-in deadline for an unused reservation, and charging allocation where one exists. Reconcile overdue reservations before displaying a refreshed state; if cleanup fails, report expiry pending/unavailable and never present the record as eligible for check-in.
+3. The system displays summaries containing the vehicle, Hub, time interval, current status, check-in deadline for an unused reservation, queue position for Waiting requests, and charging allocation where one exists. Reconcile overdue reservations before displaying a refreshed state; if cleanup fails, report expiry pending/unavailable and never present the record as eligible for check-in.
 4. The Student selects a record to view its details.
 5. The system verifies access to the selected record and retrieves its current details and linked parking/charging information.
-6. The system displays the details and available actions based on the current state. Scheduled charging requests are distinguished from active or completed charging.
+6. The system displays the details and available actions based on the current state. Waiting, Scheduled, active, and completed charging are distinguished; current waitlist positions and available cancellation actions are shown.
 7. The Student returns to the list or closes the view.
 
 ### Alternative Flow
@@ -191,7 +192,7 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 
 1. The system retrieves the selected reservation and verifies that it belongs to the Student.
 2. The system checks that the reservation is **Confirmed**, has not been checked in, has not reached `expiresAt`, and is eligible for cancellation. Reconcile an overdue reservation as Expired before considering cancellation.
-3. The system retrieves linked scheduled charging requests and displays the parking cancellation summary, including all dependent requests that will also be cancelled.
+3. The system retrieves linked Waiting and Scheduled charging requests and displays the parking cancellation summary, including all dependent requests that will also be cancelled and any waitlist entry to remove.
 4. The Student confirms the cancellation and its displayed consequences.
 5. The system rechecks the reservation and dependent request states. It then cancels the parking reservation and the displayed eligible charging requests, releasing all parking capacity still held for the reservation across its covered slots and the dependent charging allocations together, without partial updates or double release.
 6. The system displays the **Cancelled** parking reservation and the resulting statuses of its linked charging requests.
@@ -200,7 +201,7 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 
 | ID | Branch | Actions and continuation |
 | --- | --- | --- |
-| P04-A1 | No scheduled charging requests are linked at Step 3 | Show only the parking cancellation summary. Continue at Step 4; release only the parking allocation. |
+| P04-A1 | No Waiting or Scheduled charging requests are linked at Step 3 | Show only the parking cancellation summary. Continue at Step 4; release only the parking allocation. |
 | P04-A2 | The Student declines at Step 4 | End without changing the reservation, linked requests, or allocations. |
 | P04-A3 | The reservation is already cancelled at Step 2 or Step 5 | Display the existing cancellation result. Do not cancel or release resources a second time. |
 | P04-A4 | Linked request details change before Step 5 but remain cancellable | Refresh the cancellation summary and return to Step 4 for confirmation of the updated consequences. |
@@ -219,7 +220,7 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 
 | Outcome | State |
 | --- | --- |
-| Success | The reservation is **Cancelled**; its linked scheduled charging requests are **Cancelled**. All parking capacity still held for the reservation across its covered slots and the dependent charging allocations are released once. Historical records remain available. |
+| Success | The reservation is **Cancelled**; its linked Waiting/Scheduled charging requests are **Cancelled**, and Waiting entries are removed from their Hub queues. All parking capacity still held for the reservation across its covered slots and the dependent charging allocations are released once. Historical records remain available. |
 | Unsuccessful completion | This attempt makes no partial cancellation. Concurrent changes are displayed as their current states; an uncertain cancellation result is reconciled before retrying. |
 
 ## UC-P05 — Cancel a Charging Request
@@ -236,17 +237,17 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 ### Steps — Acceptance Flow (Main Success Flow)
 
 1. The system retrieves the request and verifies that it belongs to the Student.
-2. The system checks that the current request status is **Scheduled**.
-3. The system displays the cancellation summary, including any charging allocation to be released, and states that parking will remain unchanged.
+2. The system checks that the current request status is **Waiting** or **Scheduled**.
+3. The system displays the cancellation summary, including the current queue position or any charging allocation to be released, and states that parking will remain unchanged.
 4. The Student confirms cancellation.
-5. The system rechecks the request state, marks it **Cancelled**, and releases any associated future charging allocation once.
+5. The system rechecks the request state, marks it **Cancelled**, removes it from the waitlist or releases any associated future allocation once, and updates later queue positions.
 6. The system displays the cancelled request and the unchanged parking booking/session status.
 
 ### Alternative Flow
 
 | ID | Branch | Actions and continuation |
 | --- | --- | --- |
-| P05-A1 | No request was saved because the schedule was full | Continue through confirmation. No cancellation is needed; show the original Full response. |
+| P05-A1 | The request is Waiting | Confirm cancellation, remove it from the Hub waitlist, update later positions, and keep parking unchanged. |
 | P05-A2 | The Student declines at Step 4 | End without changing the charging request or parking state. |
 | P05-A3 | The request is already cancelled at Step 2 or Step 5 | Return the existing cancellation result. Do not release any allocation again. |
 | P05-A4 | The assigned slot changes before Step 5 while the request remains cancellable | Refresh the summary and return to Step 4 so the Student confirms the current request state. |
@@ -330,9 +331,9 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 1. The system retrieves the parking session and verifies that it belongs to the Student and the selected vehicle.
 2. The system retrieves its linked charging requests and current charging-session state.
 3. The system verifies that no charging session is active. If charging is active, follow P07-A1 before continuing.
-4. The system displays a checkout summary, including any unused scheduled charging requests that will be cancelled.
+4. The system displays a checkout summary, including any unused Waiting or Scheduled charging requests that will be cancelled and removed from their queues.
 5. The Student confirms departure through the application.
-6. The system rechecks the parking and charging states, then closes the parking session, marks the associated parking reservation **Completed**, and records the actual departure time without rounding to a parking time point. It cancels linked unused scheduled charging requests and releases the occupied parking space, all parking capacity still held for this visit (including the unused remainder of the reserved interval on early checkout), and remaining charging allocations once, as a consistent update without double release.
+6. The system rechecks the parking and charging states, then closes the parking session, marks the associated parking reservation **Completed**, and records the actual departure time without rounding to a parking time point. It cancels linked unused Waiting or Scheduled charging requests, removing Waiting entries from their Hub queues, and releases the occupied parking space, all parking capacity still held for this visit (including the unused remainder of the reserved interval on early checkout), and remaining charging allocations once, as a consistent update without double release.
 7. The system displays the completed parking visit and the final statuses of the linked charging requests.
 
 ### Alternative Flow
@@ -358,5 +359,5 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 
 | Outcome | State |
 | --- | --- |
-| Success | The parking session is **Closed**, the reservation is **Completed**, and the actual departure time is recorded without rounding. Occupancy and all parking capacity still held for the visit are released once, including the unused remainder on early checkout. No linked charging session remains active; unused scheduled requests are cancelled and their allocations released. Completed charging history is preserved. |
+| Success | The parking session is **Closed**, the reservation is **Completed**, and the actual departure time is recorded without rounding. Occupancy and all parking capacity still held for the visit are released once, including the unused remainder on early checkout. No linked charging session remains active; unused Waiting/Scheduled requests are cancelled, removed from any waitlist and have their allocations released. Completed charging history is preserved. |
 | Unsuccessful completion | If checkout was not committed, parking remains active and its space is not released. A previously confirmed charging stop remains in effect. An uncertain finalization is reconciled before retrying. |

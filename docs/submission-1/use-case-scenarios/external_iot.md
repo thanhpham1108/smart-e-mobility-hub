@@ -1,7 +1,8 @@
-# External IoT & Telemetry — Use Case Scenarios
+# External IoT & Telemetry — Supporting / Non-interactive Flows
 
 ## Scenario Assumptions
 
+- **Classification:** UC-T01–UC-T03 are supporting, non-interactive event/background flows, not actor-goal use cases initiated by Student or Operator. Their IDs remain unchanged for cross-references.
 - **External Telemetry Provider (ACT-03)** represents an IoT platform, gateway, or external device system that reports observations to Smart E-Mobility Hub. These scenarios describe the complete system. The MVP may use a simulator to provide equivalent events without integrating physical hardware.
 - Provider identities and their permitted vehicles, Hubs, parking spaces, and charging points are configured. Each incoming update must be authenticated and authorized as a machine interaction; no Student or Operator login is required.
 - Each event identifies its source, resource, observation time, and event identifier or equivalent reference for recognizing retries. Required measurements and session references depend on the event type. Observation times are retained as reported and validated; they are not rounded to the parking reservation's 15-minute time points.

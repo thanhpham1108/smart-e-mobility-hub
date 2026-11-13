@@ -55,12 +55,12 @@ Parking arrival and departure times are selected from available time points, spa
 | ID | Use case | Description |
 | --- | --- | --- |
 | UC-P01 | Reserve a Parking Space | Select a Hub, provide vehicle information, and select arrival and departure times from the available time points. Display availability for the entire selected interval and a request summary before the Student confirms. Recheck capacity at confirmation and create one reservation for the whole interval without overbooking or partial allocation. If capacity is unavailable, allow the Student to request alternative Hubs. |
-| UC-P02 | Submit a Private-EV Charging Request | Submit the vehicle, Hub, expected arrival/departure times, and charging needs. Automatically assign a feasible charging point and interval using FCFS, then save a Scheduled request with its allocation. If no slot fits, report Full and save no request. |
-| UC-P03 | View My Parking and Charging Bookings | View the Student's parking reservations and charging requests, including Hub, time interval, status, and assigned charging schedule where available. Show the allocation of each accepted Scheduled request. |
-| UC-P04 | Cancel a Parking Reservation | Cancel an eligible reservation belonging to the Student and release its reserved capacity. Apply the cancellation policy to any dependent charging request. An active parking session must be ended through checkout. |
-| UC-P05 | Cancel a Charging Request | Cancel an eligible scheduled request belonging to the Student and release its charging allocation. Parking remains unchanged. Active charging sessions follow the applicable interruption procedure. |
+| UC-P02 | Submit a Private-EV Charging Request | Submit charging needs for a parking visit. Automatically assign a feasible point and interval using FCFS; if capacity is full, add the valid request to the Hub waitlist and return its position. Insufficient charging time is reported without queueing. |
+| UC-P03 | View My Parking and Charging Bookings | View the Student's parking reservations and charging requests, including Hub, time interval, status, current waitlist position for Waiting requests, and assigned charging schedule where available. |
+| UC-P04 | Cancel a Parking Reservation | Cancel an eligible reservation belonging to the Student and release its reserved capacity. Cancel linked Waiting/Scheduled charging requests; remove Waiting entries from their Hub queue. An active parking session must be ended through checkout. |
+| UC-P05 | Cancel a Charging Request | Cancel an eligible Waiting or Scheduled request belonging to the Student; remove a waiting request from the Hub queue or release its charging allocation. Parking remains unchanged. Active charging sessions follow the applicable interruption procedure. |
 | UC-P06 | Check In a Private EV | Confirm arrival against a valid parking reservation and start the parking session. Update occupancy without counting the reservation and its occupied space twice. Reject invalid, expired, or mismatched reservations. |
-| UC-P07 | Check Out a Private EV | Confirm departure, close the Student's active parking session, and release the space once. Handle any active charging session according to the completion or interruption procedure. |
+| UC-P07 | Check Out a Private EV | Confirm departure, close the Student's active parking session, and release the space once. Cancel linked unused Waiting/Scheduled requests, remove Waiting entries from their Hub queues, and handle any active charging session according to the completion or interruption procedure. |
 
 ### 2.5 Alternative Hubs
 
@@ -98,8 +98,8 @@ Parking arrival and departure times are selected from available time points, spa
 
 | ID | Use case | Description |
 | --- | --- | --- |
-| UC-C01 | View the Charging Queue and Schedule | View accepted charging requests in submission-time (FCFS) order with assigned points, intervals and current point status. Identical timestamps use lower battery level as a tie-breaker. |
-| UC-C02 | Generate a Charging Schedule | Automatically check and assign a feasible charging point/interval when a request is submitted, using FCFS. If no slot fits, report Full or insufficient charging time and do not save the request. |
+| UC-C01 | View the Charging Queue and Schedule | View Scheduled and Waiting requests in FCFS order, including current waitlist positions, assigned points/intervals where available and current point status. Identical timestamps use lower battery level as a tie-breaker. |
+| UC-C02 | Generate an FCFS Charging Schedule | Automatically assign a feasible charging point/interval by FCFS when a request is submitted. If valid capacity is full, save it as Waiting without an allocation and return the Hub waitlist position; insufficient charging time is rejected without saving. |
 | UC-C03 | Adjust a Charging Schedule | Modify a charging interval or charging-point assignment in an existing schedule while preserving FCFS order. Validate resource availability and conflicts before accepting the change and record its effect on the request. |
 
 ### 2.9 What-if Simulation
@@ -114,19 +114,17 @@ Parking arrival and departure times are selected from available time points, spa
 | UC-W04 | Review Coordination Recommendations | View recommended redistribution, charging adjustments, or redirection to alternative Hubs and their expected effects. Reviewing a recommendation does not apply it to live operations. |
 | UC-W05 | Compare What-if Scenarios | Compare completed runs or a scenario against a baseline using consistent measures. Display differences in snapshots, assumptions, and time horizons that affect comparability. |
 
-### 2.10 External IoT & Telemetry
+### Supporting / Non-interactive Telemetry Flows
 
-**Actor:** External Telemetry Provider.
+**Triggering system:** External Telemetry Provider. These event-driven/background flows are supporting system interactions, not actor-goal use cases initiated by Student or Operator. They remain documented for technical detail; What-if events stay separate from live telemetry.
 
-These use cases describe the complete system's interactions with an external IoT provider, independently of whether the MVP uses physical devices or simulated inputs. Incoming observations are reconciled with existing bookings, sessions, and operational restrictions. What-if Simulation events remain separate from live operational telemetry.
-
-| ID | Use case | Description |
+| ID | Supporting flow | Description |
 | --- | --- | --- |
 | UC-T01 | Update Vehicle Telemetry | Receive identified, timestamped vehicle location, battery level, and operational-condition data. Verify the source, validate the update, and apply fresh observations without overwriting rental/reservation commitments. Fault reports create or update an incident for Operator handling and restrict new allocations. Duplicate or stale events must not repeat effects or replace newer state. |
 | UC-T02 | Update Parking Occupancy | Receive identified, timestamped parking-occupancy observations for a Hub or parking space. Reconcile observed occupancy with parking sessions and reservations without double-counting; expose discrepancies for Operator review. Observations do not confirm check-in/checkout or cancel reserved capacity. Reject invalid or stale observations. |
 | UC-T03 | Update Charging-Point Status | Receive identified, timestamped charging-point condition and, where applicable, charging-session progress or start/stop events. Reconcile verified events with the assigned point, session, and schedule. Faults restrict new allocations and identify affected sessions/allocations for Operator handling. Release eligible capacity only after the relevant state is confirmed; an idle report alone does not cancel a future allocation. |
 
-Detailed scenarios: [External IoT & Telemetry](../use-case-scenarios/external_iot.md).
+Detailed scenarios: [External IoT & Telemetry](../use-case-scenarios/external_iot.md). Supporting-flow view: [PlantUML source](Use_Case_Diagram_Telemetry_Supporting.puml) · [PNG](Use_Case_Diagram_Telemetry_Supporting.png).
 
 ## 3. Supporting Use Cases
 
@@ -149,7 +147,7 @@ Detailed scenarios: [External IoT & Telemetry](../use-case-scenarios/external_io
 | --- | --- |
 | ACT-01 — Student | UC-A01–UC-A02; UC-H01–UC-H03; UC-R01–UC-R08; UC-P01–UC-P07; UC-X01 |
 | ACT-02 — Operator | UC-A01–UC-A02; UC-F01–UC-F05; UC-I01; UC-C01–UC-C03; UC-W01–UC-W05 |
-| ACT-03 — External Telemetry Provider | UC-T01–UC-T03 |
+| ACT-03 — External Telemetry Provider | Supporting flows UC-T01–UC-T03 (event-driven; non-interactive) |
 
 Operator participation in UC-I02 and UC-I03 is inherited through UC-I01.
 

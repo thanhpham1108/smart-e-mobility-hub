@@ -1,0 +1,43 @@
+@startuml Use_Case_Diagram_Telemetry_Supporting
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  ArrowColor #475569
+}
+
+actor Student
+actor Operator
+actor "External Telemetry Provider" as Telemetry
+
+rectangle "Smart E-Mobility Hub" {
+  package "Actor-goal use cases" {
+    usecase "UC-C01\nView Charging Queue\nand Schedule" as C01
+    usecase "UC-C02\nGenerate FCFS\nCharging Schedule" as C02
+    usecase "UC-C03\nAdjust Charging\nSchedule" as C03
+  }
+
+  package "Supporting / non-interactive flows" {
+    usecase "UC-T01\nUpdate Vehicle Telemetry" as T01
+    usecase "UC-T02\nUpdate Parking Occupancy" as T02
+    usecase "UC-T03\nUpdate Charging-Point Status" as T03
+  }
+}
+
+Operator -- C01
+Student -- C02
+Operator -- C02
+Operator -- C03
+Telemetry -- T01
+Telemetry -- T02
+Telemetry -- T03
+
+note bottom of Telemetry
+  Event-driven integrations; no Student or Operator initiates these flows.
+  IDs are retained for cross-references in supporting diagrams.
+end note
+@enduml
