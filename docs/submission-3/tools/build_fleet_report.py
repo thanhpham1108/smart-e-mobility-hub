@@ -24,7 +24,7 @@ OUT = ROOT / "output/pdf/Submission3_Fleet_Incident_2452265.pdf"
 def verify_operations():
     current = None
     operations = []
-    for line in (BASE / "class-diagram/04-fleet-incident.puml").read_text().splitlines():
+    for line in (BASE / "class-diagram/fleet-incident/04-fleet-incident.puml").read_text().splitlines():
         match = re.match(r"\s*class (\w+).*\{", line)
         if match:
             current = match.group(1)
@@ -173,7 +173,7 @@ def build():
     diagrams = [
         ("Deployment view", "deployment-view/Deployment_View.png", "large"),
         ("Development / Implementation view", "development-view/Implementation_View.png", "wide"),
-        ("Fleet & Incident class diagram", "class-diagram/04-fleet-incident.png", "wide"),
+        ("Fleet & Incident class diagram", "class-diagram/fleet-incident/04-fleet-incident.png", "wide"),
     ]
     for title, relative, template in diagrams:
         story.extend([NextPageTemplate(template), PageBreak(), paragraph(title, "H1FI")])

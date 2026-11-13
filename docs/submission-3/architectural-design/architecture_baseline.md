@@ -35,7 +35,7 @@ The method catalogues should describe the inputs, outputs, effects, and failure 
 
 ## Member 4 detailed design contribution
 
-The [Fleet & Incident class design](../class-diagram/04-fleet-incident.puml) retains member 4 ownership of `RedistributionOrder`, `IncidentTicket`, `FleetService` and `TelemetryAdapter`, and adds `IncidentService` to separate incident recovery from transfer coordination. This is a refinement within the existing Fleet & Incident module. Its DTOs, lifecycle guards, owner contracts and all operation descriptions are defined in [the method catalogue](../method-design/04-fleet-incident.md).
+The [Fleet & Incident class design](../class-diagram/fleet-incident/04-fleet-incident.puml) retains member 4 ownership of `RedistributionOrder`, `IncidentTicket`, `FleetService` and `TelemetryAdapter`, and adds `IncidentService` to separate incident recovery from transfer coordination. This is a refinement within the existing Fleet & Incident module. Its DTOs, lifecycle guards, owner contracts and all operation descriptions are defined in [the method catalogue](../method-design/04-fleet-incident.md).
 
 The Implementation view now makes incident handling, telemetry routing to all three resource owners, and internal freshness/imbalance evaluation explicit. Fleet reads Hub/Charging status, checks capacity through Parking and updates vehicle state through Rental. IncidentService applies resource restrictions/restoration through Rental or Charging. TelemetryAdapter does not own parking or charging sessions. Simulation receives copied, versioned Fleet/Incident data through the shared snapshot contract.
 

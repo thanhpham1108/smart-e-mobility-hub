@@ -2,7 +2,7 @@
 
 Owner: Mai Hoang Phuong Dong - 2452265 (member 4).
 
-Class diagram: [04-fleet-incident.puml](../class-diagram/04-fleet-incident.puml).
+Class diagram: [04-fleet-incident.puml](../class-diagram/fleet-incident/04-fleet-incident.puml).
 
 Scope: UC-F01-F05, UC-I01-I03, UC-T01-T03 and UC-S03; background support for FR-NI-01/02/03/05/06/07/08. UC-I01 is abstract. IncidentService handles its vehicle and charging-point specializations using a typed resource reference. Rental, parking and charging policies remain owned by their respective modules.
 

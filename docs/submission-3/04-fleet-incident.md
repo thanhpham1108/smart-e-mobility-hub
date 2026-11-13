@@ -11,7 +11,7 @@ This is the individual design contribution for Operator Fleet & Incident, includ
 | Individual report | [Submission3_Fleet_Incident_2452265.pdf](../../output/pdf/Submission3_Fleet_Incident_2452265.pdf) |
 | Deployment view contribution | [PlantUML](deployment-view/Deployment_View.puml), [PNG](deployment-view/Deployment_View.png), [SVG](deployment-view/Deployment_View.svg) |
 | Team Implementation view consolidation | [PlantUML](development-view/Implementation_View.puml), [PNG](development-view/Implementation_View.png), [SVG](development-view/Implementation_View.svg) |
-| Individual class diagram | [PlantUML](class-diagram/04-fleet-incident.puml), [PNG](class-diagram/04-fleet-incident.png), [SVG](class-diagram/04-fleet-incident.svg) |
+| Individual class diagram | [PlantUML](class-diagram/fleet-incident/04-fleet-incident.puml), [PNG](class-diagram/fleet-incident/04-fleet-incident.png), [SVG](class-diagram/fleet-incident/04-fleet-incident.svg) |
 | Complete method catalogue | [22 operation descriptions and data contracts](method-design/04-fleet-incident.md) |
 | Bonus test cases | [14 acceptance test specifications](test-cases/04-fleet-incident.md) |
 | Shared design agreement | [Architecture baseline](architectural-design/architecture_baseline.md) |

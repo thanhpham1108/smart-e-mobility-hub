@@ -1,10 +1,13 @@
-@startuml 04-fleet-incident
-title Fleet & Incident - Class Design (Mai Hoang Phuong Dong, 2452265)
+@startuml 04-fleet-incident-review
+title Fleet & Incident — Class Diagram Review
+top to bottom direction
 skinparam classAttributeIconSize 0
+skinparam classHeaderBackgroundColor #D9EFD9
 skinparam shadowing false
+skinparam packageStyle rectangle
 skinparam linetype ortho
-skinparam nodesep 35
-skinparam ranksep 50
+skinparam nodesep 95
+skinparam ranksep 75
 hide empty members
 
 package "Fleet & Incident - owner: member 4" {
@@ -18,6 +21,7 @@ package "Fleet & Incident - owner: member 4" {
     + updateOrder(ctx: Context, orderId: String, action: OrderAction): RedistributionOrder
     + evaluateNetworkHealth(now: DateTime): List<OperationalAlert>
   }
+
   class IncidentService <<application service>> {
     + getIncident(ctx: Context, ticketId: String): IncidentView
     + reportFailure(ctx: Context, report: FailureReport): IncidentTicket
@@ -25,12 +29,14 @@ package "Fleet & Incident - owner: member 4" {
     + resolveIncident(ctx: Context, ticketId: String): IncidentTicket
     + closeIncident(ctx: Context, ticketId: String): IncidentTicket
   }
+
   class TelemetryAdapter <<intake adapter>> {
     + validateEvent(source: SourceIdentity, event: TelemetryEvent): ValidationResult
     + ingestVehicle(source: SourceIdentity, event: TelemetryEvent): EventResult
     + ingestParking(source: SourceIdentity, event: TelemetryEvent): EventResult
     + ingestChargingPoint(source: SourceIdentity, event: TelemetryEvent): EventResult
   }
+
   class RedistributionOrder <<entity>> {
     - orderId: String
     - sourceHubId: String
@@ -46,6 +52,7 @@ package "Fleet & Incident - owner: member 4" {
     + markAtRisk(reason: String): void
     + transition(target: OrderStatus): void
   }
+
   class IncidentTicket <<entity>> {
     - ticketId: String
     - resourceType: ResourceType
@@ -61,6 +68,37 @@ package "Fleet & Incident - owner: member 4" {
     + appendEvidence(evidence: Evidence): Boolean
     + transition(target: IncidentStatus): void
   }
+
+  enum OrderAction <<enumeration>> {
+    DISPATCH
+    REVALIDATE
+    CANCEL
+  }
+  enum OrderStatus <<enumeration>> {
+    ASSIGNED
+    IN_TRANSIT
+    PARTIALLY_COMPLETED
+    AT_RISK
+    COMPLETED
+    CANCELLED
+  }
+  enum ResourceType <<enumeration>> {
+    VEHICLE
+    CHARGING_POINT
+  }
+  enum IncidentStatus <<enumeration>> {
+    REPORTED
+    INVESTIGATING
+    ACTION_ASSIGNED
+    IN_REPAIR
+    RESOLVED
+    CLOSED
+  }
+  enum Severity <<enumeration>> {
+    LOW
+    MEDIUM
+    HIGH
+  }
 }
 
 package "Resource owners - references only" {
@@ -74,17 +112,16 @@ FleetService .right.> IncidentService : reads incident impact
 IncidentService ..> IncidentTicket : manages
 TelemetryAdapter ..> IncidentService : fault intake
 TelemetryAdapter ..> FleetService : assignment risk / health
+
 RedistributionOrder "0..*" --> "1" MobilityHub : source
 RedistributionOrder "0..*" --> "1" MobilityHub : destination
 RedistributionOrder "0..*" --> "1..*" SharedVehicle : assigned (history)
 IncidentTicket "0..*" --> "0..1" SharedVehicle : vehicle incident
 IncidentTicket "0..*" --> "0..1" ChargingPoint : point incident
-legend bottom
-  IncidentTicket targets SharedVehicle XOR ChargingPoint; equivalent open faults share one ticket.
-  arrivedVehicleIds is a subset of assignedVehicleIds; only recordArrival confirms physical movement.
-  One active transfer per vehicle. A new fault before closure invalidates recovery and reopens investigation.
-  External state is accessed through owner contracts, not direct repository writes.
-  DTOs, enums, transaction rules and errors: method-design/04-fleet-incident.md.
-  Entity methods enforce local transitions; application services enforce cross-resource safety.
-endlegend
+
+FleetService --> OrderAction : uses
+RedistributionOrder --> OrderStatus
+IncidentTicket --> ResourceType
+IncidentTicket --> IncidentStatus
+IncidentTicket --> Severity
 @enduml
