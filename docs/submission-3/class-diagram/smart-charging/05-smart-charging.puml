@@ -67,11 +67,13 @@ package "Smart Charging" {
   }
 
   enum RequestStatus <<enumeration>> {
+    Waiting
     Scheduled
     Charging
     Completed
     Suspended
     Cancelled
+    Expired
   }
 
   enum PointStatus <<enumeration>> {
@@ -82,7 +84,7 @@ package "Smart Charging" {
 }
 
 ChargingSchedule "1" -- "0..*" ChargingAllocation
-ChargingRequest "1" -- "1" ChargingAllocation
+ChargingRequest "1" -- "0..1" ChargingAllocation
 ChargingPoint "1" -- "0..*" ChargingAllocation
 ChargingService ..> ChargingRequest
 ChargingService ..> ChargingSchedule
