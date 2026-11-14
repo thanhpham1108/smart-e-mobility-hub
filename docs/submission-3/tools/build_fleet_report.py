@@ -169,7 +169,6 @@ def build():
     toc = TableOfContents()
     toc.levelStyles = [styles["TOCFI"]]
     story.extend([toc, PageBreak()])
-    story.extend(markdown(BASE / "04-fleet-incident.md"))
     diagrams = [
         ("Deployment view", "deployment-view/Deployment_View.png", "large"),
         ("Development / Implementation view", "development-view/Implementation_View.png", "wide"),

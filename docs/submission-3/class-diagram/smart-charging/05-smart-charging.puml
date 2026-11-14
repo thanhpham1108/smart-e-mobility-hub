@@ -16,7 +16,7 @@ package "Smart Charging" {
     + adjustAllocation(allocationId: String, pointId: String, startTime: DateTime, endTime: DateTime, expectedVersion: int): ChargingAllocation
     + submitRequest(draft: ChargingDraft, key: String): ChargingRequest
     + cancelRequest(requestId: String): ChargingRequest
-    + stopCharging(requestId: String, confirmedAt: DateTime): ChargingRequest
+    + stopCharging(requestId: String, choice: ChargingStopChoice, confirmedAt: DateTime): ChargingRequest
     + reconcileSessionEvent(event: ChargingSessionEvent): ChargingRequest
     + recordPointObservation(pointId: String, status: PointStatus, observedAt: DateTime): ChargingPoint
     + setPointRestriction(pointId: String, incidentId: String, active: boolean): ChargingPoint

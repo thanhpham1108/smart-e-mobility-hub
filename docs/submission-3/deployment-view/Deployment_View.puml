@@ -1,53 +1,59 @@
 @startuml Deployment_View
 title Smart E-Mobility Hub — Deployment View (Submission 3)
 top to bottom direction
-skinparam nodesep 45
-skinparam ranksep 55
 skinparam shadowing false
-skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 55
+skinparam ranksep 65
 skinparam defaultTextAlignment center
+skinparam backgroundColor #FFFFFF
 
-node "Student device" <<device>> as StudentDevice {
-  node "Browser" <<executionEnvironment>> as StudentBrowser {
-    artifact "Student Portal\n(UI + in-progress selection)" as StudentUI
+node "Student device" <<device>> as Student #DDF3FF {
+  node "Browser" <<executionEnvironment>> as StudentBrowser #F2FAFF {
+    artifact "Student Portal\nUI and temporary selection" as StudentUI #DDF5B8
   }
 }
 
-node "Operator device" <<device>> as OperatorDevice {
-  node "Browser" <<executionEnvironment>> as OperatorBrowser {
-    artifact "Operator Portal\n(UI + in-progress selection)" as OperatorUI
+node "Operator device" <<device>> as Operator #DDF3FF {
+  node "Browser" <<executionEnvironment>> as OperatorBrowser #F2FAFF {
+    artifact "Operator Portal\nUI and temporary selection" as OperatorUI #DDF5B8
   }
 }
 
-node "Application host" <<device>> as ApplicationHost {
-  node "One Web/API process" <<executionEnvironment>> as Process {
-    artifact "API handlers\nSession and source checks" as API
-    artifact "Fleet & Incident module\nFleetService / IncidentService\nTelemetryAdapter / health scheduler" as Fleet
-    artifact "Parking & Private EV module" as Parking
-    artifact "Other four domain modules\nHub / Rental / Charging / Simulation" as Domain
-    artifact "Authoritative in-memory state\nShared lock + staged Unit of Work\nCommand/event results + audit" as State
+node "Telemetry simulator host" <<device>> as Simulator #DDF3FF {
+  artifact "Mock telemetry producer\nvehicle / parking / charging events" as Producer #DDF5B8
+}
+
+node "Application host" <<device>> as Application #FFF0C2 {
+  node "Web/API process" <<executionEnvironment>> as Runtime #FFF9E8 {
+    artifact "HTTPS API handlers\nsession, role and source checks" as API #DDF5B8
+    artifact "Hub & Identity\nauthentication · Hub status" as Hub #DDF5B8
+    artifact "Vehicle Rental\nreservation · trips" as Rental #DDF5B8
+    artifact "Parking & Private EV\nbooking · occupancy" as Parking #DDF5B8
+    artifact "Fleet & Incident\ntelemetry · faults" as Fleet #DDF5B8
+    artifact "Smart Charging\nFCFS · waitlist · allocation" as Charging #DDF5B8
+    artifact "What-if Simulation\nisolated network copy" as Simulation #DDF5B8
+    artifact "Internal scheduler\nstart eligibility · expiry · timeout · health" as Scheduler #DDF5B8
+    artifact "Authoritative in-memory state\nUnit of Work · request/event ledger" as State #DDF5B8
+    artifact "Audit/event log\nstate transitions and failures" as Audit #DDF5B8
   }
-  artifact "JSON seed fixtures" as Fixtures
+  artifact "JSON seed fixtures" as Fixtures #DDF5B8
 }
 
-node "Telemetry simulator host" <<device>> as SimulatorHost {
-  artifact "Timestamped mock event producer\nVehicle / parking / charging point" as Producer
-}
+Student -- Application
+Operator -- Application
+Simulator -- Application : HTTPS / authenticated telemetry
 
-StudentBrowser --> API : HTTPS / Student requests
-OperatorBrowser --> API : HTTPS / Operator requests
-Producer --> API : HTTPS / authenticated telemetry
-Fixtures --> State : initialize on startup
-API -[hidden]-> Fleet
-Fleet -[hidden]-> Parking
-Parking -[hidden]-> Domain
-Domain -[hidden]-> State
+Student -[hidden]right- Operator
+Operator -[hidden]right- Simulator
+API -[hidden]down- Hub
+Hub -[hidden]right- Rental
+Rental -[hidden]right- Parking
+Hub -[hidden]down- Fleet
+Fleet -[hidden]right- Charging
+Charging -[hidden]right- Simulation
+Fleet -[hidden]down- Scheduler
+Scheduler -[hidden]right- State
+State -[hidden]right- Audit
 
-legend bottom
-  Artifacts inside the Web/API process use in-process calls and the same state lock.
-  Browser state holds UI selections; resource commitments are decided by the application.
-  No production database or physical IoT gateway is required for this MVP design.
-  State and deduplication results last for the process lifetime; restart reloads fixtures.
-  The simulator and application may share one laptop during demonstration.
-endlegend
 @enduml

@@ -1,49 +1,58 @@
 @startuml Implementation_View
-title Smart E-Mobility Hub — Development / Implementation View (Submission 3)
-left to right direction
+title Smart E-Mobility Hub — Development View (Submission 3)
+top to bottom direction
 skinparam shadowing false
-skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam componentStyle uml2
 skinparam packageStyle rectangle
-skinparam nodesep 45
-skinparam ranksep 45
+skinparam nodesep 105
+skinparam ranksep 115
+skinparam defaultTextAlignment center
 
-package "Presentation" as Presentation {
-  [Student Portal] as StudentUI
-  [Operator Portal] as OperatorUI
+package "Presentation" #E0F2FE {
+  component "Student Portal" as StudentUI #E8F7FF
+  component "Operator Portal" as OperatorUI #E8F7FF
 }
-component "API handlers\nSession / source authorization" as API
-package "Application and domain modules" as Domain {
-  [Fleet & Incident\nFleetService / IncidentService\nTelemetryAdapter] as Fleet
-  [Vehicle Rental] as Rental
-  [Parking & Private EV] as Parking
-  [Smart Charging] as Charging
-  [Hub & Identity] as Hub
-  [What-if Simulation] as Simulation
+
+package "Application" #F3F4F6 {
+  component "API handlers\nsession / role / source checks" as API #FFFFFF
+  component "Internal scheduler\nstart eligibility / expiry / timeout / health" as Scheduler #FFFFFF
 }
-component "Repository + Unit of Work contracts\nVersioned snapshot contract" as Contracts
-component "JSON seed / in-memory adapter\nState lock, command/event ledger, audit" as Data
-component "Internal health scheduler" as Scheduler
 
-Presentation --> API : role-scoped requests
-API --> Domain : route to owning service
-API ..> Hub : authentication
-Scheduler --> Fleet : freshness / imbalance
-Fleet --> Rental : vehicle operations
-Fleet --> Parking : capacity / observations
-Fleet --> Charging : point status / incidents
-Fleet --> Hub : network status
-Rental --> Hub : status / alternatives
-Parking --> Hub : status / alternatives
-Parking --> Charging : charging requests
-Charging ..> Parking : parking eligibility
-Domain --> Contracts : owner writes / consistent reads
-Simulation ..> Contracts : copy snapshot for each run
-Contracts --> Data : atomic publication
+package "Domain modules" as Domain #EAF7EA {
+  component "Hub & Identity" as Hub #D9EFD9
+  component "Vehicle Rental" as Rental #D9EFD9
+  component "Parking & Private EV" as Parking #D9EFD9
+  component "Fleet & Incident\ntelemetry intake" as Fleet #D9EFD9
+  component "Smart Charging\nFCFS waitlist" as Charging #D9EFD9
+  component "What-if Simulation\ncopy-only" as Simulation #D9EFD9
+}
 
-legend bottom
-  Fleet & Incident owns intake; Rental, Parking and Charging own resource transitions.
-  Inter-module arrows are in-process contract dependencies, not separate deployments.
-  Simulation modifies its copied snapshot only; recommendations do not dispatch live work.
-  Exact module contracts are defined in their method catalogues and architecture_baseline.md.
-endlegend
+package "Shared layer" as Shared #FFF4D6 {
+  component "Repository + Unit of Work\ncommand/event ledger" as Repository #FFF9E8
+  component "Versioned snapshot contract" as Snapshot #FFF9E8
+  component "JSON seed / in-memory adapter\nstate lock + audit" as Adapter #FFF9E8
+}
+
+StudentUI ..> API : Student actions
+OperatorUI ..> API : Operator actions
+API ..> Domain
+Scheduler ..> Domain
+Domain ..> Repository
+Simulation ..> Snapshot : read and copy
+Repository ..> Adapter : atomic commit
+Snapshot ..> Adapter : consistent read
+
+StudentUI -[hidden]right- OperatorUI
+API -[hidden]right- Scheduler
+Hub -[hidden]right- Rental
+Rental -[hidden]right- Parking
+Fleet -[hidden]right- Charging
+Charging -[hidden]right- Simulation
+Rental -[hidden]down- Fleet
+Parking -[hidden]down- Charging
+Repository -[hidden]right- Snapshot
+Repository -[hidden]down- Adapter
+Snapshot -[hidden]down- Adapter
+Domain -[hidden]right- Shared
 @enduml

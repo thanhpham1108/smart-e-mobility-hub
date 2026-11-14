@@ -8,7 +8,6 @@ skinparam packageStyle rectangle
 skinparam linetype ortho
 skinparam nodesep 70
 skinparam ranksep 75
-hide circle
 
 package "Hub & Identity" {
 

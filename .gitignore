@@ -63,3 +63,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+
+# Local Submission 3 review notes and guides
+/docs/submission-3/class-diagram/UML_Class_Diagram_Guide.md
+/docs/submission-3/CLASS_DESIGN_AUDIT.md
+/docs/submission-3/CLASS_DESIGN_REVIEW.md
+/docs/submission-3/DECISIONS_TO_CONFIRM.md
+/docs/submission-3/START_HERE_REVIEW.md
+/docs/submission-3/test-cases/review/

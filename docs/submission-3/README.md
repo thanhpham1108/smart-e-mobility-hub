@@ -1,11 +1,16 @@
 # Submission 3 — Design
 
-The [course brief](../BTL_SoftwareEngineering_HK26_v1.pdf) requires a deployment view, a development/implementation view, a class diagram with descriptions of **every method shown**, and optional test cases. The team will continue the six module assignments from Submissions 1 and 2.
+Submission 3 contains one shared [deployment view](deployment-view/README.md), one shared [development view](development-view/README.md), six module class diagrams, method descriptions for every operation shown, and bonus design test cases. The [architecture baseline](architectural-design/architecture_baseline.md) records the contracts between modules. These are design artifacts, not evidence of an implemented backend.
 
-This directory contains the shared starting point for the team. The [task assignment](task_assignment.md) names each module owner, expected contribution, and review handoff. The [architecture baseline](architectural-design/architecture_baseline.md) records the common design decisions; the two PlantUML views under `deployment-view/` and `development-view/` are drafts for all six members to review before the report is assembled.
+| Module | Class diagram | Method descriptions | Test cases |
+| --- | --- | --- | --- |
+| Hub & Identity | [PNG](class-diagram/hub-identity/01-hub-identity.png) · [PlantUML](class-diagram/hub-identity/01-hub-identity.puml) | [Methods](method-design/01-hub-identity.md) | [Cases](test-cases/01-hub-identity.md) |
+| Vehicle Rental | [PNG](class-diagram/vehicle-rental/02-vehicle-rental.png) · [PlantUML](class-diagram/vehicle-rental/02-vehicle-rental.puml) | [Methods](method-design/02-vehicle-rental.md) | [Cases](test-cases/02-vehicle-rental.md) |
+| Parking & Private EV | [PNG](class-diagram/parking/03-parking-private-ev.png) · [PlantUML](class-diagram/parking/03-parking-private-ev.puml) | [Methods](method-design/03-parking-private-ev.md) | [Cases](test-cases/03-parking-private-ev.md) |
+| Fleet & Incident | [PNG](class-diagram/fleet-incident/04-fleet-incident.png) · [PlantUML](class-diagram/fleet-incident/04-fleet-incident.puml) | [Methods](method-design/04-fleet-incident.md) | [Cases](test-cases/04-fleet-incident.md) |
+| Smart Charging | [PNG](class-diagram/smart-charging/05-smart-charging.png) · [PlantUML](class-diagram/smart-charging/05-smart-charging.puml) | [Methods](method-design/05-smart-charging.md) | [Cases](test-cases/05-smart-charging.md) |
+| What-if Simulation | [PNG](class-diagram/what-if/06-what-if.png) · [PlantUML](class-diagram/what-if/06-what-if.puml) | [Methods](method-design/06-what-if.md) | [Cases](test-cases/06-what-if.md) |
 
-Each member should place their module class diagram in `class-diagram/`, its complete method catalogue in `method-design/`, and its bonus test cases in `test-cases/`. Keep editable `.puml` sources alongside exported diagram images. Names and states must match the approved use-case catalogue and Submission 2 diagrams.
+The [combined class inventory](class-diagram/CLASS_INVENTORY.md) explains ownership and cross-module relationships. The [team assignment](task_assignment.md) records who owns each module; it is a planning document, so use the diagrams and method catalogues above for the current design.
 
-The reference architecture uses browser clients, one application process, JSON fixtures/in-memory state, and a telemetry simulator. These are logical deployment choices for the design document; no specific programming framework or production database is required by the brief.
-
-Member 4's [Fleet & Incident contribution](04-fleet-incident.md) includes the class diagram, complete 22-operation catalogue, 14 bonus test specifications, architectural-view integration and a reproducible individual PDF report. The shared views now include that contribution and remain subject to cross-module owner review.
+The current charging rule is FCFS by submission timestamp, with lower battery as the tie-breaker only for identical timestamps. A future-start request waits without a reserved point; a currently eligible request waits with a `Full` response when capacity is occupied. Planned end times and duration estimates are informational. Fleet redistribution commits vehicles but does not reserve destination capacity; arrival confirmation rechecks it. What-if reads a copied snapshot and never changes live operation.

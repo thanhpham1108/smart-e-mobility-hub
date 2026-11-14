@@ -1,6 +1,6 @@
 # Tổng class inventory — Submission 3
 
-**Bản review cho cả sáu module.** Bốn module đầu lấy từ commit đã nộp; hai module cuối là thiết kế mới để nhóm rà. `<<external>>` trong diagram của một thành viên chỉ là **tham chiếu**, không tính thành class do người đó sở hữu. Enum và data contract được ghi riêng bên dưới.
+**Inventory hiện tại cho cả sáu module.** Các diagram và method catalogue chính nằm trong các thư mục module ở `docs/submission-3/`; các commit/branch ban đầu chỉ ghi nguồn đóng góp. `<<external>>` trong diagram của một thành viên chỉ là **tham chiếu**, không tính thành class do người đó sở hữu. Enum và data contract được ghi riêng bên dưới.
 
 | # | Module / nguồn | Class do module sở hữu | Trách nhiệm và điểm nối chính |
 | --- | --- | --- | --- |
@@ -8,8 +8,8 @@
 | 2 | Vehicle Rental — `550aff9` trên `docs/vehicle-rental` | `SharedVehicle`, `VehicleReservation`, `RentalTrip`, `RentalService` | Giữ/nhận/trả xe và vòng đời xe. Dùng Hub/Parking; báo vấn đề cho Fleet. What-if chỉ đọc bản sao trạng thái xe. |
 | 3 | Parking & Private EV — `5991c86` trên `docs/sub3-parking-private-ev` | `ParkingSpace`, `ParkingReservation`, `ParkingSession`, `ParkingService` | Giữ chỗ, check-in/out và yêu cầu sạc xe tư nhân. Gọi Charging để gửi/hủy request; Charging phải kiểm tra cửa sổ đỗ. |
 | 4 | Fleet & Incident — `270ef08` trên `sub4-mem3` | `RedistributionOrder`, `IncidentTicket`, `FleetService`, `IncidentService`, `TelemetryAdapter` | Điều chuyển, sự cố, intake telemetry. Gọi chủ sở hữu xe/cổng/chỗ đỗ để hạn chế hoặc khôi phục; không tự sửa trạng thái tài nguyên của module khác. |
-| 5 | Smart Charging — [inventory riêng](05-smart-charging-inventory.md) | `ChargingRequest`, `ChargingPoint`, `ChargingAllocation`, `ChargingSchedule`, `ChargingService` | Xử lý request FCFS, gán point và interval, tạo/đổi lịch; nhận request từ Parking và tình trạng cổng từ Fleet; cấp snapshot chỉ đọc cho What-if. |
-| 6 | What-if Simulation — [inventory riêng](06-what-if-inventory.md) | `WhatIfScenario`, `NetworkSnapshot`, `SimulationRun`, `SimulationResult`, `Recommendation`, `SimulationService` | Cấu hình/run, giữ baseline cô lập, kết quả, đề xuất và so sánh. Đọc bản sao từ năm module; không thực thi đề xuất lên dữ liệu thật. |
+| 5 | Smart Charging — [inventory riêng](smart-charging/05-smart-charging-inventory.md) | `ChargingRequest`, `ChargingPoint`, `ChargingAllocation`, `ChargingSchedule`, `ChargingService` | Xử lý request FCFS, gán point và interval, tạo/đổi lịch; nhận request từ Parking và tình trạng cổng từ Fleet; cấp snapshot chỉ đọc cho What-if. |
+| 6 | What-if Simulation — [inventory riêng](what-if/06-what-if-inventory.md) | `WhatIfScenario`, `NetworkSnapshot`, `SimulationRun`, `SimulationResult`, `Recommendation`, `SimulationService` | Cấu hình/run, giữ baseline cô lập, kết quả, đề xuất và so sánh. Đọc bản sao từ năm module; không thực thi đề xuất lên dữ liệu thật. |
 
 ## Từng class để đối chiếu với diagram
 
@@ -54,7 +54,7 @@ Các cột dưới đây tóm tắt **thuộc tính và operation quan trọng**
 | Bên cần dữ liệu | Nguồn / chiều gọi | Điều phải nhất quán giữa diagram và method |
 | --- | --- | --- |
 | Rental | Hub, Parking, Fleet | Hub status/alternatives; chỗ trả xe; gửi báo cáo lỗi. `SharedVehicle` vẫn do Rental sở hữu. |
-| Parking | Hub, Charging | `ParkingService.submitCharging` tạo Scheduled request với allocation hoặc lưu request Waiting không allocation và trả vị trí queue khi Hub đầy; thiếu thời lượng bị từ chối. Cancellation/no-show/checkout phối hợp xóa Waiting hoặc giải phóng allocation. `ParkingReservation` vẫn do Parking sở hữu. |
+| Parking | Hub, Charging | `ParkingService.submitCharging` tạo Scheduled request khi đã đến lúc bắt đầu và cổng rảnh; khung giờ tương lai hoặc Hub đầy thì lưu Waiting không allocation. Chỉ báo Full khi request đủ điều kiện nhưng cổng bận; ước lượng thời lượng không từ chối request. Cancellation/no-show/checkout phối hợp xóa Waiting hoặc giải phóng allocation. `ParkingReservation` vẫn do Parking sở hữu. |
 | Charging | Parking, Fleet | Kiểm tra cửa sổ đỗ; áp dụng observation/incident đã xác minh. `ChargingPoint` và `ChargingAllocation` do Charging sở hữu. |
 | Fleet | Rental, Parking, Charging, Hub | Thu thập status, gửi hạn chế vận hành tới chủ sở hữu; telemetry không ghi đè booking/session/đặt chỗ tương lai. |
 | What-if | Snapshot contract đọc Hub, Rental, Parking, Fleet, Charging | Bản chụp nhất quán/đủ dữ liệu; các thao tác mô phỏng chỉ sửa bản sao. |
@@ -70,19 +70,19 @@ Các cột dưới đây tóm tắt **thuộc tính và operation quan trọng**
 
 1. Mỗi class có đúng một module sở hữu; tham chiếu ngoài module dùng tên/ID hoặc hợp đồng service, không vẽ lại nội dung lớp đó.
 2. Association và multiplicity biểu diễn quan hệ giữa instance; dependency biểu diễn lời gọi/sử dụng tạm. Không dùng composition/aggregation khi chưa có quy tắc sở hữu vòng đời rõ.
-3. Một request có `0..1` allocation (`Waiting` có `0`, `Scheduled`/`Charging` có `1`); một schedule có `0..*` allocation, một point có `0..*` allocation ở các thời điểm không chồng nhau.
+3. Một request có `0..1` allocation (`Waiting` có `0`, `Scheduled`/`Charging` có `1`); một schedule có `0..*` allocation, một point có `0..*` allocation theo lịch sử. `endTime` dự kiến không giải phóng cổng đang `Charging`/`Suspended`; chỉ cấp point khi không còn phiên thực tế chiếm cổng.
 4. UC-C03 giữ FCFS: chỉ thay đổi cổng/khoảng sạc, không đổi vị trí chờ. `Cancelled` dùng cho dừng sạc không hoàn thành; không thêm `Interrupted` vào enum Submission 3.
 5. Một run What-if gắn baseline và assumptions của chính nó; Failed run không có result công bố; recommendation không thay đổi live state.
 
-## Đường dẫn review
+## Đường dẫn tài liệu hiện tại
 
 | Module | Diagram | Method descriptions | Test cases |
 | --- | --- | --- | --- |
-| Hub & Identity | [PNG](01-hub-identity.png) · [PlantUML](01-hub-identity.puml) | [01-hub-identity](../method-design/01-hub-identity.md) | [01-hub-identity](../test-cases/01-hub-identity.md) |
-| Vehicle Rental | [Ảnh review](review/02-vehicle-rental.png) · [Bản gốc `550aff9`](https://github.com/thanhpham1108/smart-e-mobility-hub/blob/550aff9/docs/submission-3/class-diagram/02-vehicle-rental.png) | [Bản method đã chỉnh](../method-design/review/02-vehicle-rental.md) | [Test file](https://github.com/thanhpham1108/smart-e-mobility-hub/blob/550aff9/docs/submission-3/test-cases/02-vehicle-rental.md) |
-| Parking & Private EV | [Ảnh review](review/03-parking-private-ev.png) · [Bản gốc `5991c86`](https://github.com/thanhpham1108/smart-e-mobility-hub/blob/5991c86/docs/submission-3/class-diagram/03-parking-private-ev.png) | [Bản method đã chỉnh](../method-design/review/03-parking-private-ev.md) | [Test cases đã chỉnh](../test-cases/review/03-parking-private-ev.md) |
-| Fleet & Incident | [Ảnh review](fleet-incident/04-fleet-incident.png) · [Bản gốc `270ef08`](https://github.com/thanhpham1108/smart-e-mobility-hub/blob/270ef08/docs/submission-3/class-diagram/04-fleet-incident.png) | [Method file](https://github.com/thanhpham1108/smart-e-mobility-hub/blob/270ef08/docs/submission-3/method-design/04-fleet-incident.md) | [Test file](https://github.com/thanhpham1108/smart-e-mobility-hub/blob/270ef08/docs/submission-3/test-cases/04-fleet-incident.md) |
-| Smart Charging | [PNG](05-smart-charging.png) · [PlantUML](05-smart-charging.puml) | [05-smart-charging](../method-design/05-smart-charging.md) | [05-smart-charging](../test-cases/05-smart-charging.md) |
-| What-if Simulation | [PNG](06-what-if.png) · [PlantUML](06-what-if.puml) | [06-what-if](../method-design/06-what-if.md) | [06-what-if](../test-cases/06-what-if.md) |
+| Hub & Identity | [PNG](hub-identity/01-hub-identity.png) · [PlantUML](hub-identity/01-hub-identity.puml) | [Methods](../method-design/01-hub-identity.md) | [Cases](../test-cases/01-hub-identity.md) |
+| Vehicle Rental | [PNG](vehicle-rental/02-vehicle-rental.png) · [PlantUML](vehicle-rental/02-vehicle-rental.puml) | [Methods](../method-design/02-vehicle-rental.md) | [Cases](../test-cases/02-vehicle-rental.md) |
+| Parking & Private EV | [PNG](parking/03-parking-private-ev.png) · [PlantUML](parking/03-parking-private-ev.puml) | [Methods](../method-design/03-parking-private-ev.md) | [Cases](../test-cases/03-parking-private-ev.md) |
+| Fleet & Incident | [PNG](fleet-incident/04-fleet-incident.png) · [PlantUML](fleet-incident/04-fleet-incident.puml) | [Methods](../method-design/04-fleet-incident.md) | [Cases](../test-cases/04-fleet-incident.md) |
+| Smart Charging | [PNG](smart-charging/05-smart-charging.png) · [PlantUML](smart-charging/05-smart-charging.puml) | [Methods](../method-design/05-smart-charging.md) | [Cases](../test-cases/05-smart-charging.md) |
+| What-if Simulation | [PNG](what-if/06-what-if.png) · [PlantUML](what-if/06-what-if.puml) | [Methods](../method-design/06-what-if.md) | [Cases](../test-cases/06-what-if.md) |
 
-Nguồn bốn module đầu hiện nằm trên các commit/branch ghi trong bảng. Các branch riêng **chưa được merge vào `main`**. Ba ảnh trong `review/` là bản bố cục lại để đọc: giữ lớp/thuộc tính/operation nội bộ, bỏ chú giải dài hoặc đường nối ngoài module; bảng quan hệ liên module ở trên giữ phần giao tiếp đó. Bản gốc của đồng đội không bị ghi đè.
+Các đường dẫn trong bảng trỏ tới bản đang dùng để tổng hợp Submission 3. Lịch sử nguồn đóng góp của từng thành viên được ghi ở bảng đầu; dùng file hiện tại trong từng thư mục để review và render.

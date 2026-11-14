@@ -6,7 +6,7 @@ These are executable-by-review acceptance test specifications for the proposed d
 
 ## Shared fixtures
 
-At 2026-11-08T09:00:00+07:00, OP1 is an authorized Operator, ST1 a Student, and TP1 a telemetry source permitted for the listed resources. Hub A has capacity 20 and physical occupancy 10. Hub B has capacity 10, physical occupancy 6, and one unrelated incoming hold, leaving 3 transfer spaces. Vehicles V1/V2/V3 are healthy at A, with no rental, reservation or transfer commitment. All observations are current. Unless overridden, staleInterval is 15 minutes, lowVehicleThreshold is 2 and capacityWarningPercent is 85. These values are test configuration, not mandated production thresholds. Each write has a unique requestId and the current entity version; explicit retries reuse the original key and payload.
+At 2026-11-08T09:00:00+07:00, OP1 is an authorized Operator, ST1 a Student, and TP1 a telemetry source permitted for the listed resources. Hub A has capacity 20 and physical occupancy 10. Hub B has capacity 10 and physical occupancy 6, leaving 4 currently free spaces. Vehicles V1/V2/V3 are healthy at A, with no rental, reservation or transfer commitment. All observations are current. Unless overridden, staleInterval is 15 minutes, lowVehicleThreshold is 2 and capacityWarningPercent is 85. These values are test configuration, not mandated production thresholds. Each write has a unique requestId and the current entity version; explicit retries reuse the original key and payload.
 
 ## TC-FI-01 - Dashboard freshness and read-only inspection
 
@@ -26,17 +26,17 @@ At 2026-11-08T09:00:00+07:00, OP1 is an authorized Operator, ST1 a Student, and 
 | Initial state / preconditions | Shared fixtures; two selected vehicles V1/V2. |
 | Input and steps | Validate A to B; confirm proposal; verify state; then physically verify V1/V2 at B and submit arrival confirmation. |
 | Expected response | Feasible proposal; Assigned order; then Completed order with two confirmed arrivals. |
-| Expected persisted state | After creation: both confirmed locations remain A, occupancy remains A=10/B=6, two transfer commitments and two incoming holds exist. After arrival: locations B, occupancy A=8/B=8, transfer commitments/holds consumed; unrelated hold remains. Resource availability is recalculated once. |
+| Expected persisted state | After creation: both confirmed locations remain A, occupancy remains A=10/B=6, and two vehicle transfer commitments exist; no destination capacity is reserved. After arrival: locations B, occupancy A=8/B=8, and transfer commitments are released. Resource availability is recalculated once. |
 
 ## TC-FI-03 - Insufficient destination capacity or conflicting vehicle
 
 | Field | Value |
 | --- | --- |
 | Related use case | UC-F04, UC-S03 |
-| Initial state / preconditions | Variant A: B occupancy=9 with one incoming hold, so no free space. Variant B: original fixture but V2 has an active reservation. |
+| Initial state / preconditions | Variant A: B occupancy=9, so only one space is free for the two selected vehicles. Variant B: original fixture but V2 has an active reservation. |
 | Input and steps | Validate V1/V2 transfer for each variant; attempt creation with the rejected proposal. In B, remove V2 and revalidate the V1-only proposal. |
 | Expected response | Capacity reason for A; V2 commitment reason for B. Rejected proposals cannot create an order. Revised V1-only selection can pass a new validation. |
-| Expected persisted state | Rejected attempts create no order/hold and change no physical state. No vehicle is silently dropped from a submitted confirmed request. |
+| Expected persisted state | Rejected attempts create no order or vehicle commitment and change no physical state. No vehicle is silently dropped from a submitted confirmed request. |
 
 ## TC-FI-04 - Concurrent commitment after validation
 
@@ -46,17 +46,19 @@ At 2026-11-08T09:00:00+07:00, OP1 is an authorized Operator, ST1 a Student, and 
 | Initial state / preconditions | OP1 has a feasible proposal for V1 at version r1. |
 | Input and steps | Before creation, commit a Rental reservation for V1 (version r2); submit the old proposal. Also run two creation commands for V1 against the same initial state under the shared lock. |
 | Expected response | Old proposal receives Conflict/revalidation required. In the race, at most one competing commitment succeeds. |
-| Expected persisted state | No resource is simultaneously assigned and reserved incompatibly. Losing requests create no order/hold; occupancy is unchanged. |
+| Expected persisted state | No resource is simultaneously assigned and reserved incompatibly. Losing requests create no order or vehicle commitment; occupancy is unchanged. |
 
 ## TC-FI-05 - Partial arrival, retry and mismatched confirmation
 
 | Field | Value |
 | --- | --- |
 | Related use case | UC-F05, FR-NI-05 |
-| Initial state / preconditions | Assigned order O1 contains V1/V2; B holds two transfer spaces. |
+| Initial state / preconditions | Assigned order O1 contains V1/V2; B currently has enough free spaces but none is reserved for the transfer. |
 | Input and steps | Confirm only V1 using request K1. Retry K1 with identical payload/old expectedVersion. Submit a new command that incorrectly includes already-arrived V1 or unassigned V3. Finally confirm only V2 with current version. |
 | Expected response | First result PartiallyCompleted; identical retry returns original result. New invalid subset is rejected. Final valid confirmation returns Completed. |
-| Expected persisted state | After K1 and its retry: V1 at B, V2 at A; occupancy A=9/B=7; exactly one remaining transfer hold. Invalid subset has no effects. Final totals A=8/B=8. |
+| Expected persisted state | After K1 and its retry: V1 at B, V2 at A; occupancy A=9/B=7; V2 retains its vehicle transfer commitment. Invalid subset has no effects. Before V2's arrival, destination capacity is checked again; final totals are A=8/B=8. |
+
+Capacity-race variant: after O1 is created but before either arrival, unrelated activity fills B to 10/10. A new `recordArrival` attempt must report destination capacity full to the Operator and leave vehicle locations, occupancy, order progress and transfer commitments unchanged. No destination space was reserved by O1.
 
 ## TC-FI-06 - Atomic failure and lost acknowledgement
 
@@ -66,7 +68,7 @@ At 2026-11-08T09:00:00+07:00, OP1 is an authorized Operator, ST1 a Student, and 
 | Initial state / preconditions | O1 assigned V1/V2. Separately, ticket I1 is ready for restoration. Enable controlled failure before transaction publication. |
 | Input and steps | Stage vehicle movement, then fail before Hub/order publication. Repeat with failure between staged ticket resolution and owner restriction release. Retry after removing the failure. In another variant, commit successfully but drop the response; retry the same key. |
 | Expected response | Failed publication returns retryable failure, never success. Successful retry commits once. Lost-response retry returns the original result. |
-| Expected persisted state | Failed attempts preserve complete before-state including holds/restrictions. No partial movement, falsely resolved ticket or duplicate occupancy/eligibility effect. |
+| Expected persisted state | Failed attempts preserve complete before-state including vehicle commitments and incident restrictions. No partial movement, falsely resolved ticket or duplicate occupancy/eligibility effect. |
 
 ## TC-FI-07 - Repeated fault evidence and transfer risk
 
@@ -108,15 +110,15 @@ At 2026-11-08T09:00:00+07:00, OP1 is an authorized Operator, ST1 a Student, and 
 | Expected response | Matching observation refreshes time; duplicate returns previous result. Disagreement returns RECONCILIATION_REQUIRED with expected/observed counts. Concurrent update is reconciled against current owner state. |
 | Expected persisted state | Count never becomes 20. The count=9 report does not check out a vehicle, release a reservation or expose disputed space. Existing sessions/holds remain until owner reconciliation. |
 
-## TC-FI-11 - Charging fault, future allocation and session evidence
+## TC-FI-11 - Charging fault, waiting request and session evidence
 
 | Field | Value |
 | --- | --- |
 | Related use case | UC-F03, UC-I03, UC-T03, FR-NI-05 |
-| Initial state / preconditions | CP1 has active session S1 plus future allocation A2; associated private-EV parking is active. |
+| Initial state / preconditions | CP1 has active session S1 plus a second request W2 Waiting for that point; associated private-EV parking is active. W2 has no allocation. |
 | Input and steps | Send point fault without confirmed stop, then healthy/idle observation. Submit wrong-session stop and unexpected start events. Finally submit verified S1 stop with correct resource/time references; repeat it. Process the fault ticket through repair and restoration using owner checks. |
 | Expected response | Fault incident and point restriction; idle cannot restore it. Mismatched events require reconciliation. Verified stop records its actual outcome once. Restoration requires verified repair and reconciliation, not merely idle telemetry. |
-| Expected persisted state | Fault alone does not fabricate S1 completion or free CP1. Future allocation A2 is preserved/flagged until Charging handles it. Correct stop updates only S1; any queue reevaluation follows Charging policy once, with a still-faulted point excluded. Parking remains active. |
+| Expected persisted state | Fault alone does not fabricate S1 completion or free CP1. W2 remains Waiting without an allocation. Correct stop updates only S1; any queue reevaluation follows Charging policy once, with a still-faulted point excluded. Parking remains active. |
 
 ## TC-FI-12 - Recover or cancel an at-risk partial transfer
 
@@ -126,7 +128,7 @@ At 2026-11-08T09:00:00+07:00, OP1 is an authorized Operator, ST1 a Student, and 
 | Initial state / preconditions | O1 assigned V1/V2; V1 already arrived at B. V2 faults at A; O1 AtRisk, resumeStatus=PartiallyCompleted. |
 | Input and steps | Resolve V2 fault via its incident workflow. REVALIDATE O1 with owner state/capacity checked. Separately, attempt CANCEL while V2 disposition is unknown; then reconcile V2 as remaining at A and cancel. |
 | Expected response | Revalidation returns PartiallyCompleted, never resets to Assigned. Unknown-disposition cancellation rejects. Verified cancellation returns Cancelled. |
-| Expected persisted state | V1 remains at B and its occupancy effect remains. Cancellation releases only V2's outstanding holds, leaves V2's confirmed location at A and derives its availability from remaining owner restrictions. |
+| Expected persisted state | V1 remains at B and its occupancy effect remains. Cancellation releases only V2's outstanding vehicle transfer commitment, leaves V2's confirmed location at A and derives its availability from remaining owner restrictions. |
 
 ## TC-FI-13 - Imbalance alert does not dispatch vehicles
 
