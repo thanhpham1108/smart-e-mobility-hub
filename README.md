@@ -2,7 +2,7 @@
 
 Smart E-Mobility Hub is a course project for coordinating electric mobility resources across the VNU-HCM Urban Area. A network of Mobility Hubs provides shared electric vehicles, parking spaces and charging points. Students use these resources; Operators monitor capacity, resolve incidents, coordinate vehicles between Hubs and explore hypothetical demand.
 
-**Project status:** Submissions 1–3 document the requirements, interactions and design. The implementation phase is next. `src/` and `tests/` currently contain placeholders; the programming stack, installation commands and run commands are **TBD**. The diagrams and method descriptions describe the intended design, not completed software.
+**Project status:** Submissions 1–3 document the requirements, interactions and design. The implementation phase is next. `src/` and `tests/` currently contain placeholders. The MVP will be a responsive HTML/CSS/JavaScript web app hosted on GitHub Pages, with simulated data and state stored in one browser. Installation and run commands are **TBD**. The diagrams and method descriptions describe the intended design, not completed software.
 
 ## What the MVP must demonstrate
 
@@ -10,13 +10,13 @@ Smart E-Mobility Hub is a course project for coordinating electric mobility reso
 | --- | --- |
 | Student | Sign in; search Hubs and vehicles; reserve, pick up and return a shared vehicle; reserve parking for a private EV; request, view, cancel and complete charging. |
 | Operator | Inspect network and resource state; coordinate redistribution; investigate incidents; view and adjust charging assignments; configure and compare what-if runs. |
-| External Telemetry Provider | Send identified, timestamped vehicle, parking and charging observations. A simulator plays this role in the MVP. These are supporting event flows rather than interactive user goals. |
+| External Telemetry Provider | Supply identified, timestamped vehicle, parking and charging observations. An in-browser simulator plays this role in the MVP. These are supporting event flows rather than interactive user goals. |
 
 The demo should show state changes across connected flows, such as a vehicle becoming unavailable after reservation, a parking booking consuming capacity, a charging request entering a waitlist when all points are occupied, and an incident restricting an affected resource.
 
 ## Six modules and team ownership
 
-Each member continues the area they designed in Submissions 1–3. The owner implements a complete feature slice: domain behavior, its service/API boundary, relevant Student or Operator screens, and the integration points listed below. Shared UI and state infrastructure should be agreed as a team before feature branches depend on it.
+Each member continues the area they designed in Submissions 1–3. The owner implements a complete feature slice: domain behavior, its service function boundary, relevant Student or Operator screens, and the integration points listed below. Shared UI and state infrastructure should be agreed as a team before feature branches depend on it.
 
 | Member | Module and use cases | Owned state and implementation responsibility |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ An assignment connects one request to one charging point through a `ChargingAllo
 
 Operators inspect the network and create redistribution orders for selected shared vehicles. Creation commits the selected vehicles but does not reserve destination capacity or change their confirmed location. On physical arrival, the Operator confirms the arrived subset; the system checks destination capacity again, updates those vehicles and occupancy, and retains the remaining order progress. Incident handling records evidence and restricts affected vehicles or charging points. Verified repair can remove the relevant incident restriction, but other active faults and commitments still apply.
 
-The telemetry simulator sends vehicle, parking and charging observations to a validated intake boundary. The intake verifies source identity, resource identity, timestamp, freshness and duplicate events, then calls the module that owns the resource. A parking count observation does not itself check a vehicle in/out. An idle charging-point observation does not end a held or active charging session. Telemetry-observed location does not replace redistribution arrival confirmation.
+The in-browser telemetry simulator creates vehicle, parking and charging observations for the intake module. The intake validates simulated source identity, resource identity, timestamp, freshness and duplicate events, then calls the module that owns the resource. A parking count observation does not itself check a vehicle in/out. An idle charging-point observation does not end a held or active charging session. Telemetry-observed location does not replace redistribution arrival confirmation.
 
 ### What-if Simulation
 
@@ -57,9 +57,9 @@ An Operator configures a scenario, starts a run and reviews predicted metrics an
 
 ## Architecture and integration
 
-The [deployment view](docs/submission-3/deployment-view/README.md) models Student and Operator browsers calling one Web/API process over HTTPS. The process contains API handlers, the six domain modules, an internal scheduler, authoritative in-memory state and an audit/event result ledger. JSON fixtures seed the initial state. A separate telemetry simulator sends authenticated events to the same application. Restarting the process reloads fixtures; durable operational storage and failover are outside the current MVP design.
+The implementation target is one responsive web app deployed through GitHub Pages. JavaScript modules implement the six domain services in the browser. JSON fixtures seed the initial demo state; browser storage keeps changes across reloads on the demo machine. Student and Operator roles, timed events and telemetry observations are simulated within the app. This MVP does not synchronize state across different devices.
 
-The [development view](docs/submission-3/development-view/README.md) separates presentation, application entry points, domain modules and shared contracts/data. Browser components display state and submit actions; they do not allocate resources. The application checks sessions, roles and telemetry sources before dispatching to the owner. Cross-module mutations must be committed together through the shared state/Unit of Work contract so that failure does not leave half a reservation or half a release.
+The [deployment view](docs/submission-3/deployment-view/README.md) and [development view](docs/submission-3/development-view/README.md) record the Submission 3 server-based design. They need to be aligned with the browser-only implementation in the Final report. The module ownership and business rules remain the implementation reference. UI components call domain service functions rather than changing resource state directly; a shared browser state adapter applies related changes together.
 
 | Integration boundary | Agreement needed before parallel coding |
 | --- | --- |
@@ -68,19 +68,19 @@ The [development view](docs/submission-3/development-view/README.md) separates p
 | Parking ↔ Smart Charging | Linked parking reference and requested window; request creation/status; cancellation of unused linked requests; verified stop before checkout. |
 | Fleet & Incident → Rental / Parking / Charging | Typed telemetry and incident events; owner-controlled restriction, reconciliation and status updates. |
 | All operational modules → What-if | One consistent, read-only snapshot with source versions and freshness information. |
-| API / scheduler → owning services | Authenticated action context, authoritative time, retry key or event ID, and expiry/timeout triggers. |
+| UI / simulated timer → owning services | Selected demo role, authoritative app time, retry key or event ID, and expiry/timeout triggers. |
 
 The [architecture baseline](docs/submission-3/architectural-design/architecture_baseline.md) is the shared contract when a detail is not repeated here. A module defines its own entity lifecycle; other modules refer to it by ID and service result.
 
 ## How to divide and assemble implementation work
 
-1. **Choose one stack and repository conventions together.** Agree on the app entry point, module directories, API style, shared IDs/time format, state adapter, fixtures and UI shell. Record these choices here before writing run instructions.
+1. **Set up the shared browser app.** Agree on the app entry point, module directories, service function contracts, shared IDs/time format, state adapter, fixtures and UI shell. Add local run and GitHub Pages publishing instructions when the app exists.
 2. **Agree on cross-module contracts first.** The owner of each service writes its request/response shapes and error/status meanings. Its consumers build against the same contract, using temporary adapters or fixtures while the provider is unfinished. In particular, settle the Parking–Charging handoff and Fleet's calls to Rental/Parking/Charging before implementing dependent flows.
-3. **Build feature slices in module branches.** Each owner connects UI → API → service → shared state for at least one main flow, then adds the remaining actions and exceptional states. Keep domain rules in the owning service rather than duplicating them in browser code.
+3. **Build feature slices in module branches.** Each owner connects UI → domain service → shared browser state for at least one main flow, then adds the remaining actions and exceptional states. Keep domain rules in the owning service rather than duplicating them in UI components.
 4. **Integrate in dependency order.** Bring up the shared app and Hub & Identity first; connect Rental and Parking; then Charging with Parking; then Fleet/Incident and telemetry; then What-if snapshot reads. Merge small, reviewable changes into the shared branch after each connected flow works.
 5. **Run end-to-end scenarios before the demo.** Verify a Student rental journey, a parking and charging journey with Full/waitlist behavior, an incident and partial redistribution, and an isolated simulation. Check resource counts and lifecycle states after each flow.
 
-One shared integration owner should maintain the app entry point, fixtures and agreed contracts, while feature owners remain responsible for their modules. The team can assign that integration role when the stack is chosen; it is not an additional feature module.
+One shared integration owner should maintain the app entry point, fixtures and agreed contracts, while feature owners remain responsible for their modules. The team can assign that integration role before coding starts; it is not an additional feature module.
 
 ## Final submission
 
@@ -97,4 +97,4 @@ The course brief requires **one final PDF** containing all content from Submissi
 
 ## Development setup
 
-**Stack, installation, run and test commands: TBD.** The first implementation change should add these instructions once the team has selected the stack and created the executable app entry point.
+**Stack:** HTML, CSS and JavaScript, deployed as a static web app on GitHub Pages. **Installation, local run and publishing commands: TBD** until the executable app entry point is created.
