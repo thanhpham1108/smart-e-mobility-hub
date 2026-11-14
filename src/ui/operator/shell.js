@@ -1,0 +1,9 @@
+export function operatorShell(path, title) {
+  const workspace = [["/operator/network", "Network Map"], ["/operator/fleet", "Fleet & Redistribution"], ["/operator/incidents", "Incidents"]];
+  const other = [["/operator/charging", "Smart Charging"], ["/operator/what-if", "What-if Simulation"]];
+  const links = items => items.map(([href, label]) => `<a class="operator-nav__link" href="#${href}" ${path === href ? 'aria-current="page"' : ""}>${label}</a>`).join("");
+  return `<div class="operator-shell">
+    <aside class="operator-sidebar" id="operator-navigation" aria-label="Operator navigation"><a class="operator-brand" href="#/operator/network"><span class="brand-mark" aria-hidden="true">S</span><span><strong>SmartHub <em>Ops</em></strong><small>VNU-HCM mobility network</small></span></a><p class="operator-nav__label">WORKSPACE</p><nav class="operator-nav" aria-label="Workspace">${links(workspace)}</nav><p class="operator-nav__label">OTHER MODULES</p><nav class="operator-nav" aria-label="Other modules">${links(other)}</nav><div class="operator-profile"><span class="avatar">OP</span><span><strong>Fleet Operator</strong><small>Operations role</small></span></div></aside>
+    <div class="operator-content"><header class="operator-topbar"><button type="button" class="menu-button" data-menu-toggle aria-controls="operator-navigation" aria-expanded="false">Menu</button><div class="breadcrumb">Smart E-Mobility Hub <span aria-hidden="true">/</span> <strong>${title}</strong></div><div class="operator-topbar__actions"><span class="connection"><i aria-hidden="true"></i> Local demo</span><a class="role-switch" href="#/student/parking" aria-label="Switch to Student portal"><span class="avatar avatar--small">OP</span> Operator <span aria-hidden="true">⇄</span></a></div></header><main class="operator-main" id="page-root"></main></div>
+  </div>`;
+}

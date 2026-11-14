@@ -2,7 +2,7 @@
 
 Smart E-Mobility Hub is a course project for coordinating electric mobility resources across the VNU-HCM Urban Area. A network of Mobility Hubs provides shared electric vehicles, parking spaces and charging points. Students use these resources; Operators monitor capacity, resolve incidents, coordinate vehicles between Hubs and explore hypothetical demand.
 
-**Project status:** Submissions 1–3 document the requirements, interactions and design. The implementation phase is next. `src/` and `tests/` currently contain placeholders. The MVP will be a responsive HTML/CSS/JavaScript web app hosted on GitHub Pages, with simulated data and state stored in one browser. Installation and run commands are **TBD**. The diagrams and method descriptions describe the intended design, not completed software.
+**Project status:** Submissions 1–3 document the requirements, interactions and design. The implementation foundation now contains one browser app entry point, shared Student and Operator shells, routing, CSS tokens and two PC reference pages. Feature services and complete use-case flows remain to be built. The target MVP is a responsive HTML/CSS/JavaScript web app hosted on GitHub Pages, with simulated data and state stored in one browser. The diagrams and method descriptions describe the intended design, not completed software.
 
 ## What the MVP must demonstrate
 
@@ -74,7 +74,9 @@ The [architecture baseline](docs/submission-3/architectural-design/architecture_
 
 ## How to divide and assemble implementation work
 
-1. **Set up the shared browser app.** Agree on the app entry point, module directories, service function contracts, shared IDs/time format, state adapter, fixtures and UI shell. Add local run and GitHub Pages publishing instructions when the app exists.
+The detailed member deliverables, integration gates and shared UI rules are in the [implementation plan](docs/implementation/README.md) and [UI implementation contract](docs/implementation/UI_DESIGN_SYSTEM.md). Use those two documents when opening feature branches or prompting separate coding agents.
+
+1. **Extend the shared browser app.** The entry point, PC reference shells and sample pages exist. Agree on service function contracts, shared IDs/time format, state adapter and fixtures before feature branches depend on them. Match the two PC visual references first; refine mobile layouts after desktop integration.
 2. **Agree on cross-module contracts first.** The owner of each service writes its request/response shapes and error/status meanings. Its consumers build against the same contract, using temporary adapters or fixtures while the provider is unfinished. In particular, settle the Parking–Charging handoff and Fleet's calls to Rental/Parking/Charging before implementing dependent flows.
 3. **Build feature slices in module branches.** Each owner connects UI → domain service → shared browser state for at least one main flow, then adds the remaining actions and exceptional states. Keep domain rules in the owning service rather than duplicating them in UI components.
 4. **Integrate in dependency order.** Bring up the shared app and Hub & Identity first; connect Rental and Parking; then Charging with Parking; then Fleet/Incident and telemetry; then What-if snapshot reads. Merge small, reviewable changes into the shared branch after each connected flow works.
@@ -97,4 +99,4 @@ The course brief requires **one final PDF** containing all content from Submissi
 
 ## Development setup
 
-**Stack:** HTML, CSS and JavaScript, deployed as a static web app on GitHub Pages. **Installation, local run and publishing commands: TBD** until the executable app entry point is created.
+**Stack:** Browser-native HTML, CSS and JavaScript modules. No package installation is needed for the current foundation. From the repository root, run `python3 -m http.server 4173` and open `http://localhost:4173/#/student/parking`; switch to the Operator portal in the header or open `http://localhost:4173/#/operator/network`. The two pages are layout and integration examples, not finished Parking or Fleet features. The app is structured for a GitHub Pages project URL; publishing will be configured when the MVP flows are integrated.

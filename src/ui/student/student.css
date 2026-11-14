@@ -1,0 +1,34 @@
+.student-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.student-header { min-height: 64px; display: flex; align-items: center; gap: 40px; padding: 0 max(24px, calc((100vw - 1360px)/2)); border-bottom: 1px solid var(--color-border); background: #fff; }
+.student-brand { display: inline-flex; align-items: center; gap: 12px; flex: 0 0 auto; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.student-nav { display: flex; align-items: stretch; align-self: stretch; gap: 22px; min-width: 0; }
+.student-nav a { display: inline-flex; align-items: center; border-bottom: 3px solid transparent; padding: 3px 5px 0; color: var(--color-muted); font-size: 13px; white-space: nowrap; }
+.student-nav a[aria-current="page"] { border-color: var(--color-primary); color: var(--color-primary-dark); font-weight: 800; }
+.student-nav a:hover { color: var(--color-primary-dark); }
+.student-tools { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.student-main { width: min(100%, 1360px); flex: 1; margin-inline: auto; padding: 24px 24px 30px; }
+.student-footer { width: min(100%, 1360px); display: flex; justify-content: space-between; gap: 12px; margin: 0 auto; padding: 10px 24px 18px; color: #94a3b8; font-size: 12px; }
+.parking-layout { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(300px, .83fr); align-items: start; gap: 24px; }
+.parking-form { padding: 20px; }
+.parking-form h2 { margin-bottom: 15px; font-size: 19px; }
+.hub-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+.hub-choice { min-height: 118px; padding: 14px; border: 1px solid var(--color-border); border-radius: 11px; background: #fff; text-align: left; }
+.hub-choice.is-selected { border-color: var(--color-primary); background: #effaf6; }
+.hub-choice strong, .hub-choice small, .hub-choice span { display: block; }
+.hub-choice strong { margin-bottom: 5px; font-size: 14px; }
+.hub-choice small { color: var(--color-muted); font-size: 12px; }
+.hub-choice span { margin-top: 12px; color: var(--color-primary-dark); font-size: 12px; font-weight: 700; }
+.parking-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.section-divider { margin: 24px 0; border: 0; border-top: 1px solid #edf2f7; }
+.parking-note { margin: 18px 0 0; padding: 13px; border-radius: 8px; background: #eafbf3; color: #047857; font-size: 13px; }
+.parking-summary { overflow: hidden; }
+.parking-summary__head { padding: 19px; background: #ecfdf5; border-bottom: 1px solid #d1fae5; }
+.parking-summary__head h2 { margin: 0; font-size: 19px; }
+.parking-summary__body { padding: 19px; }
+.parking-map { height: 100px; display: grid; place-items: center; margin-bottom: 16px; border: 1px solid #e2efe9; border-radius: 10px; background: repeating-linear-gradient(90deg, #eef8f3 0 68px, #fff 68px 80px); color: #047857; font-size: 13px; font-weight: 800; }
+.summary-row { display: flex; justify-content: space-between; gap: 10px; margin: 10px 0; font-size: 13px; }
+.summary-row span { color: var(--color-muted); }
+.parking-summary .button { width: 100%; margin-top: 12px; }
+.parking-summary__caption { margin: 10px 0 0; color: var(--color-muted); font-size: 12px; text-align: center; }
+@media (max-width: 1050px) { .student-header { gap: 20px; }.parking-layout { grid-template-columns: 1fr; }.parking-summary { max-width: none; } }
+@media (max-width: 720px) { .student-header { flex-wrap: wrap; gap: 0 12px; padding: 10px 16px 0; }.student-brand { margin-right: auto; }.student-nav { order: 3; width: 100%; overflow-x: auto; gap: 15px; }.student-tools .avatar { display: none; }.student-main { padding: 20px 16px; }.student-footer { flex-wrap: wrap; padding-inline: 16px; }.hub-picker { grid-template-columns: 1fr; }.hub-choice { min-height: 80px; }.parking-fields { grid-template-columns: 1fr; } }
