@@ -31,29 +31,34 @@ else Assignment is incomplete
   else All confirmed arrivals are valid
     C -> H: Check destination capacity and occupancy
     H --> C: Current Hub counts
-    C -> A: Begin atomic completion update
-    loop Each newly confirmed vehicle
-      C -> V: Set location to destination Hub
-      C -> H: Update source/destination occupancy once
-      C -> A: Mark vehicle arrived
-    end
-    alt All assigned vehicles have arrived
-      C -> A: Set assignment Completed
-    else Some assigned vehicles have not arrived
-      C -> A: Set assignment PartiallyCompleted
-    end
-    alt Any update fails
-      A --> C: Roll back all changes
-      C --> UI: Completion not recorded
-    else Update commits
-      A --> C: New assignment state and version
-      C --> UI: Show confirmed arrivals and remaining vehicles
-      UI --> Operator: Display completion result
+    alt Destination now full for confirmed subset
+      C --> UI: Reject arrival confirmation; show capacity reason
+    else Capacity available for confirmed subset
+      C -> A: Begin atomic completion update
+      loop Each newly confirmed vehicle
+        C -> V: Set location to destination Hub
+        C -> H: Update source/destination occupancy once
+        C -> A: Mark vehicle arrived
+      end
+      alt All assigned vehicles have arrived
+        C -> A: Set assignment Completed
+      else Some assigned vehicles have not arrived
+        C -> A: Set assignment PartiallyCompleted
+      end
+      alt Any update fails
+        A --> C: Roll back all changes
+        C --> UI: Completion not recorded
+      else Update commits
+        A --> C: New assignment state and version
+        C --> UI: Show confirmed arrivals and remaining vehicles
+        UI --> Operator: Display completion result
+      end
     end
   end
 end
 note over C,H
 Only newly confirmed arrivals change location and occupancy.
+Order creation does not reserve destination capacity.
 Retries do not double-count the same vehicle (FR-NI-05).
 end note
 @enduml

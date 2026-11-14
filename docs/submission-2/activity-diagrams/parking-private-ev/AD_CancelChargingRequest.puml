@@ -108,7 +108,7 @@ end note
     :Refresh summary; require confirmation again;
   else ([summary unchanged])
 |Database|
-:Guarded atomic cancellation: recheck ownership,\nWaiting/Scheduled state and reviewed details;\nmark Cancelled, remove queue entry or release\nfuture allocation ONCE; keep parking unchanged;
+:Guarded atomic cancellation: recheck ownership,\nWaiting/Scheduled state and reviewed details;\nmark Cancelled, remove queue entry or release\nheld Scheduled allocation ONCE; keep parking unchanged;
 |System|
 
     if () then ([confirmation response lost])

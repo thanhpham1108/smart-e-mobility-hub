@@ -55,7 +55,7 @@ repeat
 :Evaluate overdue Confirmed reservations\nusing server time (FR-NI-13);
 if () then ([overdue Confirmed records])
   |Database|
-  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nWaiting/Scheduled requests; release remaining\nholds and future allocations ONCE;
+  :Guarded atomic expiry of eligible records:\nrecheck deadline and no Active parking/charging;\nmark Expired / NoShow and expiredAt; cancel\nWaiting/Scheduled requests; release remaining\nholds and held Scheduled allocations ONCE;
   |System|
   if () then ([cleanup failed, unknown or Active conflict])
     :Report expiry pending or operational conflict;\ndo not admit overdue parking or create charging;\ndo not count unresolved holds as released;\nreconcile original expiry before retry;
@@ -137,7 +137,7 @@ endif
     :Refresh linked request details; require\nconfirmation of new consequences;
   else ([consequences unchanged])
 |Database|
-:Guarded atomic cancellation: recheck ownership,\nConfirmed status, now < expiresAt and reviewed\ndependents; cancel parking and Waiting/Scheduled\nrequests; release all remaining holds and future\nallocations ONCE;
+:Guarded atomic cancellation: recheck ownership,\nConfirmed status, now < expiresAt and reviewed\ndependents; cancel parking and Waiting/Scheduled\nrequests; release all remaining holds and held Scheduled\nallocations ONCE;
 |System|
 
     if () then ([confirmation response lost])

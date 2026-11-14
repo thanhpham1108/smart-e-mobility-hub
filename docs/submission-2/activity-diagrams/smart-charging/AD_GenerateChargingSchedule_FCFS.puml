@@ -30,11 +30,11 @@ if (Valid draft?) then (no)
   stop
 endif
 :Record submission instant;
-:Estimate energy from configured
-battery capacity;
+:Estimate duration for display
+when inputs are available;
 
 |#FEF3C7|Database|
-:Read point status, power
+:Read point status, optional power
 and existing allocations;
 
 |#F0FDF4|ChargingController|
@@ -42,13 +42,21 @@ if (Required data available?) then (no)
   :Show data error; keep old schedule; <<status>>
   stop
 endif
-:Find feasible point and interval
-in FCFS order;
-if (Charging time sufficient?) then (no)
-  :Show Insufficient Charging Time; <<status>>
+:Check requested start and current
+point occupancy in FCFS order;
+if (Requested start reached?) then (no)
+  |#FEF3C7|Database|
+  :Save Waiting request without allocation;
+  |#F0FDF4|ChargingController|
+  if (Save succeeded?) then (no)
+    :Show save error; keep old schedule; <<status>>
+    stop
+  endif
+  |#E0F2FE|Student / Parking|
+  :Show Waiting until requested start; <<status>>
   stop
 endif
-if (Point and interval available?) then (yes)
+if (Charging point currently free?) then (yes)
   |#FEF3C7|Database|
   :Save Scheduled request and allocation together;
   |#F0FDF4|ChargingController|

@@ -38,18 +38,23 @@ alt Parking ineligible or data unavailable
   UI --> ST : Show error
 else Eligible parking
   SVC -> SVC : Validate inputs and estimate duration
-  alt Invalid input or insufficient charging time
+  alt Invalid input
     SVC --> UI : Reason; no request saved
     UI --> ST : Revise input
   else Valid request
     SVC -> DATA : Read point availability and FCFS queue
     DATA --> SVC : Current Hub capacity and order
-    alt Hub capacity full
+    alt Requested start in the future
+      SVC -> DATA : Save Waiting request without allocation
+      DATA --> SVC : Request reference and queue position
+      SVC --> UI : Waiting until requested start
+      UI --> ST : Show queue position; no point promised
+    else Hub capacity full for eligible request
       SVC -> DATA : Save Waiting request without allocation
       DATA --> SVC : Request reference and queue position
       SVC --> UI : Full, Waiting and position
       UI --> ST : Show waitlist position
-    else Feasible point and interval
+    else Eligible request and point currently free
       SVC -> DATA : Save Scheduled request and allocation atomically
       DATA --> SVC : Request reference, point and interval
       SVC --> UI : Scheduled assignment

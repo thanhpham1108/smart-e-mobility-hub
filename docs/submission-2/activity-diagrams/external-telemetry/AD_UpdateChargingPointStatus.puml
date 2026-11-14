@@ -100,7 +100,7 @@ else ([compatible report])
     if () then ([confirmed stop / completion / permitted pause])
 :Plan Completed if target met, Interrupted for final\nearly stop, or Paused if permitted; retain actual\nstop time; release only capacity no longer committed;
     else ([condition-only report])
-:Preserve unresolved restrictions and future\nallocations;
+:Preserve unresolved restrictions and held\nScheduled allocations;
     endif
   endif
 endif

@@ -131,7 +131,7 @@ activate C
 C --> C: Evaluation result
 deactivate C
   else condition-only report (healthy, idle or fault)
-C -> C: Update reported condition; preserve open restrictions and future allocations
+C -> C: Update reported condition; preserve open restrictions and held Scheduled allocations
 activate C
 C --> C: Evaluation result
 deactivate C

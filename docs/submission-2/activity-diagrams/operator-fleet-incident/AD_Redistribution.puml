@@ -32,18 +32,23 @@ if (Data current and transfer feasible?) then (yes)
         |System / Controller|
         :Check order state and vehicle identities;
         if (Arrivals valid?) then (yes)
-          |Database|
-          :Atomically update arrived vehicle locations,
-          Hub occupancy and order progress;
-          |System / Controller|
-          if (Update committed?) then (yes)
-            if (All vehicles arrived?) then (yes)
-              :Show Completed order;
+          :Recheck current destination capacity;
+          if (Capacity for confirmed arrivals?) then (yes)
+            |Database|
+            :Atomically update arrived vehicle locations,
+            Hub occupancy and order progress;
+            |System / Controller|
+            if (Update committed?) then (yes)
+              if (All vehicles arrived?) then (yes)
+                :Show Completed order;
+              else (no)
+                :Show PartiallyCompleted order;
+              endif
             else (no)
-              :Show PartiallyCompleted order;
+              :Show failure; retain last confirmed state;
             endif
           else (no)
-            :Show failure; retain last confirmed state;
+            :Show destination full; retain last confirmed state;
           endif
         else (no)
           :Reject mismatch or duplicate confirmation;
@@ -63,6 +68,7 @@ endif
 stop
 note right
 Creating an order never asserts physical arrival.
+Creating an order does not reserve destination capacity.
 Only confirmed arrivals change location and occupancy.
 end note
 @enduml

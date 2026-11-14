@@ -37,39 +37,38 @@ start
 |Operator|
 :View current queue position,
 port, and charging interval;
-:Edit queue position, port, or interval;
+:Edit port or planned interval;
 :Click "Save Adjustment";
 
 |ChargingController|
-:Validate requested changes;
-if (Queue order only?) then (yes)
-  :Check new queue position is valid;
-else (no)
-  |Database|
-  :Read latest charging-point status
-  and existing allocations;
-
-  |ChargingController|
-  if (Port operational?) then (no)
-    |Operator|
-    :Show unavailable-point error;
-    stop
-  endif
-  ->yes;
-
-  |ChargingController|
-  if (Interval conflicts?) then (yes)
-    :Reject adjustment;
-    :Current schedule remains unchanged; <<status>>
-    |Operator|
-    :Show conflicting allocation;
-    stop
-  endif
-  ->no;
-
-  |ChargingController|
-  :Check remaining scheduling constraints;
+:Validate Scheduled state, current start
+and FCFS order;
+if (Valid for current assignment?) then (no)
+  |Operator|
+  :Show invalid-adjustment error;
+  stop
 endif
+|Database|
+:Read latest point status and held allocations;
+
+|ChargingController|
+if (Port usable for this assignment?) then (no)
+  |Operator|
+  :Show unavailable-point error;
+  stop
+endif
+
+|ChargingController|
+if (Point or vehicle already held?) then (yes)
+  :Reject adjustment;
+  :Current schedule remains unchanged; <<status>>
+  |Operator|
+  :Show conflicting allocation;
+  stop
+endif
+
+|ChargingController|
+:Check remaining scheduling constraints;
 
 |ChargingController|
 if (Requested change valid?) then (no)

@@ -30,11 +30,21 @@ Ctrl -->> UI : currentSchedule
 deactivate Ctrl
 UI -->> Op : Show current point, time slot, and queue position
 
-Op -> UI : Edit time slot or switch charging point
+Op -> UI : Edit planned interval or switch charging point
 Op -> UI : Click "Save Adjustment"
 
 UI -> Ctrl : adjustScheduleSlot(scheduleId, newPointId, newTimeSlot)
 activate Ctrl
+
+Ctrl -> Req : verifyScheduledAndCurrentStart(scheduleId, newTimeSlot)
+activate Req
+Req --> Ctrl : eligible / invalid future start or state
+deactivate Req
+
+alt Not a current Scheduled assignment
+    Ctrl -->> UI : showError("Only current Scheduled assignments may be adjusted")
+    UI -->> Op : Keep FCFS order and current schedule
+else Eligible current assignment
 
 Ctrl -> Point : checkPointOperationalStatus(newPointId)
 activate Point
@@ -45,14 +55,14 @@ alt Charging Point Is Faulty or Offline
     Ctrl -->> UI : showError("Selected charging point is unavailable or faulty")
     UI -->> Op : Highlight port error and prompt alternative
 else Charging Point Is Operational
-    Ctrl -> Sched : checkTimeOverlap(newPointId, newTimeSlot, scheduleId)
+    Ctrl -> Sched : checkCurrentPointAndVehicleCommitments(newPointId, scheduleId)
     activate Sched
-    Sched --> Ctrl : isOverlapping
+    Sched --> Ctrl : pointOrVehicleHeld
     deactivate Sched
 
-    alt Time Slot Conflicts With Another Vehicle
-        Ctrl -->> UI : showConflictWarning("Time slot conflicts with existing allocation")
-        UI -->> Op : Alert conflict and suggest open intervals
+    alt Point or vehicle is already held
+        Ctrl -->> UI : showConflictWarning("Point or vehicle already committed")
+        UI -->> Op : Alert conflict and suggest available point
     else Valid Adjustment (No Conflict)
         Ctrl -> Sched : updateSlotAllocation(scheduleId, newPointId, newTimeSlot)
         activate Sched
@@ -67,6 +77,7 @@ else Charging Point Is Operational
         Ctrl -->> UI : showSuccess("Schedule adjusted successfully")
         UI -->> Op : Close modal and refresh Gantt view
     end
+end
 end
 
 deactivate Ctrl

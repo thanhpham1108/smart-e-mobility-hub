@@ -1,6 +1,6 @@
 # Smart Charging — Sequence diagrams
 
-The diagrams retain the existing UI/Controller/Request/Point/Schedule lifelines and FCFS rule. UC-C01 includes `Waiting` requests and their current Hub positions. UC-C02 runs automatically when a charging draft is submitted: valid requests blocked by full capacity enter the per-Hub waitlist; insufficient charging time is rejected without saving a request.
+The diagrams retain the existing UI/Controller/Request/Point/Schedule lifelines and FCFS rule. UC-C01 includes `Waiting` requests and their current Hub positions. UC-C02 runs automatically when a charging draft is submitted: a future-start request remains Waiting without a guaranteed point, while a currently eligible request blocked by full capacity receives Full and enters the per-Hub waitlist. Estimated duration is informational and does not reject a valid request.
 
 | Use case | Editable PlantUML | Rendered image |
 | --- | --- | --- |

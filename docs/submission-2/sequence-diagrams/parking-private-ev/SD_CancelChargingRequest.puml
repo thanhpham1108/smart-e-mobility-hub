@@ -90,7 +90,7 @@ critical Recheck request and cancel its queue entry or allocation
 SVC -> DATA: Cancel owned Waiting/Scheduled request; remove from\nqueue or release matching allocation
 activate DATA #E2E7ED
 note over SVC,DATA
-  Release an existing future charging allocation once.
+  Release an existing held Scheduled allocation once.
   Keep parking unchanged; no allocation means no release.
 end note
 DATA --> SVC: Cancelled / already cancelled / summary changed / ineligible / save failure
