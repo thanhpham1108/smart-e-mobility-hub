@@ -1,6 +1,6 @@
 # Implementation plan — Smart E-Mobility Hub
 
-This is the working handoff for the six implementation owners. It follows the latest agreed MVP: **one responsive HTML/CSS/JavaScript app on GitHub Pages, demonstrated in one browser, with seeded data and browser-local state**. It is not a claim that code already exists. The [UI contract](UI_DESIGN_SYSTEM.md) is mandatory for every feature screen.
+This is the working handoff for the six implementation owners. It follows the latest agreed MVP: **one HTML/CSS/JavaScript app on GitHub Pages, demonstrated in one browser, with seeded data and browser-local state**. The shared PC foundation exists; full feature flows still need implementation. The [UI contract](UI_DESIGN_SYSTEM.md) is mandatory for every feature screen, and the [two selected PC reference frames with source prototypes](ui-reference/README.md) live in this folder.
 
 ## 1. What the team must agree before parallel coding
 

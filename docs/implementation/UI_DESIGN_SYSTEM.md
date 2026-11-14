@@ -13,7 +13,7 @@ Member 1 owns the shells and shared UI primitives. Feature owners render page co
 
 ## Canonical references and source folders
 
-Use **[Reserve Parking Space](../submission-2/ui-design/student-portal/UI_STUDENT_ReserveParkingSpace.png)** as the Student visual reference: white 64 px navigation, emerald active route, light slate page, form/cards and a clear summary panel. Use **[Network Overview](../submission-2/ui-design/operator-portal/fleet-incident-mockup/UI_OPERATOR_Network_Overview.png)** as the Operator visual reference: dark sidebar, white top header, page heading, KPI cards and content panels. They define the shell and component language; domain views can have different content layouts.
+Use **[Reserve Parking Space](ui-reference/student/reference.png)** as the Student visual reference: white 64 px navigation, emerald active route, light slate page, form/cards and a clear summary panel. Use **[Network Overview](ui-reference/operator/reference.png)** as the Operator visual reference: dark sidebar, white top header, page heading, KPI cards and content panels. [Both original prototype sources are copied into this implementation folder](ui-reference/README.md). They define the shell and component language; domain views can have different content layouts.
 
 Target folder structure:
 
