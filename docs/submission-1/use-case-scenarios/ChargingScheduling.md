@@ -1,5 +1,7 @@
 # Use Case: Smart Charging Slot Scheduling
 
+> Legacy prototype draft (UC-05). The current, reviewed UC-C01–C03 behavior is in [smart_charging_scheduling.md](smart_charging_scheduling.md); use that file for FCFS, future-start Waiting, planned end times and test/report alignment.
+
 ## 1. Overview
 * **Use Case ID:** UC-05
 * **Use Case Name:** Smart Charging Slot Scheduling

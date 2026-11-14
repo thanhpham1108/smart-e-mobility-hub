@@ -122,7 +122,7 @@ This document covers the Operator's assigned Fleet & Incident scope: the managem
 | **Preconditions** | 1. The system is running.<br>2. The Operator is authenticated and authorized to manage vehicle redistribution.<br>3. The selected vehicles and source/destination Hubs exist.<br>4. The latest available vehicle and Hub status information is available for validation. |
 | **Trigger** | The Operator selects **Coordinate Vehicle Redistribution** from the dashboard or fleet-management view. |
 | **Steps** | 1. The Operator selects one or more vehicles.<br>2. The Operator selects the source Hub and destination Hub.<br>3. The system executes **<<include>> UC-S03 — Validate Redistribution Feasibility**.<br>4. The system displays the feasibility decision and any rejection reason.<br>5. The Operator confirms the feasible redistribution request.<br>6. The system creates a redistribution assignment.<br>7. The system displays the assignment confirmation. |
-| **Post-conditions** | A redistribution assignment is recorded only for a feasible transfer. Vehicle location and source/destination occupancy are not updated until actual arrival is confirmed through UC-F05. |
+| **Post-conditions** | A redistribution assignment commits the selected vehicles only. It does not reserve destination capacity or update vehicle location and Hub occupancy. Actual arrival and current destination capacity are checked through UC-F05. |
 | **Exception flow** | 1. A selected vehicle is ineligible or has a conflicting commitment.<br>2. The source/destination Hub combination is unsuitable.<br>3. The destination Hub has insufficient capacity.<br>4. The assignment cannot be saved.<br>5. The system does not create an invalid assignment or record unconfirmed vehicle movement. |
 
 ### Main Flow
@@ -135,7 +135,7 @@ This document covers the Operator's assigned Fleet & Incident scope: the managem
 6. **System:** Executes **<<include>> UC-S03 — Validate Redistribution Feasibility**.
 7. **System:** Displays the feasibility decision and the selected transfer details.
 8. **Operator:** Confirms the feasible redistribution request.
-9. **System:** Creates a redistribution assignment for the selected vehicles and Hubs.
+9. **System:** Creates a redistribution assignment for the selected vehicles and Hubs without reserving destination capacity.
 10. **System:** Records the assignment state.
 11. **System:** Displays the assignment confirmation.
 
@@ -186,9 +186,9 @@ This document covers the Operator's assigned Fleet & Incident scope: the managem
 | **Actors** | Operator |
 | **Preconditions** | 1. The system is running.<br>2. The Operator is authenticated and authorized to manage vehicle redistribution.<br>3. A valid, incomplete redistribution assignment exists.<br>4. The Operator can identify the vehicles that have actually arrived. |
 | **Trigger** | The Operator selects a redistribution assignment and confirms vehicle arrival at the destination Hub. |
-| **Steps** | 1. The system retrieves the selected redistribution assignment.<br>2. The system displays the assigned vehicles, source Hub, destination Hub, and current assignment state.<br>3. The Operator confirms the vehicles that have actually arrived.<br>4. The system validates the confirmed vehicles against the assignment.<br>5. The system updates the confirmed vehicles' locations.<br>6. The system updates the assignment state.<br>7. The system updates source/destination occupancy consistently.<br>8. The system displays the completion result. |
+| **Steps** | 1. The system retrieves the selected redistribution assignment.<br>2. The system displays the assigned vehicles, source Hub, destination Hub, and current assignment state.<br>3. The Operator confirms the vehicles that have actually arrived.<br>4. The system validates the confirmed vehicles against the assignment and rechecks current destination capacity.<br>5. The system updates the confirmed vehicles' locations.<br>6. The system updates the assignment state.<br>7. The system updates source/destination occupancy consistently.<br>8. The system displays the completion result. |
 | **Post-conditions** | Only confirmed vehicle movement is recorded. The location, assignment state, and Hub occupancy for each confirmed vehicle are updated consistently. |
-| **Exception flow** | 1. The assignment cannot be found or is already completed.<br>2. The confirmed vehicle does not belong to the assignment.<br>3. Only part of the assignment is completed.<br>4. The completion update cannot be saved.<br>5. The system does not record movement that has not been confirmed. |
+| **Exception flow** | 1. The assignment cannot be found or is already completed.<br>2. The confirmed vehicle does not belong to the assignment.<br>3. The destination Hub is full at confirmation time.<br>4. Only part of the assignment is completed.<br>5. The completion update cannot be saved.<br>6. The system does not record movement that has not been confirmed. |
 
 ### Main Flow
 
@@ -197,7 +197,7 @@ This document covers the Operator's assigned Fleet & Incident scope: the managem
 3. **System:** Retrieves the assignment details.
 4. **System:** Displays assigned vehicles, source Hub, destination Hub, and current assignment state.
 5. **Operator:** Confirms that all assigned vehicles have arrived at the destination Hub.
-6. **System:** Validates that the confirmed vehicles belong to the selected assignment.
+6. **System:** Validates that the confirmed vehicles belong to the selected assignment and rechecks current destination capacity for that subset.
 7. **System:** Updates the current location of each confirmed vehicle to the destination Hub.
 8. **System:** Updates the assignment state to **Completed**.
 9. **System:** Updates the source and destination Hub occupancy consistently.
@@ -220,6 +220,13 @@ This document covers the Operator's assigned Fleet & Incident scope: the managem
 2. The System rejects that vehicle confirmation.
 3. The System identifies the mismatch to the Operator.
 4. The Operator may correct the selection and confirm again.
+
+**A3. Destination Hub Becomes Full Before Arrival Confirmation**
+
+1. At Step 6, the System finds insufficient current destination capacity for the confirmed subset.
+2. The System rejects this confirmation and informs the Operator that the destination is full.
+3. The System leaves vehicle locations, occupancy, order progress, and outstanding vehicle commitments unchanged.
+4. The Operator resolves the capacity issue and retries after revalidation.
 
 ### Exception Flow
 

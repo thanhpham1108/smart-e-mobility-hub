@@ -20,7 +20,7 @@ This policy concerns **unused private-EV parking reservations**, independently o
 | Visible deadline | Display the exact deadline in the reservation summary, confirmation, electronic ticket and booking details. The deadline is not rounded to a parking time point. |
 | Trigger | A background expiry scan runs at least once every 60 seconds. Booking/detail reads and operations that depend on parking eligibility also evaluate overdue reservations before returning current eligibility or applying changes. Availability checks reconcile affected overdue holds before counting capacity; unresolved cleanup never counts as released capacity. |
 | Eligible source state | Only `Confirmed` reservations with no Active parking session and no Active linked charging session may expire. `Checked In`, `Completed`, `Cancelled` and already `Expired` records are not changed by expiry. |
-| Consistent expiry | Recheck the deadline and eligibility, then atomically mark the reservation `Expired`, set reason `NoShow` and the actual processing time `expiredAt`, cancel its linked `Scheduled` charging requests, and release all parking holds and future charging allocations still held by those records exactly once. No parking session is created. Preserve all historical records. |
+| Consistent expiry | Recheck the deadline and eligibility, then atomically mark the reservation `Expired`, set reason `NoShow` and the actual processing time `expiredAt`, cancel its linked `Waiting`/`Scheduled` charging requests, remove Waiting entries and release all parking holds and held Scheduled charging allocations exactly once. No parking session is created. Preserve all historical records. |
 | Deadline versus processing time | `expiresAt` is the eligibility deadline; `expiredAt` is when cleanup succeeds. A delayed timer does not extend check-in eligibility. An overdue reservation cannot accept check-in or a new charging request, even if its persisted status is still temporarily `Confirmed`. |
 | Concurrent operations | Check-in, cancellation, charging-request creation, charging start and expiry use a serialized final eligibility decision with authoritative server time. Check-in wins only if its final decision is made before `expiresAt` and creates the Active session consistently; expiry then skips it. At or after the deadline, reject check-in and reconcile expiry first. A record already cancelled/expired/checked in is never released a second time. |
 | Faults and retries | A failed or uncertain expiry update must not partially release capacity; retry or retrieve the original expiry result idempotently. If a `Confirmed` reservation unexpectedly has Active charging or an Active parking session, deny overdue admission, report an operational inconsistency and defer expiry until resolved; never stop active charging or clear occupied capacity as an expiry side effect. Occupancy observations remain governed by FR-NI-08. |
@@ -102,8 +102,8 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 4. The system validates the charging inputs, confirms that the Hub accepts charging requests, and checks the associated parking record's current eligibility, including `now < expiresAt` for an unused Confirmed reservation.
 5. The system displays a request summary and explains that a full Hub returns a waitlist position for a valid request.
 6. The Student confirms submission.
-7. The system rechecks parking eligibility and charging-window validity. If a feasible charging point and interval are available, it saves one linked **Scheduled** request and allocation. If capacity is full, it saves the valid request as **Waiting** without an allocation and returns the current Hub waitlist position. Insufficient charging time remains an error and creates no request. Concurrent parking cancellation or expiry must cancel a linked Waiting or Scheduled request.
-8. The system displays the request reference and either its assigned point/interval with **Scheduled** status, or **Full**, **Waiting**, and its queue position.
+7. The system rechecks parking eligibility and charging-window validity. It considers earlier eligible Waiting requests first; if the requested start has arrived and a charging point is still free, it saves one linked **Scheduled** request and allocation. A future-start request is **Waiting** without an allocation until its start arrives. If an eligible request finds the Hub full, it is also saved as **Waiting**, with Full and its current Hub waitlist position. Estimated duration does not reject the request. Concurrent parking cancellation or expiry must cancel a linked Waiting or Scheduled request.
+8. The system displays the request reference and either its assigned point/planned interval with **Scheduled** status, **Waiting** until a future requested start, or **Full**, **Waiting**, and its queue position when eligible capacity is occupied.
 
 ### Alternative Flow
 
@@ -111,7 +111,7 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 | --- | --- | --- |
 | P02-A1 | The vehicle is already checked in at Step 1 | Use the active parking session as the request context. Limit the requested charging interval to the remaining permitted parking interval and continue at Step 2. |
 | P02-A2 | Hub capacity is full for a valid requested window | Report Full, save the request as Waiting without an allocation, and show its current position in that Hub’s FCFS waitlist. Promote automatically when capacity opens; expire and notify the Student when the requested window ends. |
-| P02-A3 | Insufficient charging time for the target | Report Insufficient Charging Time and save no request. The Student may revise the window or target and submit again. |
+| P02-A3 | Requested start is in the future | Save the request as Waiting without an allocation and show its current queue position. Do not report Full solely because the start has not arrived; evaluate point capacity at the requested start. |
 | P02-A4 | An equivalent active request is found before creation at Step 7 | Display the existing request and its current status. End without creating another request or changing an existing allocation. |
 | P02-A5 | Student changes or abandons the request at Step 5 | Return to Step 3 for changes, or end without creating a request. |
 
@@ -240,7 +240,7 @@ For the MVP, the **Gate Simulator** displays the barrier-opening result of a con
 2. The system checks that the current request status is **Waiting** or **Scheduled**.
 3. The system displays the cancellation summary, including the current queue position or any charging allocation to be released, and states that parking will remain unchanged.
 4. The Student confirms cancellation.
-5. The system rechecks the request state, marks it **Cancelled**, removes it from the waitlist or releases any associated future allocation once, and updates later queue positions.
+5. The system rechecks the request state, marks it **Cancelled**, removes it from the waitlist or releases any associated held Scheduled allocation once, and updates later queue positions.
 6. The system displays the cancelled request and the unchanged parking booking/session status.
 
 ### Alternative Flow

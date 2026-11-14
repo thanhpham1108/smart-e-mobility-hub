@@ -2,7 +2,7 @@
 
 ## Shared rule
 
-A valid charging draft is checked against point availability and its requested time window. If a feasible slot exists, the system saves one `Scheduled` request with one allocation. If all suitable capacity is occupied, it saves the request as `Waiting` in that Hub’s FCFS waitlist, reports that the Hub is full, and shows the Student their queue position. When capacity becomes available, the earliest eligible request is assigned automatically. Insufficient charging time remains an error and does not enter the waitlist. Identical submission timestamps use lower battery as a tie-breaker, then request ID for stability.
+A valid charging draft is checked against point availability and its requested time window. If the requested start has arrived, all earlier eligible Waiting requests have been considered, and a point is free, the system saves one `Scheduled` request with one allocation. A future-start request is saved as `Waiting` without a point until its start arrives; it is not reported Full solely because it is early. If currently eligible capacity is occupied, the request is also `Waiting`, the system reports Full and shows the Student their queue position. When an eligible request reaches the head of the FCFS queue and a point actually becomes available, it is assigned automatically. Estimated charging duration and end time are for display, not admission or automatic release. Identical submission timestamps use lower battery as a tie-breaker, then request ID for stability.
 
 # UC-C01 — View the Charging Queue and Schedule
 
@@ -24,23 +24,23 @@ A valid charging draft is checked against point availability and its requested t
 
 **Actors:** Student or an authorized internal requester; Smart Charging System. **Trigger:** Submit a charging request. The scheduling step runs automatically.
 
-**Preconditions:** The request window, Hub, vehicle and current/target battery values are valid. The system has a configured battery-capacity assumption and current point status/power.
+**Preconditions:** The request window, Hub, vehicle and current/target battery values are valid. Current authoritative point status is available. Configured battery capacity and power support an informational estimate when available.
 
 **Main flow:**
 
 1. The system receives the draft and records the submission instant used for FCFS.
-2. It estimates charging energy from the battery difference and configured capacity assumption, then estimates duration for candidate points.
-3. It checks the requested window, existing allocations and operational points in FCFS order. Only identical timestamps use lower battery level as a tie-breaker.
-4. If a feasible point and interval exist, it saves the request as `Scheduled` with exactly one `ChargingAllocation` and updates the current schedule together.
-5. It returns the request reference, point and interval. Operator can later view the saved plan through UC-C01.
+2. When estimate inputs are available, it calculates charging energy and a display-only completion time from the battery difference and configured capacity assumption.
+3. It checks the requested window and current operational point occupancy in FCFS order. Only identical timestamps use lower battery level as a tie-breaker.
+4. If `requestedStart ≤ now < requestedEnd`, no earlier eligible Waiting request takes priority, and a point is currently free, it saves the request as `Scheduled` with exactly one `ChargingAllocation` and updates the current schedule together.
+5. It returns the request reference, point and estimated completion time. Operator can later view the current assignment through UC-C01.
 
-**Alternative — Hub capacity full:** If the request is valid but no capacity fits because the Hub is full, save it as `Waiting` without an allocation, show `Full` and its current waitlist position. Allocate it automatically when it becomes eligible at the head of the Hub’s FCFS queue.
+**Alternative — Future requested start:** Save the valid request as `Waiting` without an allocation and show its queue position. Do not promise a future point or label the response Full solely because the start is in the future. At the requested start, evaluate the eligible FCFS queue against current point occupancy.
 
-**Alternative — Insufficient charging time:** Show `Insufficient Charging Time`; do not save or waitlist the request. The Student may revise the requested interval and submit again.
+**Alternative — Hub capacity full:** If the request is currently eligible but the Hub's point capacity is occupied, save it as `Waiting` without an allocation, show `Full` and its current waitlist position. Allocate it automatically when it becomes eligible at the head of the Hub’s FCFS queue and a point actually opens.
 
 **Alternative — No charging required:** If current battery already meets the target, reject the draft with `No Charging Required`; save no request.
 
-**Exception:** If point data, configuration or saving fails, keep the previous valid schedule and save no new request.
+**Exception:** If authoritative point data or saving fails, keep the previous valid schedule and save no new request. Missing estimate configuration omits the estimate without rejecting an otherwise valid request.
 
 # UC-C03 — Adjust a Charging Schedule
 
@@ -50,11 +50,11 @@ A valid charging draft is checked against point availability and its requested t
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Use-case ID**       | UC-C03                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Use-case name**     | Adjust a Charging Schedule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Use-case overview** | To allow the Operator to modify a charging interval or charging-point assignment in an existing schedule while keeping FCFS queue order and validating the resulting schedule.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Use-case overview** | To allow the Operator to modify a charging interval or charging-point assignment in an existing schedule while keeping FCFS queue order and validating the resulting schedule. Only an already Scheduled current assignment can be adjusted; the change cannot reserve a point for a future start.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | **Actors**            | Operator                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Preconditions**     | 1. The system is running.<br>2. The Operator is authenticated and authorized to modify schedules.<br>3. A current charging schedule exists.<br>4. Charging-point status information is available.<br>5. The selected charging request is eligible for manual adjustment.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | **Trigger**           | The Operator selects a charging request and clicks the **“Adjust Schedule”** button.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| **Steps**             | 1. The system retrieves the selected charging request and its current schedule.<br>2. The system displays the FCFS queue position as read-only information, plus the charging point, start time, and end time.<br>3. The Operator modifies one or more permitted scheduling attributes.<br>4. The Operator clicks **“Save Adjustment”**.<br>5. The system validates the requested changes.<br>6. The system checks whether the selected charging point is operational and available.<br>7. The system checks whether the new charging interval conflicts with another allocation.<br>8. The system checks the basic scheduling constraints.<br>9. If all validations pass, the system saves the modification.<br>10. The system displays the updated schedule. |
+| **Steps**             | 1. The system retrieves the selected charging request and its current schedule.<br>2. The system displays the FCFS queue position as read-only information, plus the charging point, start time, and end time.<br>3. The Operator modifies one or more permitted scheduling attributes.<br>4. The Operator clicks **“Save Adjustment”**.<br>5. The system validates the requested changes.<br>6. The system checks whether the selected charging point is operational and available.<br>7. The system checks current point and vehicle commitments; a planned end time alone does not free a point.<br>8. The system checks the basic scheduling constraints.<br>9. If all validations pass, the system saves the modification.<br>10. The system displays the updated schedule. |
 | **Post-conditions**   | The requested schedule modification is saved only if all validation rules pass. The resulting schedule does not assign a faulty/unavailable charging point or create a conflicting charging allocation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | **Exception flow**    | 1. Charging-point status cannot be retrieved.<br>2. The database cannot save the modification.<br>3. Another scheduling operation modifies the same schedule before the adjustment is saved.<br>4. The original valid schedule remains unchanged if the adjustment cannot be safely applied.                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
@@ -67,7 +67,7 @@ A valid charging draft is checked against point availability and its requested t
 5. **Operator:** Clicks **Save Adjustment**.
 6. **System:** validates the requested changes.
 7. **System:** checks the status of the selected charging point.
-8. **System:** checks whether the proposed charging interval overlaps with another allocation.
+8. **System:** checks current point and vehicle commitments, regardless of their planned end times.
 9. **System:** checks whether the adjusted schedule satisfies the basic scheduling constraints.
 10. **System:** saves the adjustment if all validation checks pass.
 11. **System:** updates the charging schedule.
@@ -79,8 +79,8 @@ A valid charging draft is checked against point availability and its requested t
 **A1. Operator Changes Charging Interval**
 
 1. At Step 4, the Operator changes the start or end time.
-2. The System validates the new interval.
-3. The System checks for conflicts with other charging allocations.
+2. The System validates that the new interval is for the current Scheduled assignment, not a future point hold.
+3. The System checks current point and vehicle commitments.
 4. If no conflict exists, the System accepts the new interval.
 5. The System continues from Step 10.
 
@@ -88,13 +88,13 @@ A valid charging draft is checked against point availability and its requested t
 
 1. At Step 4, the Operator selects another charging point.
 2. The System retrieves the latest status of the selected point.
-3. The System checks whether the point is operational and available during the requested interval.
+3. The System checks whether the point is operational and currently free; a future planned interval does not reserve it.
 4. If valid, the System accepts the new charging-point assignment.
 5. The System continues from Step 10.
 
 **A3. Proposed Schedule Causes a Conflict**
 
-1. At Step 8, the System detects an overlap with another charging allocation.
+1. At Step 8, the System detects a conflicting current point or vehicle commitment.
 2. The System rejects the proposed adjustment.
 3. The System identifies the conflicting allocation to the Operator.
 4. The Operator selects another interval or charging point.
