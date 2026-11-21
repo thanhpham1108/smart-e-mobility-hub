@@ -27,6 +27,6 @@
 ## 6. Constraints (+)
 * **Decoupled Mock Data:** All mock/pre-populated datasets (vehicles, hubs, charging stations) must reside in standalone JSON fixtures. Raw data structures must not be hard-coded into UI components.
 * **Timezone & Temporal Standards:** All timestamp operations (reservations, charging queues, schedules) must adhere to ISO 8601 formatting and be normalized to the local timezone (`GMT+7`) to prevent queue calculation errors.
-* **Lightweight Smart Charging Logic:** The charging scheduler uses straightforward rule-based prioritization (e.g., lowest battery first or first-come, first-served). Each hub manages a queue of up to 20 vehicles at a time, ensuring slot assignments update smoothly in the browser without requiring complex optimization engines.
+* **Lightweight Smart Charging Logic:** The charging scheduler uses FCFS, with lower battery as the tie-breaker for identical submission timestamps. Test the browser scheduler with 20 waiting entries per Hub. Eligible requests can join the waitlist beyond that test workload.
 * **Mock IoT:** Vehicle telemetry (GPS coordinates, battery levels, digital locks) shall be simulated via state events and mock timers; no live hardware integration is required.
-* **Simulated Billing:** Rental and charging transactions shall operate exclusively via a mock student campus credit system without external third-party payment gateways.
+* **Simulated Billing (Submission 1 scope):** Rental and charging transactions were planned to use mock student campus credits. The [Final MVP scope](../../implementation/SHARED_CONTRACTS.md#runtime-and-existing-skeleton) excludes billing.
