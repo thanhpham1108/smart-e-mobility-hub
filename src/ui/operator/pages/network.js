@@ -1,20 +1,41 @@
-import { badge, escapeHtml, pageHeader, statCard } from "../../shared/components.js";
+import { pageHeader, statCard } from "../../shared/components.js";
+import { toLocalInput, fromLocalInput } from "../../shared/records.js";
+import { e, time, status, empty, panel, act, input, select, options, mountFleetView } from "../fleet-components.js";
+import { operationalAlerts } from "../../../modules/fleet-incident/service.js";
 
-export function mount(root, { store }) {
-  function render() {
-    const hubs = store.readSnapshot().hubs;
-    const vehicles = hubs.reduce((sum, hub) => sum + hub.vehiclesFree, 0);
-    const parkingFree = hubs.reduce((sum, hub) => sum + hub.parkingFree, 0);
-    const parkingTotal = hubs.reduce((sum, hub) => sum + hub.parkingTotal, 0);
-    const chargingActive = hubs.reduce((sum, hub) => sum + hub.chargingActive, 0);
-    const chargingTotal = hubs.reduce((sum, hub) => sum + hub.chargingTotal, 0);
-    const atRisk = hubs.filter(hub => hub.freshness !== "Live");
-    root.innerHTML = `${pageHeader("Operations / Live network", "Network Overview", "Vehicle availability, Hub utilization and attention areas across VNU-HCM.", '<span class="badge badge--info">Shared database</span>')}
-      <section class="network-stats" aria-label="Network metrics">${statCard("Available vehicles", vehicles, `Across ${hubs.length} Mobility Hubs`)}${statCard("Parking utilization", parkingTotal ? `${Math.round((1 - parkingFree / parkingTotal) * 100)}%` : "—", `${parkingTotal - parkingFree} of ${parkingTotal} spaces occupied`, "info")}${statCard("Charging points active", `${chargingActive}/${chargingTotal}`, "Current sessions", "warning")}${statCard("Hubs to review", atRisk.length, "Near capacity or stale", "danger")}</section>
-      <div class="network-grid"><section class="card network-panel"><h2>Mobility Hub network</h2><div class="network-map" role="img" aria-label="Schematic list of Mobility Hubs">${hubs.map(hub => `<div class="network-map__hub"><strong>${escapeHtml(hub.name)}</strong><small>${hub.vehiclesFree} vehicles available · ${escapeHtml(hub.freshness)}</small></div>`).join("")}</div><p style="margin:9px 0 0;color:var(--color-muted);font-size:12px">Schematic layout · Counts are refreshed from PostgreSQL.</p></section><section class="card network-panel"><h2>Operational alerts</h2>${atRisk.length ? atRisk.map(hub => `<div class="network-alert"><strong>${escapeHtml(hub.freshness)} · ${escapeHtml(hub.name)}</strong><p>${hub.parkingFree} parking spaces free at this Hub.</p></div>`).join("") : '<p>No Hubs need review.</p>'}</section></div>
-      <section class="hub-performance"><h2>Hub performance</h2><div class="hub-performance__grid">${hubs.map(hub => `<article class="card hub-performance__item"><strong>${escapeHtml(hub.name)}</strong><small>${escapeHtml(hub.area)}</small><p>${hub.vehiclesFree} vehicles</p>${badge(hub.freshness, hub.freshness === "Live" ? "positive" : "warning")}</article>`).join("")}</div></section>`;
-  }
-  render();
-  const unsubscribe = store.subscribe(render);
-  return () => unsubscribe();
+export function mount(root, context) {
+  return mountFleetView(root, context, { hub: "ktx-a", telemetryType: "vehicle", lastEvent: null }, (data, ui) => {
+    const alerts = operationalAlerts(data);
+    const hub = data.hubs.find(h => h.id === ui.hub) ?? data.hubs[0];
+    const vehicles = data.vehicles.filter(v => v.currentHubId === hub.id);
+    const points = data.chargingPoints.filter(p => p.hubId === hub.id);
+    const occupied = data.hubs.reduce((n, h) => n + h.parkingTotal - h.parkingFree, 0);
+    const capacity = data.hubs.reduce((n, h) => n + h.parkingTotal, 0);
+    const type = ui.telemetryType;
+    return `${pageHeader("Operations / Live network", "Network Overview", "A shared view of campus mobility, resource health and operational attention.", '<a class="button button--primary" href="#/operator/fleet">Plan redistribution</a>')}
+      <div class="fi-stats fi-stats--four">${statCard("Available vehicles", data.hubs.reduce((n, h) => n + h.vehiclesFree, 0), `Across ${data.hubs.length} Mobility Hubs`)}${statCard("Parking utilization", capacity ? `${Math.round(occupied / capacity * 100)}%` : "—", `${occupied} of ${capacity} ledger spaces occupied`, "info")}${statCard("Active charging", data.hubs.reduce((n, h) => n + h.chargingActive, 0), "Sessions verified by Charging", "info")}${statCard("Hubs to review", new Set(alerts.map(a => a.hubId).filter(Boolean)).size, `${alerts.length} operational alerts`, "warning")}</div>
+      <div class="fi-columns fi-network">${panel("Mobility Hub network", `<div class="fi-map">${data.hubs.map(h => `<button type="button" class="fi-hub ${h.id === hub.id ? "is-selected" : ""}" data-action="hub" data-id="${e(h.id)}" aria-pressed="${h.id === hub.id}"><span class="fi-hub-dot" aria-hidden="true"></span><strong>${e(h.name)}</strong><small>${h.vehiclesFree} vehicles · ${h.parkingFree} free spaces</small>${status(h.freshness)}</button>`).join("")}</div><p class="fi-muted">Schematic network · Select a Hub to inspect resources below.</p>`, status(data.hubs.every(h => h.freshness === "Live") ? "Live" : "Stale"))}
+      ${panel("Operational attention", `<div class="fi-alerts">${alerts.length ? alerts.map(a => `<article class="fi-alert fi-alert--${a.kind}"><strong>${e(a.title)}</strong><p>${e(data.hubs.find(h => h.id === a.hubId)?.name ?? "Network")} · ${e(a.detail)}</p>${a.hubId ? act("Inspect Hub", "hub", `data-id="${e(a.hubId)}"`) : ""}</article>`).join("") : empty("Network is clear", "No alerts at the configured thresholds.")}</div>`)} </div>
+      ${panel(`${hub.name} · Resource inspection`, `<div class="fi-detail-heading"><p>${e(hub.area)} · Latest point observation ${time(hub.lastObservedAt)}</p>${status(hub.freshness)}</div><div class="fi-hub-metrics"><span><strong>${hub.vehiclesFree}</strong> rentable vehicles</span><span><strong>${hub.parkingFree}/${hub.parkingTotal}</strong> ledger spaces free</span><span><strong>${hub.chargingFree}/${hub.chargingTotal}</strong> chargers available</span></div>${hub.parkingDiscrepancy ? `<div class="fi-callout">${e(hub.parkingDiscrepancy)} New parking admissions are blocked.</div>` : ""}
+        <h3>Shared vehicles</h3>${vehicles.length ? `<div class="fi-resource-grid">${vehicles.map(v => { const obs = data.observations.find(o => o.resourceType === "vehicle" && o.resourceId === v.vehicleId); return `<article class="fi-resource"><div class="fi-detail-heading"><strong>${e(v.name)}</strong>${status(v.status)}</div><p>${e(v.vehicleId)} · ${v.batteryLevel}% battery</p><div class="fi-tags">${status(v.condition)}${v.chargingCommitted ? status("Charging committed") : ""}</div><small>Confirmed location: ${e(hub.name)}${v.status === "REDISTRIBUTING" && !v.parkingSpaceId ? " (departed; awaiting arrival)" : ""}<br>Parking space: ${e(v.parkingSpaceId ?? "None")}<br>Updated ${time(v.lastUpdated)}<br>${v.activeRestrictionIds.length} active restrictions</small>${obs?.discrepancy ? `<p class="fi-callout">${e(obs.discrepancy)}</p>` : ""}</article>`; }).join("")}</div>` : empty("No shared vehicles at this confirmed location")}
+        <details><summary>Charging points (${points.length})</summary><div class="fi-resource-grid">${points.map(p => { const allocation = data.chargingAllocations.find(a => a.pointId === p.pointId); const req = data.chargingRequests.find(r => r.requestId === allocation?.requestId); return `<article class="fi-resource"><div class="fi-detail-heading"><strong>${e(p.pointId)}</strong>${status(p.status)}</div><p>${e(p.chargingVehicleType)} · ${req ? e(req.status) : "Unallocated"}</p><small>${p.activeRestrictionIds.length} active restrictions${p.reconciliationHold ? " · Reconciliation hold" : ""}<br>Observed ${time(p.statusObservedAt)}${req ? `<br>Request ${e(req.requestId)}<br>Vehicle ${e(req.vehicleId)}` : ""}</small></article>`; }).join("")}</div><a href="#/operator/charging">Open charging workspace →</a></details>`)}
+      <div class="fi-columns">${panel("Telemetry simulator", `<p class="fi-muted">Send identified observations using the demo clock. Observations never confirm transfer arrivals or stop charging sessions.</p><form class="fi-inline" data-action="type">${select("type", "Observation type", ["vehicle", "point", "parking"].map(v => `<option ${type === v ? "selected" : ""}>${v}</option>`).join(""))}<button class="button button--secondary">Select type</button></form>
+        <form class="fi-form" data-action="telemetry" data-draft="telemetry-${type}-${e(hub.id)}"><input type="hidden" name="type" value="${type}">
+        ${type === "vehicle" ? select("vehicleId", "Shared vehicle", options(data.vehicles, "vehicleId", "name")) + input("batteryPercent", "Observed battery (%)", 'type="number" min="0" max="100" value="75" required') + select("condition", "Observed condition", '<option>OPERATIONAL</option><option>FAULTED</option>') + select("observedHubId", "Observed location", '<option value="">No location observation</option>' + options(data.hubs, "id", "name")) : type === "point" ? select("pointId", "Charging point", options(points, "pointId", "pointId")) + select("status", "Observed condition", ["Operational", "Maintenance", "Faulty", "Unknown"].map(v => `<option>${v}</option>`).join("")) : `<input type="hidden" name="hubId" value="${e(hub.id)}">${input("occupiedCount", `Observed occupied spaces · ${hub.name}`, `type="number" min="0" max="${hub.parkingTotal}" value="${hub.parkingTotal - hub.parkingFree}" required`)}`}
+        ${input("observedAt", "Observed at (ICT)", `type="datetime-local" value="${toLocalInput(data.demoTime)}" required`)}
+        ${type !== "parking" ? input("faultKey", "Fault reference (when faulty)", 'value="telemetry-fault" maxlength="80"') + input("description", "Observation note", 'maxlength="1000" placeholder="Optional symptom or field note"') : ""}
+        <div class="fi-actions"><button class="button button--primary">Send observation</button>${act("Use current demo time", "clock")}</div><small>One new observation per resource timestamp. Advance the demo clock for subsequent observations.</small></form>
+        ${ui.lastEvent ? `<div class="fi-review"><small>Last submitted event: ${e(ui.lastEvent.input.eventId)}</small>${act("Replay same event", "replay")}</div>` : ""}`)}
+      ${panel("Recent event results", data.telemetryEvents.length ? `<div class="fi-events">${data.telemetryEvents.map(event => `<article class="fi-alert"><div class="fi-detail-heading"><strong>${e(event.resourceId)}</strong>${status(event.result?.status ?? event.kind)}</div><p>${e(event.result?.message ?? event.kind)}</p><small>${time(event.observedAt)}<br>${e(event.eventId)}</small></article>`).join("")}</div>` : empty("No observations yet", "Send a vehicle, point or occupancy observation and inspect its result here."))}</div>`;
+  }, {
+    hub(v, t) { t.state.hub = v.id; },
+    type(v, t) { t.state.telemetryType = v.type; },
+    clock(_, t, button) { const form = button.closest("form"); form.elements.observedAt.value = toLocalInput(t.store.readSnapshot().demoTime); },
+    async telemetry({ type, observedAt, ...values }, t) {
+      const event = { operation: `telemetry.${type}`, input: { ...values, observedAt: fromLocalInput(observedAt), eventId: crypto.randomUUID() } };
+      t.state.lastEvent = event;
+      await t.save(event.operation, event.input, "Observation recorded.");
+    },
+    async replay(_, t) { const event = t.state.lastEvent; const result = await t.save(event.operation, event.input); if (result.ok && result.data.duplicate) t.tell("Duplicate event acknowledged. No observation or incident was applied twice."); }
+  });
 }

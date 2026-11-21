@@ -17,6 +17,8 @@ try {
   await db.exec(await readFile("supabase/seed.sql", "utf8"));
   await db.exec(await readFile("supabase/tests/mvp.sql", "utf8"));
   console.log("Passed: seed, roles, demo access, parking + charging, retry, rental, partial transfer, incident, telemetry, simulation and reset.");
+  await db.exec(await readFile("supabase/tests/fleet.sql", "utf8"));
+  console.log("Passed: Fleet/Incident validation, atomic arrivals, risk recovery, restrictions, telemetry ordering/deduplication, occupancy reconciliation and reset.");
 } catch (error) {
   console.error(error.message);
   if (error.where) console.error(error.where);

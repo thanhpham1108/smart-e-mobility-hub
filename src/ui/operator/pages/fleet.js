@@ -1,68 +1,52 @@
-import { badge, pageHeader } from "../../shared/components.js";
-import { actionForm, button, e, field, input, list, mountRecords, options, panel, select, timeLabel } from "../../shared/records.js";
+import { pageHeader, statCard } from "../../shared/components.js";
+import { e, status, empty, panel, act, select, options, note, history, mountFleetView } from "../fleet-components.js";
+import { isTransferOpen, outstanding, vehicleEligible } from "../../../modules/fleet-incident/service.js";
+export { mountIncidents } from "./incidents.js";
 
 export function mountFleet(root, context) {
-  return mountRecords(root, context, ({ hubs, vehicles, points, orders }, _, memory) => {
-    const sourceHub = memory.sourceHubId ?? hubs.find(hub => hub.id === "ktx-a")?.id ?? hubs[0]?.id;
-    const sourceVehicleOptions = options(vehicles.filter(v => v.currentHubId === sourceHub && v.status === "AVAILABLE" && v.condition === "OPERATIONAL"), "vehicleId", "name");
-    const hubName = id => hubs.find(hub => hub.id === id)?.name ?? id;
-    const vehicleName = id => vehicles.find(v => v.vehicleId === id)?.name ?? id;
-    return `${pageHeader("Operator Portal", "Fleet & Redistribution", "Inspect the fleet, dispatch transfers and confirm each arrival.")}
-      ${panel("Create a transfer", actionForm("fleet.source", select("sourceHubId","Source Hub", options(hubs,"id","name")
-        .replace(`value="${e(sourceHub)}"`, `value="${e(sourceHub)}" selected`)), "Select source")
-        + actionForm("fleet.create", `<input type="hidden" name="sourceHubId" value="${e(sourceHub)}">`
-        + select("destinationHubId","Destination Hub",options(hubs.filter(h=>h.id!==sourceHub && h.status==="Operational"),"id","name"))
-        + field("vehicleIds","Available vehicles",`<select name="{{name}}" multiple required>${sourceVehicleOptions}</select>`), "Create transfer"))}
-      ${panel("Transfer orders", list(orders, order => `<article>
-        <h3>${e(hubName(order.sourceHubId))} → ${e(hubName(order.destinationHubId))} ${badge(order.status)}</h3>
-        <p class="records-meta">${e(order.orderId)} · ${timeLabel(order.createdAt)}</p>
-        ${order.vehicles.map(v => `<p>${e(vehicleName(v.vehicleId))} · ${v.arrivedAt ? "Arrived " + timeLabel(v.arrivedAt) : "Awaiting arrival"}
-          ${!v.arrivedAt && ["Dispatched","Partial","AtRisk"].includes(order.status)
-            ? button("Confirm arrival", "fleet.arrive", {orderId:order.orderId,vehicleId:v.vehicleId}) : ""}</p>`).join("")}
-        ${order.status === "Planned" ? button("Dispatch", "fleet.dispatch", {orderId:order.orderId})
-          + button("Cancel", "fleet.cancel", {orderId:order.orderId}) : ""}
-      </article>`, "No transfer orders."))}
-      ${panel("Vehicle inspection", list(vehicles,v => `<article><h3>${e(v.name)}</h3><p>${e(v.vehicleId)} · ${e(v.status)} · ${e(v.condition)} · ${v.batteryLevel}% · ${e(hubName(v.currentHubId) ?? "In transit")}</p></article>`, "No shared vehicles."))}
-      ${panel("Simulated telemetry",
-        actionForm("telemetry.point",select("pointId","Charging point",options(points,"pointId","pointId"))
-          + select("status","Observed condition",["Operational","Maintenance","Faulty","Unknown"].map(value=>`<option>${value}</option>`).join("")),"Record point status")
-        + actionForm("telemetry.vehicle",select("vehicleId","Vehicle",options(vehicles,"vehicleId","name"))
-          + input("batteryPercent","Observed battery (%)",'type="number" min="0" max="100" required'), "Record battery"))}`;
+  return mountFleetView(root, context, { source: "ktx-a", selected: null, review: null }, (data, ui) => {
+    const hubName = id => data.hubs.find(h => h.id === id)?.name ?? id;
+    const candidates = data.vehicles.filter(v => v.currentHubId === ui.source && vehicleEligible(v));
+    const order = data.orders.find(o => o.orderId === ui.selected) ?? data.orders.find(isTransferOpen) ?? data.orders[0];
+    const attrs = order ? `data-order-id="${e(order.orderId)}" data-expected-version="${order.version}"` : "";
+    return `${pageHeader("Operations / Fleet", "Fleet & Redistribution", "Balance vehicle supply, review capacity and track every confirmed arrival.", '<a class="button button--secondary" href="#/operator/network">Inspect network</a>')}
+      <div class="fi-stats">${statCard("Ready to move", data.vehicles.filter(vehicleEligible).length, "Available shared vehicles")}${statCard("Active transfers", data.orders.filter(isTransferOpen).length, "Capacity checked again on arrival", "info")}${statCard("Orders at risk", data.orders.filter(o => o.status === "AtRisk").length, "Resolve the cause before continuing", "warning")}</div>
+      <div class="fi-columns">${panel("Plan a transfer", `
+        <form data-action="source" class="fi-inline">${select("source", "Source Hub", options(data.hubs.filter(h => h.status === "Operational"), "id", "name", ui.source))}<button class="button button--secondary">Load vehicles</button></form>
+        <form data-action="review" data-draft="transfer-${e(ui.source)}" class="fi-form">
+          <input type="hidden" name="sourceHubId" value="${e(ui.source)}">
+          ${select("destinationHubId", "Destination Hub", options(data.hubs.filter(h => h.id !== ui.source && h.status === "Operational"), "id", "name", "hcmut"))}
+          <fieldset><legend>Select vehicles</legend>${candidates.length ? candidates.map(v => `<label class="fi-check fi-vehicle-choice"><input type="checkbox" name="vehicleIds" value="${e(v.vehicleId)}"><span><strong>${e(v.name)}</strong><small>${e(v.vehicleId)} · ${v.batteryLevel}% battery</small></span>${status(v.condition)}</label>`).join("") : empty("No eligible vehicles", "Choose another source Hub or resolve existing commitments.")}</fieldset>
+          <button class="button button--primary" ${candidates.length ? "" : "disabled"}>Review feasibility</button>
+        </form>
+        ${ui.review ? `<div class="fi-review"><strong>${ui.review.feasible ? "Ready for confirmation" : "Transfer needs attention"}</strong><p>${e(hubName(ui.draft.sourceHubId))} → ${e(hubName(ui.draft.destinationHubId))}</p><p>${ui.review.vehicleCount} selected · ${ui.review.availableCapacity} spaces available</p><p>${ui.draft.vehicleIds.map(e).join(", ")}</p>${ui.review.reasons.map(r => `<p>${e(r)}</p>`).join("")}<small>This reviewed selection is committed on confirmation. Destination capacity is not reserved.</small>${ui.review.feasible ? act("Confirm reviewed transfer", "create", "", true) : ""}</div>` : ""}
+      `)}${panel("Transfer orders", data.orders.length ? `<div class="fi-order-list">${data.orders.map(o => `<button type="button" data-action="select" data-id="${e(o.orderId)}" class="fi-order ${o.orderId === order?.orderId ? "is-selected" : ""}"><span><strong>${e(hubName(o.sourceHubId))} → ${e(hubName(o.destinationHubId))}</strong><small>${e(o.orderId)}</small></span>${status(o.status)}<span class="fi-progress"><span style="width:${Math.round((o.vehicles.length - outstanding(o).length) / o.vehicles.length * 100)}%"></span></span><small>${o.vehicles.length - outstanding(o).length}/${o.vehicles.length} arrived</small></button>`).join("")}</div>` : empty("No transfers yet", "Select vehicles and review a destination to create your first order."))}</div>
+      ${order ? panel("Order progress", `<div class="fi-detail-heading"><div><h3>${e(hubName(order.sourceHubId))} → ${e(hubName(order.destinationHubId))}</h3><p>${e(order.orderId)} · Version ${order.version}</p></div>${status(order.status)}</div>
+        ${order.riskReason ? `<div class="fi-callout">${e(order.riskReason)}</div>` : ""}
+        <form data-action="arrive" data-draft="arrivals-${e(order.orderId)}-${order.version}" class="fi-form"><input type="hidden" name="orderId" value="${e(order.orderId)}"><input type="hidden" name="expectedVersion" value="${order.version}">
+          <div class="fi-resource-list">${order.vehicles.map(ov => { const v = data.vehicles.find(v => v.vehicleId === ov.vehicleId); return `<label class="fi-check"><input type="checkbox" name="vehicleIds" value="${e(ov.vehicleId)}" ${ov.arrivedAt || !["Dispatched", "Partial"].includes(order.status) ? "disabled" : ""}><span><strong>${e(v?.name ?? ov.vehicleId)}</strong><small>${e(ov.vehicleId)} · ${ov.arrivedAt ? "Arrival confirmed" : order.status === "Cancelled" ? "Remaining work cancelled; verified at source" : "Awaiting arrival confirmation"}</small></span>${status(ov.arrivedAt ? "Completed" : v?.condition)}</label>`; }).join("")}</div>
+          ${["Dispatched", "Partial"].includes(order.status) ? '<button class="button button--primary">Confirm selected arrivals</button><small>Confirm only vehicles physically received. All selected arrivals succeed together or none move.</small>' : ""}
+        </form><div class="fi-actions">${order.status === "Planned" ? act("Dispatch vehicles", "dispatch", attrs, true) : ""}${order.status === "AtRisk" ? act("Revalidate order", "revalidate", attrs, true) : ""}${order.status === "Planned" || (order.status === "AtRisk" && order.resumeStatus === "Planned") ? act("Cancel transfer", "cancel", attrs) : ""}</div>
+        ${order.status === "AtRisk" && order.resumeStatus !== "Planned" ? `<details><summary>Cancel remaining work after verified return</summary><form class="fi-form" data-action="cancel" data-draft="disposition-${e(order.orderId)}-${order.version}"><input type="hidden" name="orderId" value="${e(order.orderId)}"><input type="hidden" name="expectedVersion" value="${order.version}"><p>Confirm all outstanding vehicles have physically returned to ${e(hubName(order.sourceHubId))}. Source parking capacity is checked again. Vehicles already received at the destination stay there.</p>${note("note", "Disposition evidence", "Who verified the return, which vehicles and where they are parked")}<label class="fi-check"><input type="checkbox" name="sourceDispositionVerified" value="true" required><span>All outstanding vehicles are physically at the source Hub</span></label><button class="button button--secondary">Confirm return and cancel remaining work</button></form></details>` : ""}
+        <details><summary>Transfer history</summary>${history(data.transferHistory.filter(h => h.orderId === order.orderId))}</details>`) : ""}`;
   }, {
-    "fleet.source"(input, { memory }) {
-      memory.sourceHubId = input.sourceHubId;
-      return { ok:true,readOnly:true,message:"Source Hub selected." };
+    source(values, { state }) { state.source = values.source; state.review = null; },
+    select(values, { state }) { state.selected = values.id; },
+    async review(values, tools) {
+      const draft = { ...values, vehicleIds: values.vehicleIds ?? [] };
+      const result = await tools.service.review(draft);
+      tools.state.review = result.ok ? result.data : null;
+      tools.state.draft = draft;
+      if (!result.ok) tools.tell(result.message, true);
     },
-    "telemetry.point"(input,{ api }) { return api.command("telemetry.point",{...input,eventId:crypto.randomUUID()}); },
-    "telemetry.vehicle"(input,{ api }) { return api.command("telemetry.vehicle",{...input,eventId:crypto.randomUUID()}); }
-  });
-}
-
-export function mountIncidents(root, context) {
-  return mountRecords(root, context, ({ vehicles, points, incidents }) => {
-    return `${pageHeader("Operator Portal", "Incidents", "Track faults and confirm recovery before lifting restrictions.")}
-      ${panel("Report a resource fault", actionForm("incident.new",
-        select("resource", "Resource", '<optgroup label="Charging points">'
-          + points.map(p=>`<option value="point:${e(p.pointId)}">${e(p.pointId)}</option>`).join("")
-          + '</optgroup><optgroup label="Shared vehicles">'
-          + vehicles.map(v=>`<option value="vehicle:${e(v.vehicleId)}">${e(v.name)}</option>`).join("") + "</optgroup>")
-        + input("description","Fault description",'required maxlength="280"'), "Report incident"))}
-      ${panel("Incident queue", list(incidents, incident => `<article>
-        <h3>${e(incident.pointId ?? incident.vehicleId)} ${badge(incident.status, incident.status === "Open" ? "warning" : "neutral")}</h3>
-        <p>${e(incident.description)}</p><p class="records-meta">${e(incident.incidentId)} · ${timeLabel(incident.createdAt)}</p>
-        ${incident.status === "Open" ? button("Investigate","incident.investigate",{incidentId:incident.incidentId}) : ""}
-        ${["Open","Investigating"].includes(incident.status) ? button("Verify recovery and resolve","incident.resolve", {incidentId:incident.incidentId}) : ""}
-        ${incident.status === "Resolved" ? button("Close incident","incident.close",{incidentId:incident.incidentId}) : ""}
-      </article>`, "No incidents."))}`;
-  }, {
-    "incident.new"({ resource, description }, { api }) {
-      const [kind,id] = resource.split(":");
-      return api.command("incident.report", { description, [kind === "point" ? "pointId" : "vehicleId"]:id });
+    async create(_, tools) {
+      const result = await tools.save("fleet.create", { ...tools.state.draft, validationToken: tools.state.review.validationToken }, "Transfer created. Vehicles are committed until arrival or eligible cancellation.");
+      tools.state.review = null;
+      if (result.ok) { tools.state.selected = result.data.orderId; tools.clearDraft(`transfer-${tools.state.source}`); }
     },
-    "incident.resolve"(input,{ api }) {
-      return globalThis.confirm("Confirm that recovery was verified for this resource?")
-        ? api.command("incident.resolve",{...input,verified:true})
-        : {ok:true,readOnly:true,message:"Incident kept open."};
-    }
+    async dispatch(values, tools) { await tools.save("fleet.dispatch", values, "Dispatch recorded. Source spaces released; arrivals still need confirmation."); },
+    async arrive(values, tools) { await tools.save("fleet.arrive", { ...values, vehicleIds: values.vehicleIds ?? [] }, "Selected arrivals confirmed."); },
+    async revalidate(values, tools) { await tools.save("fleet.revalidate", values, "Order revalidated. You can continue its previous stage."); },
+    async cancel(values, tools) { if (globalThis.confirm("Cancel outstanding work and release only the vehicles verified at the source Hub?")) await tools.save("fleet.cancel", values, "Remaining transfer work cancelled. Previously arrived vehicles are unchanged."); }
   });
 }
