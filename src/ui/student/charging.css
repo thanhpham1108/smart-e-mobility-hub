@@ -1,0 +1,26 @@
+.student-charging { margin-top: 18px; padding: 20px; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: 0 2px 10px #0f172a06; }
+.student-charging__heading, .student-charging__top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.student-charging__heading h2 { margin: 0; font-size: 18px; }
+.student-charging__heading .eyebrow { margin-bottom: 3px; }
+.student-charging__note { color: var(--color-muted); font-size: 12px; }
+.student-charging__feedback { margin: 13px 0 0; color: var(--color-info); font-size: 13px; }
+.student-charging__booking-list { display: grid; gap: 10px; margin-top: 15px; }
+.student-charging__request-form { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--color-border); border-radius: 10px; background: #fbfefd; }
+.student-charging__booking-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.student-charging__booking-heading strong, .student-charging__booking-heading small { display: block; }
+.student-charging__booking-heading strong { font-size: 13px; }
+.student-charging__booking-heading small { margin-top: 4px; color: var(--color-muted); font-size: 12px; }
+.student-charging__fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; gap: 10px; }
+.student-charging__fields .button { white-space: normal; }
+.student-charging__list { display: grid; gap: 10px; margin-top: 15px; }
+.student-charging__item { padding: 14px; border: 1px solid var(--color-border); border-radius: 10px; }
+.student-charging__top strong, .student-charging__top small { display: block; }
+.student-charging__top small { margin-top: 3px; color: var(--color-muted); font-size: 12px; }
+.student-charging__window { margin: 12px 0 7px; color: var(--color-muted); font-size: 12px; }
+.student-charging__detail { display: grid; gap: 5px; margin-bottom: 12px; color: #334155; font-size: 13px; }
+.student-charging__detail strong { color: #92400e; }
+.student-charging__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.student-charging__empty { margin-top: 15px; padding: 16px; border-radius: 9px; background: #f8fafc; }
+.student-charging__empty p { margin: 4px 0 0; color: var(--color-muted); font-size: 13px; }
+@media (max-width: 760px) { .student-charging__fields { grid-template-columns: 1fr 1fr; }.student-charging__fields .button { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .student-charging { padding: 15px; }.student-charging__heading { align-items: flex-start; flex-direction: column; }.student-charging__top { align-items: flex-start; }.student-charging__fields { grid-template-columns: 1fr; }.student-charging__fields .button { grid-column: auto; }.student-charging__booking-heading { align-items: flex-start; flex-direction: column; } }

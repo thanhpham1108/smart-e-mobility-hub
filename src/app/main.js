@@ -1,6 +1,7 @@
 import { createStore } from "./store.js";
 import { createDemoClock } from "./clock.js";
 import { startRouter } from "./router.js";
+import { reconcileCharging } from "../modules/smart-charging/service.js";
 
 const root = document.querySelector("#app");
 
@@ -10,6 +11,8 @@ try {
   if (!response.ok) throw new Error(`Demo fixtures returned HTTP ${response.status}.`);
   const store = createStore(await response.json());
   const clock = createDemoClock(store);
+  reconcileCharging(store);
+  clock.subscribeAfterAdvance(() => reconcileCharging(store));
   startRouter(root, { store, clock });
 } catch (error) {
   console.error("Unable to start Smart E-Mobility Hub.", error);

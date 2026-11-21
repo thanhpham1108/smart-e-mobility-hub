@@ -1,5 +1,6 @@
 import { mount as mountParking } from "../ui/student/pages/parking.js";
 import { mount as mountNetwork } from "../ui/operator/pages/network.js";
+import { mount as mountCharging } from "../ui/operator/pages/charging.js";
 import { studentShell } from "../ui/student/shell.js";
 import { operatorShell } from "../ui/operator/shell.js";
 import { escapeHtml } from "../ui/shared/components.js";
@@ -11,7 +12,7 @@ const routes = {
   "/operator/network": { role: "operator", title: "Network Overview", mount: mountNetwork },
   "/operator/fleet": { role: "operator", title: "Fleet & Redistribution", owner: "Fleet & Incident" },
   "/operator/incidents": { role: "operator", title: "Incidents", owner: "Fleet & Incident" },
-  "/operator/charging": { role: "operator", title: "Smart Charging", owner: "Smart Charging" },
+  "/operator/charging": { role: "operator", title: "Smart Charging", mount: mountCharging },
   "/operator/what-if": { role: "operator", title: "What-if Simulation", owner: "What-if Simulation" }
 };
 
