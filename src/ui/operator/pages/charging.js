@@ -1,6 +1,6 @@
 import { badge, escapeHtml } from "../../shared/components.js";
 import {
-  adjustChargingAllocation, chargingVehicleType, getChargingOverview, recordChargingEvent
+  chargingCommand, chargingVehicleType, getChargingOverview
 } from "../../../modules/smart-charging/service.js";
 
 const minute = 60_000;
@@ -292,7 +292,7 @@ function waitlist(waiting, now) {
   </section>`;
 }
 
-export function mount(root, { store }) {
+export function mount(root, { store, api }) {
   const view = {
     hubId: store.readSnapshot().hubs[0]?.id,
     date: null,
@@ -357,7 +357,7 @@ export function mount(root, { store }) {
     render();
   }
 
-  function onClick(event) {
+  async function onClick(event) {
     const filter = event.target.closest("[data-point-filter]");
     if (filter) {
       if (filter.dataset.pointFilter === view.pointFilter) return;
@@ -384,7 +384,8 @@ export function mount(root, { store }) {
 
     const { request, allocation } = selected;
     const { event: kind, choice } = button.dataset;
-    const result = recordChargingEvent(store, {
+    button.disabled = true;
+    const result = await chargingCommand(api, store, "charging.event", {
       eventId: crypto.randomUUID(),
       kind,
       requestId: request.requestId,
@@ -394,7 +395,7 @@ export function mount(root, { store }) {
       ...(request.activeSessionId ? { sessionId: request.activeSessionId } : {}),
       ...(choice ? { stopChoice: choice } : {}),
       ...(kind === "TARGET_REACHED" ? { batteryPercent: request.targetBatteryPercent } : {})
-    }, "demo-operator", crypto.randomUUID());
+    });
     const needsReview = result.ok && result.data?.status === "RECONCILIATION_REQUIRED";
     view.feedback = {
       error: !result.ok || needsReview,
@@ -404,13 +405,15 @@ export function mount(root, { store }) {
     render();
   }
 
-  function onSubmit(event) {
+  async function onSubmit(event) {
     const form = event.target.closest("[data-adjust]");
     if (!form || !selected) return;
     event.preventDefault();
     const pointId = new FormData(form).get("point");
-    const result = adjustChargingAllocation(store, selected.allocation.allocationId, pointId,
-      Number(form.dataset.version), "demo-operator", crypto.randomUUID());
+    form.querySelector("button").disabled = true;
+    const result = await chargingCommand(api, store, "charging.adjust", {
+      allocationId: selected.allocation.allocationId, pointId, expectedVersion: Number(form.dataset.version)
+    });
     view.feedback = { error: !result.ok, message: result.ok ? `Allocation moved to ${pointId}.` : result.message };
     render();
   }

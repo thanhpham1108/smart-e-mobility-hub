@@ -109,5 +109,33 @@ begin
   perform app.need(result->>'ok'='true',result::text);
   result:=public.app_command('demo.reset','{"confirm":true}',gen_random_uuid());
   perform app.need(result->>'ok'='true',result::text);
+
+  -- Two independently authenticated students compete for the only compatible point.
+  insert into app.parking_spaces values('park-test-extra','ktx-a',true);
+  insert into app.vehicles(vehicle_id,kind,name,vehicle_type,charging_vehicle_type,student_id,battery_level,status)
+    values('test-guest-car','PRIVATE','Test car','CAR','CAR','demo-guest',30,'PRIVATE');
+  update app.charging_points set status='Maintenance'
+    where hub_id='ktx-a' and charging_vehicle_type='CAR' and point_id<>'charge-a-09';
+  insert into app.parking_reservations(reservation_id,student_id,hub_id,vehicle_id,arrival_time,departure_time,expires_at,status)
+    values
+      ('test-parking-student','demo-student','ktx-a','private-student-car-01','2026-10-24T02:00:00Z',
+        '2026-10-24T03:00:00Z','2026-10-24T02:15:00Z','Checked In'),
+      ('test-parking-guest','demo-guest','ktx-a','test-guest-car','2026-10-24T02:00:00Z',
+        '2026-10-24T03:00:00Z','2026-10-24T02:15:00Z','Checked In');
+  perform set_config('request.jwt.claim.sub',student::text,true);
+  args:='{"vehicleId":"private-student-car-01","hubId":"ktx-a","parkingReservationId":"test-parking-student",
+    "targetBatteryPercent":80,"requestedStart":"2026-10-24T02:00:00Z","requestedEnd":"2026-10-24T03:00:00Z"}';
+  result:=public.app_command('charging.submit',args,gen_random_uuid());
+  perform app.need(result#>>'{data,status}'='Scheduled',result::text);
+  request:=result#>>'{data,requestId}';
+  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',true);
+  result:=public.app_command('charging.submit',args||'{"vehicleId":"test-guest-car","parkingReservationId":"test-parking-guest"}',gen_random_uuid());
+  perform app.need(result#>>'{data,reason}'='Full' and result#>>'{data,queuePosition}'='1',result::text);
+  perform app.need((select count(*)=1 from app.charging_allocations where point_id='charge-a-09' and released_at is null),'DOUBLE_ALLOCATION');
+  perform set_config('request.jwt.claim.sub',operator::text,true);
+  result:=public.app_command('demo.advance','{}',gen_random_uuid());
+  perform app.need(result->>'ok'='true',result::text);
+  perform app.need((select status='Cancelled' from app.charging_requests where request_id=request),'START_TIMEOUT_MISSED');
+  perform app.need((select status='Scheduled' from app.charging_requests where vehicle_id='test-guest-car'),'WAITLIST_NOT_PROMOTED');
 end $$;
 rollback;

@@ -57,3 +57,7 @@ Mỗi người nộp bốn phần vào các thư mục đã có trong `docs/subm
 4. **Ghép tài liệu:** thành viên 1 và 4 cập nhật hai view chung; thành viên 6 đối chiếu UC → class/method → test case; cả nhóm xác nhận diagram và mô tả khớp nhau.
 
 Hoàn thành khi cả hai architectural view có thể giải thích được cách triển khai/phụ thuộc, mọi operation trên sáu class diagram đều có mô tả, và các quy tắc từ Submission 1–2 (đặc biệt reservation, FCFS và tách simulation khỏi live state) được giữ nhất quán. Hạn nộp lấy từ LMS; đề PDF không ghi ngày cụ thể.
+
+## Final implementation handoff
+
+The [implementation guide](../implementation/README.md) maps the six owners to the PostgreSQL implementation. The [shared contract](../implementation/SHARED_CONTRACTS.md) documents each module's tables and operations.

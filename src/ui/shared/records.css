@@ -1,0 +1,21 @@
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.auth-card { width: min(100%, 418px); display: grid; gap: 14px; padding: 28px; }
+.auth-card h1, .auth-card p { margin: 0; }
+.auth-card p { color: var(--color-muted); }
+.auth-card [data-login-feedback] { min-height: 1.35em; color: #b91c1c; }
+.records-page { display: grid; gap: 14px; }
+.records-page .page-header { margin-bottom: 0; }
+.records-panel { min-width: 0; padding: 16px; box-shadow: none; }
+.records-panel h2 { margin: 0 0 12px; font-size: 18px; }
+.records-panel h3 { margin: 0; font-size: 15px; }
+.records-panel h3 .badge { margin-left: 4px; }
+.records-panel p { margin: 4px 0; }
+.records-meta { color: var(--color-muted); font-size: 13px; }
+.records-form { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin: 8px 0; }
+.records-form .field { flex: 1 1 135px; max-width: 270px; }
+.records-form .field span { font-weight: 650; font-size: 13px; }
+.records-form select[multiple] { min-height: 96px; }
+.records-list > article + article, .records-list > p + p { border-top: 1px solid var(--color-border); }
+.records-list > article, .records-list > p { padding: 9px 0; }
+.records-list .button + .button { margin-left: 6px; }
+.records-message { min-height: 1.4em; font-size: 13px; color: var(--color-muted); }

@@ -1,5 +1,5 @@
 import { badge, escapeHtml } from "../../shared/components.js";
-import { cancelChargingRequest, recordChargingEvent, studentChargingRows, submitChargingRequest } from "../../../modules/smart-charging/service.js";
+import { chargingCommand, studentChargingRows } from "../../../modules/smart-charging/service.js";
 
 const stateTone = status => ({ Waiting: "warning", Scheduled: "info", Charging: "positive", Suspended: "warning", Completed: "positive", Cancelled: "neutral", Expired: "neutral" }[status] || "neutral");
 const showTime = value => value ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "medium", timeStyle: "short" }).format(Date.parse(value)) : "—";
@@ -7,7 +7,7 @@ const toICTInput = value => new Date(Date.parse(value) + 7 * 60 * 60_000).toISOS
 const fromICTInput = value => new Date(`${value}:00+07:00`).toISOString();
 
 // Parking can mount this component in its booking view after a charging request is submitted.
-export function mountStudentChargingStatus(root, { store, actorId = "demo-student" }) {
+export function mountStudentChargingStatus(root, { store, api, actorId }) {
   let feedback = "";
   function render() {
     const state = store.readSnapshot();
@@ -33,23 +33,17 @@ export function mountStudentChargingStatus(root, { store, actorId = "demo-studen
         <p class="student-charging__window">Requested ${escapeHtml(showTime(request.requestedStart))} to ${escapeHtml(showTime(request.requestedEnd))}</p>
         <div class="student-charging__detail">${request.status === "Waiting" ? `<strong>${request.full ? `No compatible charging point is available. You are #${request.queuePosition} on the waitlist.` : `You are #${request.queuePosition} in the queue. No point is reserved before your requested start.`}</strong>` : ""}${request.point ? `<span>Point ${escapeHtml(request.point.pointId)}</span>` : ""}${Number.isFinite(request.estimatedDurationMinutes) ? `<span>Estimated charging time: ${request.estimatedDurationMinutes} min</span>` : ""}${request.status === "Charging" || request.status === "Suspended" ? `<span>Your point remains occupied until the session is verified as stopped.</span>` : ""}</div>
         ${["Waiting", "Scheduled"].includes(request.status) ? `<button class="button button--secondary" type="button" data-cancel="${escapeHtml(request.requestId)}">Cancel request</button>` : ""}
-        ${["Charging", "Suspended"].includes(request.status) ? `<div class="student-charging__actions"><button class="button button--secondary" type="button" data-stop="COMPLETE" data-request="${escapeHtml(request.requestId)}">Complete charging</button><button class="button button--danger" type="button" data-stop="CANCEL" data-request="${escapeHtml(request.requestId)}">Stop and cancel</button></div>` : ""}</article>`).join("")}</div>` : '<div class="student-charging__empty"><strong>No charging requests yet</strong><p>Submit a request from your active Parking booking.</p></div>'}</section>`;
+        ${["Charging", "Suspended"].includes(request.status) ? `<div class="student-charging__actions"><button class="button button--secondary" type="button" data-stop="COMPLETE" data-request="${escapeHtml(request.requestId)}">Complete charging</button><button class="button button--danger" type="button" data-stop="CANCEL" data-request="${escapeHtml(request.requestId)}">Stop and cancel</button></div>` : ""}</article>`).join("")}</div>` : '<div class="student-charging__empty"><strong>No charging requests yet</strong><p>Submit a request from an eligible parking booking.</p></div>'}</section>`;
   }
-  function onClick(event) {
+  async function onClick(event) {
     const button = event.target.closest("[data-cancel], [data-stop]");
-    if (!button) return;
-    let result;
-    if (button.dataset.cancel) {
-      result = cancelChargingRequest(store, button.dataset.cancel, actorId, crypto.randomUUID());
-    } else {
-      const state = store.readSnapshot();
-      const request = state.chargingRequests.find(item => item.requestId === button.dataset.request);
-      const allocation = state.chargingAllocations.find(item => item.requestId === request?.requestId);
-      result = recordChargingEvent(store, {
-        eventId: crypto.randomUUID(), kind: "STOP", stopChoice: button.dataset.stop, requestId: request?.requestId,
-        vehicleId: request?.vehicleId, pointId: allocation?.pointId, observedAt: state.demoTime
-      }, actorId, crypto.randomUUID());
-    }
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    const result = button.dataset.cancel
+      ? await chargingCommand(api, store, "charging.cancel", { requestId: button.dataset.cancel })
+      : await chargingCommand(api, store, "charging.stop", {
+        requestId: button.dataset.request, choice: button.dataset.stop
+      });
     feedback = !result.ok ? result.message
       : result.data?.status === "RECONCILIATION_REQUIRED" ? result.data.message
         : button.dataset.stop === "COMPLETE" ? "Charging marked completed. The point is released."
@@ -57,25 +51,24 @@ export function mountStudentChargingStatus(root, { store, actorId = "demo-studen
             : "Charging request cancelled. Any held point was released.";
     render();
   }
-  function onSubmit(event) {
+  async function onSubmit(event) {
     const form = event.target.closest("[data-submit-charging]");
     if (!form) return;
     event.preventDefault();
     const fields = new FormData(form);
     const draft = {
-      studentId: actorId,
       parkingReservationId: form.dataset.submitCharging,
       hubId: fields.get("hubId"), vehicleId: fields.get("vehicleId"),
-      currentBatteryPercent: Number(fields.get("currentBatteryPercent")),
       targetBatteryPercent: Number(fields.get("targetBatteryPercent")),
       requestedStart: fromICTInput(fields.get("requestedStart")),
       requestedEnd: fromICTInput(fields.get("requestedEnd"))
     };
-    const result = submitChargingRequest(store, draft, { actorId, commandId: crypto.randomUUID() });
+    form.querySelector("button").disabled = true;
+    const result = await chargingCommand(api, store, "charging.submit", draft);
     feedback = result.ok
       ? result.data.status === "Waiting" && result.data.reason === "Full" ? `No compatible charging point is available. Your request ${result.data.requestId} is #${result.data.queuePosition} on the waitlist.`
         : result.data.status === "Waiting" ? `Your future request ${result.data.requestId} is saved. No point is reserved yet.`
-          : `Request ${result.data.requestId} is scheduled. Estimated charge time: ${result.data.estimatedDurationMinutes} minutes.`
+          : `Request ${result.data.requestId} is scheduled. Check the assigned point below.`
       : result.message;
     render();
   }
