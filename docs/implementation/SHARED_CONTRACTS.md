@@ -5,7 +5,7 @@ The Final MVP uses Supabase PostgreSQL. See [database setup](DATABASE_SETUP.md) 
 ## Runtime and identity
 
 - Keep one GitHub Pages entry point with Student and Operator shells and hash routes. Feature pages mount using `mount(root, { store, api, viewer })` and return a cleanup function. Here `store` holds the screen's latest read result in memory. The database is the authoritative source.
-- Supabase Auth provides authenticated identities. `app.profiles` links an Auth UUID to an existing business user ID and role. Every RPC derives ownership from the authenticated session. Changing the route or browser state cannot grant Operator privileges.
+- Demo visitors get a Supabase anonymous session and can select either portal. The demo RPCs map its role to a fixed, unlinked sample profile. Existing account RPCs still resolve their actor from the linked Auth UUID.
 - Screens read via `api.read(view, filter)` and re-read every five seconds while visible, on return to the tab and after successful writes. Each read returns the demo time and revision. Keep loading, unavailable and empty states distinct.
 - `api.command(operation, payload, commandId)` uses a UUID per action. PostgreSQL serializes demo writes using the shared state row and retains successful receipts by caller, operation and key. Matching retries return the original result. A different payload with the same key fails.
 - GitHub Pages serves the static frontend. Supabase hosts authentication and SQL. App tables are in the unexposed `app` schema. RPCs granted to authenticated clients check roles and ownership. Keep administrative credentials outside browser code and Git.
@@ -36,9 +36,10 @@ The allocation history may contain past rows. Partial unique indexes allow one u
 
 ## RPC catalogue
 
-Both endpoints return `{ ok: true, data }` or `{ ok: false, code }`. The client adds friendly error text and maps SQL field names to camel case. The SQL files are authoritative for operation payloads.
+Both the demo and account APIs return `{ ok: true, data }` or `{ ok: false, code }`. The client adds friendly error text and maps SQL field names to camel case. The SQL files are authoritative for operation payloads.
 
-- **Reads:** `app_view(p_view, p_filter)` supports `bootstrap`, `hubs`, `network`, `rental`, `parking`, `parking.review`, `charging`, `fleet`, `incidents` and `simulation`. Overview data exposed to students is aggregate or owned data.
+- **Reads:** `demo_view(p_role, p_view, p_filter)` delegates to `app_view(p_view, p_filter)` and supports `bootstrap`, `hubs`, `network`, `rental`, `parking`, `parking.review`, `charging`, `fleet`, `incidents` and `simulation`. Overview data exposed to students is aggregate or owned data.
+- **Writes:** `demo_command(p_role, p_operation, p_input, p_command_id)` delegates to `app_command` with the seeded profile for the current portal.
 - **Rental and Parking:** `rental.reserve/pickup/cancel/return`, `parking.reserve/checkIn/cancel/checkOut`. Confirm parking capacity across the entire window. Shared-vehicle return, transfer arrival and checkout reconcile physical occupancy through the owner transaction.
 - **Charging:** `charging.submit/cancel/stop/adjust/event`. A Student draft references its parking booking, Hub and vehicle. PostgreSQL reads the current battery and vehicle type. If a compatible point is available now, return `Scheduled`; if all compatible points are unavailable, return `Waiting`, `Full` and the Hub queue position; for a future start, return `Waiting` with `FutureStart`. Estimates and planned end are informational. A point is held for 15 minutes without a verified start. Release, timeout or recovery can promote the next eligible request.
 - **Fleet:** `fleet.create/dispatch/arrive/cancel`, `incident.report/investigate/resolve/close`, `telemetry.point/vehicle`. Arrival confirms one vehicle, and only that vehicle's confirmed destination changes. A healthy sample does not remove an incident restriction. Resolve one incident per operation.

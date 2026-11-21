@@ -25,42 +25,16 @@ const dateTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Ho_Chi_Minh", dateStyle: "medium", timeStyle: "short"
 });
 
-export function startRouter(root, { api, client }) {
-  let viewer = null;
+export function startRouter(root, createDemoApi) {
   let generation = 0;
   let clean = () => {};
-
-  function login(message = "") {
-    root.innerHTML = `<main class="auth-page"><form class="card auth-card">
-      <div class="brand-mark" aria-hidden="true">S</div><h1>Sign in to SmartHub</h1>
-      <p>Use your Student or Operator demo account.</p>
-      <div class="field"><label for="auth-email">Email</label><input id="auth-email" name="email" type="email" autocomplete="username" required></div>
-      <div class="field"><label for="auth-password">Password</label><input id="auth-password" name="password" type="password" autocomplete="current-password" required></div>
-      <p role="status" data-login-feedback>${escapeHtml(message)}</p>
-      <button class="button button--primary">Sign in</button></form></main>`;
-    root.querySelector("form").addEventListener("submit", async event => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const button = form.querySelector("button");
-      button.disabled = true;
-      const fields = new FormData(form);
-      try {
-        const { error } = await client.auth.signInWithPassword({ email: fields.get("email"), password: fields.get("password") });
-        if (error) form.querySelector("[data-login-feedback]").textContent = "Unable to sign in. Check your email, password and connection.";
-        else await initialize();
-      } catch {
-        form.querySelector("[data-login-feedback]").textContent = "Unable to reach the sign-in service.";
-      } finally { button.disabled = false; }
-    });
-  }
 
   async function route() {
     const current = ++generation;
     clean();
-    if (!viewer) { login(); return; }
     let path = location.hash.slice(1);
-    if (routes[path]?.role !== viewer.role) {
-      path = viewer.role === "operator" ? "/operator/network" : "/student/hubs";
+    if (!Object.hasOwn(routes, path)) {
+      path = "/student/parking";
       history.replaceState(null, "", `#${path}`);
     }
     const { role, title, view, mount } = routes[path];
@@ -68,25 +42,42 @@ export function startRouter(root, { api, client }) {
     const page = root.querySelector("#page-root");
     const feedback = root.querySelector("[data-demo-feedback]");
     const show = message => { if (feedback) feedback.textContent = message; };
+    const showError = message => { page.innerHTML = `<p role="alert">${escapeHtml(message)}</p>`; };
     page.innerHTML = '<p role="status">Loading from SmartHub…</p>';
+    root.querySelector("[data-menu-toggle]")?.addEventListener("click", event => {
+      event.currentTarget.setAttribute("aria-expanded", String(root.querySelector("#operator-navigation").classList.toggle("is-open")));
+    });
+    const controls = [...root.querySelectorAll("[data-reset-demo], [data-advance-clock]")];
+    controls.forEach(button => { button.disabled = true; });
+
+    let api;
+    try { api = await createDemoApi(role); }
+    catch {
+      if (current === generation) showError("Unable to open the shared demo. Refresh to try again.");
+      return;
+    }
+    if (current !== generation) return;
+    const profile = await api.read("bootstrap");
+    if (current !== generation) return;
+    if (!profile.ok) { showError(profile.message); return; }
+    const viewer = profile.data;
     let unmount = () => {};
     let mounted = false;
     const store = routeData(api, view, result => {
-      if (result?.code === "AUTH_REQUIRED") { handleSignOut(); return; }
-      if (result && !mounted) page.innerHTML = `<p role="alert">${escapeHtml(result.message)}</p>`;
+      if (result && !mounted) showError(result.message);
       show(result ? result.message : "");
     });
     const timeElement = root.querySelector("[data-demo-time]");
     const stop = store.subscribe(state => {
       if (current !== generation) return;
-      if (timeElement) timeElement.textContent = dateTime.format(new Date(state.demoTime));
+      if (timeElement) {
+        timeElement.dateTime = state.demoTime;
+        timeElement.textContent = dateTime.format(new Date(state.demoTime));
+      }
       if (!mounted) { mounted = true; unmount = mount(page, { store, api, viewer }) ?? unmount; }
     });
     clean = () => { stop(); unmount(); store.dispose(); };
-    root.querySelector("[data-sign-out]").addEventListener("click", handleSignOut);
-    root.querySelector("[data-menu-toggle]")?.addEventListener("click", event => {
-      event.currentTarget.setAttribute("aria-expanded", String(root.querySelector("#operator-navigation").classList.toggle("is-open")));
-    });
+    controls.forEach(button => { button.disabled = false; });
     for (const [selector, operation] of [["[data-reset-demo]", "demo.reset"], ["[data-advance-clock]", "demo.advance"]]) {
       root.querySelector(selector)?.addEventListener("click", async event => {
         const button = event.currentTarget;
@@ -101,24 +92,6 @@ export function startRouter(root, { api, client }) {
     await store.refresh();
   }
 
-  async function handleSignOut() {
-    viewer = null;
-    await route();
-    await client.auth.signOut();
-  }
-
-  async function initialize() {
-    const { data } = await client.auth.getSession();
-    if (!data?.session) { login(); return; }
-    const result = await api.read("bootstrap");
-    if (!result.ok) { login(result.message); return; }
-    viewer = result.data;
-    await route();
-  }
-
   window.addEventListener("hashchange", route);
-  client.auth.onAuthStateChange(event => {
-    if (event === "SIGNED_OUT" && viewer) { viewer = null; route(); }
-  });
-  initialize();
+  route();
 }

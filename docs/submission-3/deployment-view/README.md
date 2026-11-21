@@ -1,5 +1,7 @@
 # Deployment view — Smart E-Mobility Hub
 
+> This document describes the submitted design. The current app uses GitHub Pages and Supabase PostgreSQL. See the [Final architecture](../../implementation/FINAL_ARCHITECTURE.md) and [database setup](../../implementation/DATABASE_SETUP.md).
+
 [PlantUML source](Deployment_View.puml) · [PNG](Deployment_View.png) · [SVG](Deployment_View.svg)
 
 This is the runtime deployment model for the course MVP. A `«device»` is a machine or user device; a nested `«executionEnvironment»` is where software runs; each green `«artifact»` is deployed software or data. Solid lines between devices are communication paths. The [development view](../development-view/Implementation_View.puml) describes dependencies among the six modules in detail.

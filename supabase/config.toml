@@ -15,4 +15,8 @@ sql_paths = ["./seed.sql"]
 enabled = true
 site_url = "https://thanhpham1108.github.io/smart-e-mobility-hub/"
 additional_redirect_urls = ["http://localhost:4173", "http://127.0.0.1:4173"]
+enable_signup = true
+enable_anonymous_sign_ins = true
+
+[auth.email]
 enable_signup = false
