@@ -1,4 +1,5 @@
 import { escapeHtml, pageHeader } from "../../shared/components.js";
+import { demoHubRows } from "../../../app/demo-read-model.js";
 
 const times = ["08:00", "08:15", "08:30", "08:45", "09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30", "10:45", "11:00", "11:15", "11:30", "11:45", "12:00"];
 
@@ -7,8 +8,12 @@ export function mount(root, { store }) {
   let unsubscribe = () => {};
 
   function render() {
-    const hubs = store.readSnapshot().hubs;
+    const hubs = demoHubRows(store.readSnapshot());
     const selected = hubs.find(hub => hub.id === state.hubId) || hubs[0];
+    if (!selected) {
+      root.innerHTML = pageHeader("Parking & Private EV", "No Hubs available", "Reset demo data to restore the sample Hubs.");
+      return;
+    }
     root.innerHTML = `${pageHeader("Parking & Private EV", "Your space. Your schedule.", "Choose a campus Hub and preview parking for your whole visit.", '<span class="badge badge--info">Foundation demo</span>')}
       <div class="parking-layout"><section class="card parking-form" aria-label="Parking preview">
         <h2>1 &nbsp; Choose your Hub</h2><div class="hub-picker">${hubs.slice(0, 3).map(hub => `<button type="button" class="hub-choice ${state.hubId === hub.id ? "is-selected" : ""}" data-hub="${escapeHtml(hub.id)}" aria-pressed="${state.hubId === hub.id}"><strong>${escapeHtml(hub.name)}</strong><small>${escapeHtml(hub.area)}</small><span>${hub.parkingFree} spaces free in seed data</span></button>`).join("")}</div>

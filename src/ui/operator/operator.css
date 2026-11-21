@@ -19,6 +19,8 @@
 .operator-topbar__actions { display: flex; align-items: center; gap: 18px; }.connection { color: #475569; font-size: 12px; font-weight: 700; white-space: nowrap; }.connection i { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 3px #d1fae5; }
 .menu-button { display: none; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; }
 .operator-main { max-width: 1500px; margin: 0 auto; padding: 27px 32px 44px; }
+.operator-demo-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 16px; padding: 8px clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--color-border); color: var(--color-muted); font-size: 13px; }
+.operator-demo-bar time { color: var(--color-text); font-weight: 700; }
 .network-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 17px; }
 .network-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .9fr); gap: 16px; }
 .network-panel { padding: 20px; }.network-panel h2 { margin-bottom: 16px; font-size: 18px; }

@@ -16,30 +16,65 @@ const routes = {
 };
 
 const fallback = "/student/parking";
-let disposePage = () => {};
+const demoTimeFormat = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Ho_Chi_Minh", dateStyle: "medium", timeStyle: "short"
+});
 
 export function startRouter(root, context) {
+  let disposePage = () => {};
+
+  function showFeedback(message) {
+    root.querySelector("[data-demo-feedback]").textContent = message;
+  }
+
   function renderRoute() {
     disposePage();
-    disposePage = () => {};
     const path = location.hash.slice(1) || fallback;
-    const route = routes[path] || routes[fallback];
-    const activePath = routes[path] ? path : fallback;
-    if (!routes[path]) history.replaceState(null, "", `${location.pathname}${location.search}#${fallback}`);
-    context.store.setRole(route.role);
+    const activePath = Object.hasOwn(routes, path) ? path : fallback;
+    const route = routes[activePath];
+    if (path !== activePath) history.replaceState(null, "", `${location.pathname}${location.search}#${fallback}`);
+    const roleResult = context.store.setRole(route.role);
     root.innerHTML = route.role === "student" ? studentShell(activePath) : operatorShell(activePath, route.title);
     const pageRoot = root.querySelector("#page-root");
+    let unmount = () => {};
     if (route.mount) {
-      disposePage = route.mount(pageRoot, context) || (() => {});
+      unmount = route.mount(pageRoot, context) || unmount;
     } else {
       pageRoot.innerHTML = `<section class="placeholder-page"><p class="eyebrow">${escapeHtml(route.owner)}</p><h1>${escapeHtml(route.title)}</h1><p>This route is reserved for its feature owner. The shared shell and navigation are ready.</p></section>`;
     }
-    root.querySelector("[data-reset-demo]")?.addEventListener("click", context.store.resetDemo);
+    const timeElement = root.querySelector("[data-demo-time]");
+    let unsubscribeClock = () => {};
+    if (timeElement) {
+      function renderClock(demoTime) {
+        timeElement.dateTime = demoTime;
+        timeElement.textContent = demoTimeFormat.format(Date.parse(demoTime));
+      }
+      renderClock(context.clock.now());
+      unsubscribeClock = context.store.subscribe(snapshot => renderClock(snapshot.demoTime));
+    }
+
+    root.querySelector("[data-reset-demo]")?.addEventListener("click", () => {
+      const result = context.store.resetDemo();
+      if (result.ok) {
+        renderRoute();
+        root.querySelector("[data-reset-demo]")?.focus();
+      }
+      showFeedback(result.ok ? "Demo data and time reset." : result.message);
+    });
+    root.querySelector("[data-advance-clock]")?.addEventListener("click", () => {
+      const result = context.clock.advanceMinutes(15);
+      showFeedback(result.ok ? "Demo time advanced by 15 minutes." : result.message);
+    });
+    if (!roleResult.ok) showFeedback(roleResult.message);
     root.querySelector("[data-menu-toggle]")?.addEventListener("click", () => {
       const nav = root.querySelector("#operator-navigation");
       const expanded = nav?.classList.toggle("is-open") || false;
       root.querySelector("[data-menu-toggle]").setAttribute("aria-expanded", String(expanded));
     });
+    disposePage = () => {
+      unmount();
+      unsubscribeClock();
+    };
   }
 
   window.addEventListener("hashchange", renderRoute);
