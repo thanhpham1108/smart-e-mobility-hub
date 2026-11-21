@@ -1,0 +1,18 @@
+project_id = "smart-e-mobility-hub"
+
+[api]
+enabled = true
+schemas = ["public", "graphql_public"]
+
+[db]
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+enabled = true
+site_url = "https://thanhpham1108.github.io/smart-e-mobility-hub/"
+additional_redirect_urls = ["http://localhost:4173", "http://127.0.0.1:4173"]
+enable_signup = false
