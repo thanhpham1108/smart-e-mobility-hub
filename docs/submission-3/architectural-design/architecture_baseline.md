@@ -2,6 +2,8 @@
 
 This is the team's starting contract for the required deployment and development/implementation views. It follows the [course brief](../../BTL_SoftwareEngineering_HK26_v1.pdf), [use-case catalogue](../../submission-1/use-case-diagram/use-case-catalogue.md), [non-functional requirements](../../submission-1/non-functional-requirements/non_functional_requirements.md), and Submission 2 interaction/state diagrams. It is a design model, not a claim that the MVP is already implemented.
 
+For the Final MVP, use the [shared implementation contracts](../../implementation/SHARED_CONTRACTS.md) for hosting, demo sessions, telemetry transport, time and storage. This baseline documents the Submission 3 server model and the domain ownership rules that carry forward.
+
 ## Deployment view
 
 The [deployment diagram](../deployment-view/Deployment_View.puml) shows Student and Operator devices, each running a browser and portal artifact. Both connect over HTTPS to one application host. Its Web/API process contains API handlers, the six domain modules, an internal scheduler, and authoritative in-memory state with audit/event results. JSON fixtures on the same host seed state at startup. A separate telemetry simulator host sends identified, timestamped events to the API over authenticated HTTPS. The operating system is left unspecified. A physical IoT gateway, production database, separate web server and redundant application host are not part of this MVP design.

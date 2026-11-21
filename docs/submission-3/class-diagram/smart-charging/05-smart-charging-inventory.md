@@ -47,7 +47,7 @@ Không vẽ toàn bộ API của Parking/Fleet/What-if vào class diagram Smart 
 ## 5. Quyết định đã chốt và việc đồng bộ tài liệu
 
 1. **Đổi vị trí hàng đợi:** UC-C03 chỉ sửa point/time, không đổi queue sequence để giữ FCFS. Catalogue và scenario Submission 1 đã được đồng bộ; vị trí hàng đợi chỉ hiển thị để tham khảo.
-2. **Trạng thái dừng sạc:** Dùng `Cancelled` khi phiên được dừng xác nhận trước lúc đạt mục tiêu; [Parking method design](../../method-design/03-parking-private-ev.md) dùng cùng tên.
+2. **Trạng thái dừng sạc:** Sau khi xác minh dừng phiên, lựa chọn Complete của Student đặt trạng thái `Completed`, còn Cancel đặt `Cancelled`. Sự kiện đã đạt pin mục tiêu đặt `Completed`. Xem [Charging method design](../../method-design/05-smart-charging.md).
 3. **Đủ pin, không cần sạc:** bản nháp được từ chối với `NoChargingRequired` trước khi lưu; không có trạng thái request riêng.
 4. **Thời lượng sạc:** Parking gửi current/target battery và requested window. Mô hình bài tập lớn dùng một dung lượng pin giả định 40 kWh và công suất 7 kW cho mọi xe, không yêu cầu Student nhập thêm. `estimatedEnergyKwh = (target - current) / 100 × 40 kWh`; thời lượng ước lượng chỉ để hiển thị, không quyết định nhận request hay thời điểm giải phóng cổng.
 5. **Tên method liên module:** Các operation của `ChargingService` trong diagram/method catalogue là hợp đồng thiết kế của module này. [Parking method design](../../method-design/03-parking-private-ev.md) dùng các trạng thái và chiều gọi tương ứng.
