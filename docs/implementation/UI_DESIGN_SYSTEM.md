@@ -5,9 +5,9 @@ This document is the visual and interaction source of truth for the implementati
 ## One app, two role shells
 
 - **Student shell:** one 64 px top bar with brand, Hub/Rental/Parking navigation, current account/role and a role switch. Main content uses the same page heading, action position and card layout on every Student route.
-- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The top bar shows the current route and role switch. The demo bar below it has the clock, +15 min and Reset Demo. On narrow screens, use the shell's compact navigation menu.
+- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The top bar shows the current route and sign-out action. The demo bar below it has the clock, +15 min and shared Reset Demo. On narrow screens, use the shell's compact navigation menu.
 - **Routing:** keep the skeleton's hash routes so each page can reopen from the GitHub Pages project URL. When Hub & Identity adds demo sessions, a direct route that needs a role shows the shared role selection, then returns to the requested route. See the [shared implementation contracts](SHARED_CONTRACTS.md) for the current preview behavior and the expected session check.
-- **One state:** Student and Operator views read the same browser store on the demo machine. Switching role changes the shell and available actions, not the underlying data.
+- **One state:** Student and Operator views read authorized views of the same PostgreSQL database. Sign in with the other demo account to switch roles.
 
 Member 1 owns the shells and shared UI primitives. Feature owners render page content into the shell. No feature creates its own navbar, sidebar, role switch, reset control, toast framework, or global CSS rules.
 
@@ -19,7 +19,7 @@ Target folder structure:
 
 ```text
 index.html
-src/app/              # main.js, router.js, browser store and demo clock
+src/app/              # main.js, router.js, Supabase API client and route read cache
 src/data/fixtures/    # versioned JSON demo data
 src/ui/shared/        # tokens.css, base.css, components.css, components.js
 src/ui/student/       # shell.js and Hub, Rental, Parking/Charging pages
@@ -38,12 +38,12 @@ Use browser-native ES modules (`import`/`export`) and one `index.html` entry. `s
 ```js
 export function mount(root, context) {
   // Render this route and attach only its own event handlers.
-  // context currently supplies store and clock. Import UI helpers from ui/shared.
+  // context supplies store, api and viewer. Import UI helpers from ui/shared.
   return () => { /* remove listeners/timers created by this page */ };
 }
 ```
 
-The router calls the returned cleanup function before mounting another route. Attach feature listeners to the page root and scope page rendering to that element. The shell owns navigation and role switching. `src/ui/shared/components.js` owns common controls and feedback, and `src/modules/<area>/` owns business transitions. A page reads a snapshot, calls an owning service, then refreshes from the shared store. Feature branches can start with the current routes and reference pages. When a shared context service is ready, wire it into the existing entry point and verify the page against the [shared contracts](SHARED_CONTRACTS.md) before merging the connected flow.
+The router calls the returned cleanup function before mounting another route. Attach feature listeners to the page root and scope page rendering to that element. The shell owns navigation and role switching. `src/ui/shared/components.js` owns common controls and feedback, and `src/modules/<area>/` owns business transitions. A page reads a snapshot, calls an owning service, then refreshes from the shared store. Feature branches can start with the current routes, authenticated API and reference pages. When a shared context service is ready, wire it into the existing entry point and verify the page against the [shared contracts](SHARED_CONTRACTS.md) before merging the connected flow.
 
 Shared files have one owner and one review path. Feature branches may add a page and its scoped stylesheet. A change to a shared component or token is a separate, small change reviewed with Member 1; after it merges, other features import the updated version. This lets six people work in parallel without editing the same `app.js` or CSS rules. The shared stylesheet is imported once at the entry point; page styles use a route root selector such as `.parking-page` so they cannot restyle another feature.
 

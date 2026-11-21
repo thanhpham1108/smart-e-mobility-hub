@@ -1,0 +1,7 @@
+{
+  "name": "smart-e-mobility-hub",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node scripts/check-migrations.mjs" },
+  "devDependencies": { "@electric-sql/pglite": "0.5.17" }
+}

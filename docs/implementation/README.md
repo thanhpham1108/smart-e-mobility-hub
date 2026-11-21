@@ -1,22 +1,17 @@
 # Implementation plan — Smart E-Mobility Hub
 
-This is the working handoff for the six implementation owners. Start with the [contributor guide](../../CONTRIBUTING.md) for local setup, coding conventions and PRs. The Final MVP is **one HTML/CSS/JavaScript app on GitHub Pages**, demonstrated in one tab with seeded data and browser-local state. Use the [shared implementation contracts](SHARED_CONTRACTS.md) for data and service handoffs, and the [UI contract](UI_DESIGN_SYSTEM.md) and [selected PC references](ui-reference/README.md) for screens.
+Start with the [contributor guide](../../CONTRIBUTING.md), [database setup](DATABASE_SETUP.md), [shared contracts](SHARED_CONTRACTS.md), [UI design system](UI_DESIGN_SYSTEM.md) and [Final architecture](FINAL_ARCHITECTURE.md). GitHub Pages serves the browser app, and Supabase PostgreSQL stores the shared demo state.
 
-## 1. Shared foundation for parallel coding
+## 1. Shared implementation
 
-Start from the shared skeleton. The shared store, demo clock and JSON fixture are available. The feature owners implement their service rules and connect their pages to those shared interfaces.
-
-1. **Entry point and routing:** one `index.html`, ES modules, hash routes (for example `#/student/parking` and `#/operator/charging`) so refresh works on GitHub Pages under the repository URL. The shared shell renders navigation, role switch, page header, loading/error feedback and responsive layout.
-2. **State ownership:** one browser store initializes from versioned seed data, persists to `localStorage`, and exposes `readSnapshot()`, `commit(command)` and `resetDemo()`. Each module writes only its own records through a service; cross-module commands apply all related changes together before persisting. A command returns a result or an error without publishing a partial state. Use a schema version so an old browser store can be reset after a fixture change.
-3. **Common contracts:** use the shared IDs, time format, result shape, retry keys and demo actor defined in [Shared implementation contracts](SHARED_CONTRACTS.md).
-4. **Time and event simulation:** all services use the captured command time or shared clock. Wire expiry and promotion checks against the stored demo time on app start, before relevant actions and when time advances. The Operator control advances time manually. The Fleet module will add identified simulated telemetry events.
-5. **Integration boundary:** use the handoffs in the shared contracts. Feature owners add concrete provider function names and examples as they wire in each service. The provider owns the data and applies its state changes.
-
-The current foundation has the entry, router and browser store in `src/app/`, plus shared UI, role shells and sample pages under `src/ui/`. Add domain services in `src/modules/<module>/` and keep seed fixtures separate from UI code. The [UI contract](UI_DESIGN_SYSTEM.md) names the two canonical Submission 2 references and explains how feature pages extend them.
+- **Frontend:** One native browser app with Student and Operator shells and hash routes. Sign in with the appropriate demo account. Reuse the existing components and desktop visual references.
+- **Database:** SQL migrations define the schema, RPC commands and sample data. A command checks roles, rechecks availability and applies dependent changes in one transaction.
+- **Time and refresh:** Use the shared demo clock. Operator advances it manually, and the application reconciles due expiries. Visible screens re-read their authorized views every five seconds and after writes.
+- **Ownership:** Each module owns its transition rules. Use shared IDs to refer to other modules. Put changes to several resources in the same SQL command.
 
 ## 2. Member assignments and definition of done
 
-Every owner delivers **service logic + screen(s) + integration function(s) + a repeatable demo scenario**. A screen is done when it uses the shared shell/components, reads the shared store, shows real results of its service calls, and has empty/error/success states. A service is done when its main flow and important rejection/expiry behavior follow the current method design and do not change another module's records directly.
+Every owner delivers **service logic + screen(s) + integration function(s) + a repeatable demo scenario**. A screen is done when it uses the shared shell/components, reads the shared database, shows real results of its service calls, and has empty/error/success states. A service is done when its main flow and important rejection/expiry behavior follow the current method design and do not change another module's records directly.
 
 ### Member 1 — Hub & Identity: Võ Hoàng Phúc Duy
 
@@ -70,7 +65,7 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 
 ## 3. Integration order and review gates
 
-**Integration, shared foundation and Final lead:** Phạm Nguyễn Công Thành (Member 5) builds the shared store write interface, JSON fixtures, demo clock and reset. He merges verified PRs into `develop` and owns the Final submission. Each feature owner implements and fixes their module, tests its connections with the other owner, and supplies verified demo steps, screenshots and their AI usage record.
+**Integration, shared foundation and Final lead:** Phạm Nguyễn Công Thành (Member 5) builds the PostgreSQL migrations, SQL seed, demo clock and shared reset. He merges verified PRs into `develop` and owns the Final submission. Each feature owner implements and fixes their module, tests its connections with the other owner, and supplies verified demo steps, screenshots and their AI usage record.
 
 ### First handoff for each member
 
@@ -92,8 +87,8 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 
 | Gate | Merge into `develop` when this works | Pair review |
 | --- | --- | --- |
-| 0 — foundation | One app opens locally in both roles at PC width. One sample Student and Operator, stable Hub IDs, the demo clock and the shared store are available. Verify one real write survives reload and reset restores the seed. | Member 1 and Thành verify the common calls on the existing shells. |
-| 1 — Student core | Hub search, rental reserve/pickup/return and parking reserve/check-in/out use one store. | Members 1–2–3 review IDs, capacity and occupancy. |
+| 0 — foundation | One app opens locally in both roles at PC width. One sample Student and Operator, stable Hub IDs, the demo clock and the shared database are available. Verify one real write survives reload and reset restores the seed. | Member 1 and Thành verify the common calls on the existing shells. |
+| 1 — Student core | Hub search, rental reserve/pickup/return and parking reserve/check-in/out use the same database. | Members 1–2–3 review IDs, capacity and occupancy. |
 | 2 — Charging | Parking submission creates Scheduled or Waiting correctly; queue position, cancellation, automatic promotion and verified stop appear in Student and Operator views. | Members 3–5 review the same request and allocation after every transition. |
 | 3 — Operations | Incident restriction and partial redistribution call owner services and preserve Hub/resource counts. | Members 2–3–4–5 review cross-module effects. |
 | 4 — Simulation and demo | What-if copy is isolated; all four end-to-end demo journeys can be replayed from `resetDemo()`. | Member 6 checks snapshot; all six verify navigation and visual consistency. |
@@ -113,19 +108,19 @@ The original [use-case catalogue](../submission-1/use-case-diagram/use-case-cata
 
 The classroom presentation date, duration and final PDF deadline are pending announcement. In the proposed milestones below, `T` is the presentation date. Track the PDF deadline separately if it falls before the presentation.
 
-- **First work session.** Thành checks the shared store, clock and reset with Member 1, who connects the demo identity and Hub records. Members 3 and 5 verify the Parking → Charging request and status contract. Members 4 and 5 verify the charging event inputs. Member 6 verifies the network snapshot shape with Thành and gets any Hub-specific fields from Member 1. Each owner starts from `develop` and builds the first handoff in the shared PC shell.
+- **First work session.** Thành checks the shared database, clock and reset with Member 1, who connects the demo identity and Hub records. Members 3 and 5 verify the Parking → Charging request and status contract. Members 4 and 5 verify the charging event inputs. Member 6 verifies the network snapshot shape with Thành and gets any Hub-specific fields from Member 1. Each owner starts from `develop` and builds the first handoff in the shared PC shell.
 - **Around T−7 days, assemble the first demo.** Connect Student Identity, Rental and Parking in `develop`, then connect Parking and Charging across both portals. Use one seeded Hub with an occupied charger and a scenario that can free it through the normal service flow. Fleet and What-if owners can work against agreed fixture data while these integrations are underway. Start the slide outline and consolidate Submissions 1–3 in parallel.
 - **Around T−4 days, complete the demo routes.** Integrate Fleet/Incident and What-if with the shared state. Run all four journeys from section 4 with the intended starting data. Check visible state changes across portals and confirm that What-if leaves operational records unchanged. Capture the report screens from the integrated app once the journeys pass.
 - **Around T−2 days, freeze the demo version.** Run a timed rehearsal with the intended laptop and presentation setup. Test the GitHub Pages build when available and serve the same version on `localhost` for the offline fallback. Save a short recording or ordered screenshots of the demo. After rehearsal, limit changes to issues that block the demo or the final submission.
-- **T−1 day.** Rehearse again from a reset state, check projector readability and presenter handoffs, and confirm the offline fallback works. If there is less than a week, compress the build milestones and preserve time for both rehearsals.
+- **T−1 day.** Rehearse again from a reset state, check projector readability and presenter handoffs, and confirm the local Supabase fallback works. If there is less than a week, compress the build milestones and preserve time for both rehearsals.
 
 ## 6. Presentation and final PDF
 
 ### Suggested classroom run of show
 
-This provisional plan allocates **10 minutes before Q&A**. Adjust it when the lecturer announces the slot. Use one laptop and one person to run the demo. Each owner explains the state change their module contributes as the demo moves through the script.
+This provisional plan allocates **10 minutes before Q&A**. Adjust it when the lecturer announces the slot. Use one laptop and one person to run the demo, with separate browser profiles for Student and Operator. Each owner explains the state change their module contributes as the demo moves through the script.
 
-1. **1 min · Member 1.** Introduce the campus problem, the two portals and their shared browser state. Start as Student and show a Hub.
+1. **1 min · Member 1.** Introduce the campus problem, the two portals and their shared PostgreSQL data. Start as Student and show a Hub.
 2. **1 min · Member 2.** Reserve, pick up and return a seeded vehicle. Point out the change in its availability.
 3. **3 min · Members 3 and 5.** Book parking and check in. Request charging at a full Hub and show the Student's waitlist position. Switch to Operator, complete the existing session through a verified simulated event and show automatic FCFS assignment of the next eligible request. Begin and complete the newly assigned session, then show the final state in Student and check out.
 4. **2 min · Member 4.** Show a fault restricting a resource and confirm one vehicle's arrival on a seeded redistribution order. Show that the order remains partially complete and destination occupancy reflects the confirmed arrival.
@@ -134,4 +129,4 @@ This provisional plan allocates **10 minutes before Q&A**. Adjust it when the le
 
 Prepare slides for the problem and roles, the deployed MVP architecture, the demo checkpoints, and lessons learned. Thành coordinates the Final report and presentation materials. Each owner supplies a short explanation, verified screens and their AI usage record while they work.
 
-The [course brief](../BTL_SoftwareEngineering_HK26_v1.pdf) requires an MVP demonstration of the whole project, slides, repeated practice and a brief presentation that includes lessons learned. The final submission is **one PDF** containing Submissions 1–3, the working demonstration as an ordered sequence of screens, and a Generative AI declaration listing tools, scope and level of contribution. Align the submitted architecture views with the browser-only build and capture the report screens from the version used for rehearsal.
+The [course brief](../BTL_SoftwareEngineering_HK26_v1.pdf) requires an MVP demonstration of the whole project, slides, repeated practice and a brief presentation that includes lessons learned. The final submission is **one PDF** containing Submissions 1–3, the working demonstration as an ordered sequence of screens, and a Generative AI declaration listing tools, scope and level of contribution. Align the submitted architecture views with the GitHub Pages and Supabase deployment and capture the report screens from the version used for rehearsal.
