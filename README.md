@@ -2,13 +2,13 @@
 
 Smart E-Mobility Hub is a course project for coordinating electric mobility resources across the VNU-HCM Urban Area. A network of Mobility Hubs provides shared electric vehicles, parking spaces and charging points. Students use these resources; Operators monitor capacity, resolve incidents, coordinate vehicles between Hubs and explore hypothetical demand.
 
-**Project status:** Submissions 1–3 document requirements, interactions and design. The Final MVP uses Student and Operator portals with Supabase Auth and shared PostgreSQL. See the [implementation guide](docs/implementation/README.md) for feature behavior and demo workflows.
+**Project status:** Submissions 1–3 document requirements, interactions and design. The Final MVP uses Student and Operator portals with direct demo access and shared Supabase PostgreSQL. See the [implementation guide](docs/implementation/README.md) for feature behavior and demo workflows.
 
 ## What the MVP must demonstrate
 
 | Actor | Main interactions |
 | --- | --- |
-| Student | Sign in; search Hubs and vehicles; reserve, pick up and return a shared vehicle; reserve parking for a private EV; request, view, cancel and complete charging. |
+| Student | Open the Student portal; search Hubs and vehicles; reserve, pick up and return a shared vehicle; reserve parking for a private EV; request, view, cancel and complete charging. |
 | Operator | Inspect network and resource state; coordinate redistribution; investigate incidents; view and adjust charging assignments; configure and compare what-if runs. |
 | External Telemetry Provider | Supply identified, timestamped vehicle, parking and charging observations. An in-browser simulator plays this role in the MVP. These are supporting event flows rather than interactive user goals. |
 
@@ -57,7 +57,7 @@ An Operator configures a scenario, starts a run and reviews predicted metrics an
 
 ## Architecture and integration
 
-GitHub Pages serves the browser app. Supabase Auth identifies students and operators. Supabase PostgreSQL owns the clock, bookings, sessions and other live records. See the [Final architecture](docs/implementation/FINAL_ARCHITECTURE.md).
+GitHub Pages serves the browser app. The browser starts a Supabase demo session automatically. The Student and Operator portals use seeded profiles. Supabase PostgreSQL owns the clock, bookings, sessions and other live records. See the [Final architecture](docs/implementation/FINAL_ARCHITECTURE.md).
 
 The [deployment view](docs/submission-3/deployment-view/README.md) and [development view](docs/submission-3/development-view/README.md) record Submission 3. The Final implementation uses database transactions and authenticated RPCs to enforce the module ownership rules.
 
@@ -99,4 +99,4 @@ The course brief requires **one final PDF** containing all content from Submissi
 
 ## Development setup
 
-**Stack:** HTML, CSS and JavaScript on GitHub Pages with Supabase Auth and PostgreSQL. For local frontend and database setup, accounts and migration checks, follow [Database setup](docs/implementation/DATABASE_SETUP.md).
+**Stack:** HTML, CSS and JavaScript on GitHub Pages with Supabase Auth and PostgreSQL. For local frontend and database setup, demo access and migration checks, follow [Database setup](docs/implementation/DATABASE_SETUP.md).

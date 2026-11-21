@@ -1,5 +1,7 @@
 # Development view — Smart E-Mobility Hub
 
+> This document describes the submitted design. The current app uses GitHub Pages and Supabase PostgreSQL. See the [Final architecture](../../implementation/FINAL_ARCHITECTURE.md) and [database setup](../../implementation/DATABASE_SETUP.md).
+
 [PlantUML source](Implementation_View.puml) · [PNG](Implementation_View.png) · [SVG](Implementation_View.svg)
 
 This UML component view shows how the Student and Operator portals call API handlers, how the internal scheduler starts due charging requests and runs expiry/timeout checks, and how those entry points use six domain modules. The modules share repository, Unit of Work and versioned snapshot contracts within one application process. Dashed dependencies describe software structure, not separate network connections; the physical runtime is in the [deployment view](../deployment-view/README.md).

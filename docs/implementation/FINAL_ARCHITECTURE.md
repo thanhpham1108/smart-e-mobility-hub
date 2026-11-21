@@ -16,7 +16,7 @@ flowchart LR
     A -->|RPC and SQL| P
 ```
 
-The hosted project uses one shared demo dataset. Both browsers render the same HTML/CSS/JavaScript app and poll their own authorized views. No live device telemetry is required. The Operator submits identified simulated events.
+The hosted project uses one shared demo dataset. Both browsers open the same HTML/CSS/JavaScript app directly. Each browser establishes an anonymous Supabase session automatically and polls views for the selected demo portal. No live device telemetry is required. The Operator submits identified simulated events.
 
 ## Development
 

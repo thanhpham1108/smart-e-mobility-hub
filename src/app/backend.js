@@ -5,11 +5,11 @@ const hosted = {
   key: "sb_publishable_mfjgRrMVvPhVdWTnyLw5iA_0qNT0rIm"
 };
 const { url, key } = globalThis.SMART_HUB_SUPABASE ?? hosted;
-export const client = createClient(url, key);
+const client = createClient(url, key, { auth: { storageKey: "smarthub-demo-session" } });
 
 const errorMessages = {
-  AUTH_REQUIRED: "Sign in with a SmartHub demo account.",
-  FORBIDDEN: "This action is unavailable for your account.",
+  AUTH_REQUIRED: "SmartHub demo access is unavailable.",
+  FORBIDDEN: "This action is unavailable in the current portal.",
   PARKING_FULL: "No parking capacity is available for this window.",
   STOP_CHARGING_FIRST: "Stop the active charging session before checking out.",
   PARKING_NOT_ACTIVE: "Check in to parking before starting charging.",
@@ -45,16 +45,30 @@ async function rpc(name, args) {
   }
 }
 
-export const api = {
-  read(name, filter = {}) {
-    return rpc("app_view", { p_view: name, p_filter: filter });
-  },
-  command(operation, input = {}, commandId = crypto.randomUUID()) {
-    const args = { p_operation: operation, p_input: input, p_command_id: commandId };
-    return rpc("app_command", args).then(result =>
-      result.code === "CONNECTION_FAILED" ? rpc("app_command", args) : result);
-  }
-};
+let pendingSession;
+
+async function openDemoSession() {
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
+  if (data.session?.user?.is_anonymous) return;
+  const result = await client.auth.signInAnonymously();
+  if (result.error) throw result.error;
+}
+
+export async function createDemoApi(role) {
+  pendingSession ??= openDemoSession().finally(() => { pendingSession = null; });
+  await pendingSession;
+  return {
+    read(name, filter = {}) {
+      return rpc("demo_view", { p_role: role, p_view: name, p_filter: filter });
+    },
+    command(operation, input = {}, commandId = crypto.randomUUID()) {
+      const args = { p_role: role, p_operation: operation, p_input: input, p_command_id: commandId };
+      return rpc("demo_command", args).then(result =>
+        result.code === "CONNECTION_FAILED" ? rpc("demo_command", args) : result);
+    }
+  };
+}
 
 // Route data lives in memory and is refreshed from PostgreSQL.
 export function routeData(api, name, onError) {

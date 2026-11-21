@@ -137,5 +137,18 @@ begin
   perform app.need(result->>'ok'='true',result::text);
   perform app.need((select status='Cancelled' from app.charging_requests where request_id=request),'START_TIMEOUT_MISSED');
   perform app.need((select status='Scheduled' from app.charging_requests where vehicle_id='test-guest-car'),'WAITLIST_NOT_PROMOTED');
+
+  perform app.need(not has_function_privilege('anon','public.demo_command(text,text,jsonb,uuid)','execute'),'UNVERIFIED_DEMO_WRITE');
+  perform app.need(public.demo_view('operator','network')->>'code'='AUTH_REQUIRED','REGULAR_USER_CAN_SWITCH_ROLE');
+  perform set_config('request.jwt.claims','{"is_anonymous":true}',true);
+  perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+  perform app.need(public.demo_view('operator','network')->>'code'='AUTH_REQUIRED','LINKED_PROFILE_EXPOSED');
+  update app.profiles set auth_user_id=null where user_id in ('demo-student','demo-operator');
+  perform app.need(public.demo_view('student','bootstrap')#>>'{data,userId}'='demo-student','DEMO_STUDENT_UNAVAILABLE');
+  perform app.need(public.demo_view('operator','network')->>'ok'='true','DEMO_OPERATOR_UNAVAILABLE');
+  perform app.need(public.demo_view('invalid','bootstrap')->>'code'='AUTH_REQUIRED','INVALID_DEMO_ROLE');
+  perform app.need(public.demo_command('student','demo.advance','{}',gen_random_uuid())->>'code'='FORBIDDEN','DEMO_STUDENT_ADVANCED_CLOCK');
+  perform app.need(public.demo_command('operator','demo.advance','{}',gen_random_uuid())->>'ok'='true','DEMO_OPERATOR_CLOCK_FAILED');
+  perform app.need(public.app_view('bootstrap')->>'code'='AUTH_REQUIRED','DEMO_ROLE_LEAKED');
 end $$;
 rollback;

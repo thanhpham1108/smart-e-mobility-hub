@@ -1,10 +1,10 @@
 # Implementation plan — Smart E-Mobility Hub
 
-Start with the [contributor guide](../../CONTRIBUTING.md), [database setup](DATABASE_SETUP.md), [shared contracts](SHARED_CONTRACTS.md), [UI design system](UI_DESIGN_SYSTEM.md) and [Final architecture](FINAL_ARCHITECTURE.md). GitHub Pages serves the browser app, and Supabase PostgreSQL stores the shared demo state.
+Start with the [contributor guide](../../CONTRIBUTING.md), [database setup](DATABASE_SETUP.md), [adding a table or demo data](ADD_DATABASE_CHANGES.md), [shared contracts](SHARED_CONTRACTS.md), [UI design system](UI_DESIGN_SYSTEM.md) and [Final architecture](FINAL_ARCHITECTURE.md). GitHub Pages serves the browser app, and Supabase PostgreSQL stores the shared demo state.
 
 ## 1. Shared implementation
 
-- **Frontend:** One native browser app with Student and Operator shells and hash routes. Sign in with the appropriate demo account. Reuse the existing components and desktop visual references.
+- **Frontend:** One native browser app with Student and Operator shells and hash routes. Open either portal with the role switch. Reuse the existing components and desktop visual references.
 - **Database:** SQL migrations define the schema, RPC commands and sample data. A command checks roles, rechecks availability and applies dependent changes in one transaction.
 - **Time and refresh:** Use the shared demo clock. Operator advances it manually, and the application reconciles due expiries. Visible screens re-read their authorized views every five seconds and after writes.
 - **Ownership:** Each module owns its transition rules. Use shared IDs to refer to other modules. Put changes to several resources in the same SQL command.
@@ -15,9 +15,9 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 
 ### Member 1 — Hub & Identity: Võ Hoàng Phúc Duy
 
-**Build:** seed users/Hubs; simulated Student/Operator sign-in and sign-out; role-aware navigation; profile update; Hub search, status, freshness and alternatives. Own the shared app shell, router and current-user interface because every feature needs them. The demo login is explicitly simulated; use sample accounts only.
+**Build:** seed users/Hubs; direct Student/Operator demo access; role-aware navigation; profile update; Hub search, status, freshness and alternatives. Own the shared app shell, router and current-user interface because every feature needs them. Both portals use seeded demo profiles.
 
-**UI:** login/role switch, Student Hub search/status, shared Student top bar and Operator sidebar/header. Feature owners can start from the existing shells and CSS tokens while Hub & Identity continues. Use the shared UI contract for any additions.
+**UI:** Student Hub search/status, shared Student top bar and Operator sidebar/header. Feature owners can start from the existing shells and CSS tokens while Hub & Identity continues. Use the shared UI contract for any additions.
 
 **Handoff:** `currentUser`, `requireRole`, `findHubs`, `getHubStatus`, `findAlternativeHubs`, shared shell/component API. **Done when:** Student and Operator can enter the correct shell; another module can request identity and Hub data from the same store.
 
@@ -78,10 +78,10 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 
 ### How to hand over a feature
 
-1. **Start from `develop`.** Each owner works on a feature branch and first builds one usable action in the existing PC shell. Use a fixture that matches the shared contracts while a dependency is in progress. The first handoff can be as small as confirming a rental and seeing that vehicle become reserved.
-2. **Open a PR to `develop`.** Include the route, the setup or reset step, a short list of clicks, the state change expected after those clicks, and any dependencies still in progress. Link the related PR if the flow spans two modules.
+1. **Start from the SQL frontend base.** Use `integration/supabase-postgres` during cutover and `develop` afterward. Build one action on a feature branch inside the PC shell. Use local SQL seed rows that match the shared contracts. The first handoff can be as small as confirming a rental and seeing that vehicle become reserved.
+2. **Open a PR to the same base branch.** Include the route, the setup or reset step, a short list of clicks, the state change expected after those clicks, and any dependencies still in progress. Link the related PR if the flow spans two modules.
 3. **Check the connection with both owners.** Run the feature, then run the related existing flow to check that it still works. For Parking and Charging, verify the request ID and Waiting status on both portals. If a result differs, the owner of the affected service fixes it on their branch.
-4. **Merge and replay.** Thành merges the verified slice, the owners pull the updated `develop`, and the pair replays the flow from the shared seed. A feature branch can start before a dependency is complete. A cross-module flow is ready for the demo once it runs through the actual shared services and store.
+4. **Merge and replay.** Thành merges the verified slice, the owners pull the updated base branch, and the pair replays the flow from the shared seed. A feature branch can start before a dependency is complete. A cross-module flow is ready for the demo once it runs through the shared RPCs and PostgreSQL.
 
 ### Which flows to connect first
 
@@ -91,15 +91,15 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 | 1 — Student core | Hub search, rental reserve/pickup/return and parking reserve/check-in/out use the same database. | Members 1–2–3 review IDs, capacity and occupancy. |
 | 2 — Charging | Parking submission creates Scheduled or Waiting correctly; queue position, cancellation, automatic promotion and verified stop appear in Student and Operator views. | Members 3–5 review the same request and allocation after every transition. |
 | 3 — Operations | Incident restriction and partial redistribution call owner services and preserve Hub/resource counts. | Members 2–3–4–5 review cross-module effects. |
-| 4 — Simulation and demo | What-if copy is isolated; all four end-to-end demo journeys can be replayed from `resetDemo()`. | Member 6 checks snapshot; all six verify navigation and visual consistency. |
+| 4 — Simulation and demo | What-if copy is isolated; all four end-to-end demo journeys can be replayed after Operator runs **Reset Demo**. | Member 6 checks snapshot; all six verify navigation and visual consistency. |
 
-Use the gates to check integrated behavior as each connected group becomes ready. Keep `main` for the stable demonstration and verify the GitHub Pages deployment before release. The [root README](../../README.md) remains the public entry point.
+Use the gates to check integrated behavior as each connected group becomes ready. GitHub Pages and Supabase currently deploy from `develop`. Release any required database migration before publishing the dependent frontend. The [root README](../../README.md) remains the public entry point.
 
 ## 4. Acceptance scenarios for the final demo
 
-1. **Student rental:** sign in → find Hub/vehicle → reserve → pick up → return; show vehicle and parking counts before/after.
+1. **Student rental:** open Student portal → find Hub/vehicle → reserve → pick up → return; show vehicle and parking counts before/after.
 2. **Student parking + charging:** reserve an interval → check in → submit charging when point is full → see waitlist position → free a point through a verified event → see automatic assignment/start/complete → check out.
-3. **Operator operations:** inspect an issue → restrict the resource → dispatch a transfer → confirm one vehicle arrival → show partial order progress, then resolve the incident with unrelated restrictions preserved. Extend the shared fixture for this demo with two eligible vehicles and enough destination spaces. Fleet, Rental and Parking agree on those IDs.
+3. **Operator operations:** inspect an issue → restrict the resource → dispatch a transfer → confirm one vehicle arrival → show partial order progress, then resolve the incident with unrelated restrictions preserved. Use the two eligible vehicles in the SQL seed and verify that the destination has enough space before the demo. Fleet, Rental and Parking agree on those IDs.
 4. **What-if:** capture a baseline → simulate a demand/fault change → inspect metrics/recommendation → compare with baseline → confirm live state did not change.
 
 The original [use-case catalogue](../submission-1/use-case-diagram/use-case-catalogue.md), [Submission 2 interactions](../submission-2/Submission2_Report.md), [class inventory](../submission-3/class-diagram/CLASS_INVENTORY.md) and [method/test catalogues](../submission-3/README.md) provide detail on each flow. If a mockup or older design note conflicts with a later agreed rule, record the decision here and update the Final report to match the implemented MVP.
@@ -108,10 +108,10 @@ The original [use-case catalogue](../submission-1/use-case-diagram/use-case-cata
 
 The classroom presentation date, duration and final PDF deadline are pending announcement. In the proposed milestones below, `T` is the presentation date. Track the PDF deadline separately if it falls before the presentation.
 
-- **First work session.** Thành checks the shared database, clock and reset with Member 1, who connects the demo identity and Hub records. Members 3 and 5 verify the Parking → Charging request and status contract. Members 4 and 5 verify the charging event inputs. Member 6 verifies the network snapshot shape with Thành and gets any Hub-specific fields from Member 1. Each owner starts from `develop` and builds the first handoff in the shared PC shell.
-- **Around T−7 days, assemble the first demo.** Connect Student Identity, Rental and Parking in `develop`, then connect Parking and Charging across both portals. Use one seeded Hub with an occupied charger and a scenario that can free it through the normal service flow. Fleet and What-if owners can work against agreed fixture data while these integrations are underway. Start the slide outline and consolidate Submissions 1–3 in parallel.
+- **First work session.** Thành checks the shared database, clock and reset with Member 1, who connects the demo identity and Hub records. Members 3 and 5 verify the Parking → Charging request and status contract. Members 4 and 5 verify the charging event inputs. Member 6 verifies the network snapshot shape with Thành and gets any Hub-specific fields from Member 1. Each owner starts from the current SQL frontend base and builds the first handoff in the shared PC shell.
+- **Around T−7 days, assemble the first demo.** Connect Student Identity, Rental and Parking in `develop`, then connect Parking and Charging across both portals. Use one seeded Hub with an occupied charger and a scenario that can free it through the normal service flow. Fleet and What-if owners can work against agreed SQL seed data while these integrations are underway. Start the slide outline and consolidate Submissions 1–3 in parallel.
 - **Around T−4 days, complete the demo routes.** Integrate Fleet/Incident and What-if with the shared state. Run all four journeys from section 4 with the intended starting data. Check visible state changes across portals and confirm that What-if leaves operational records unchanged. Capture the report screens from the integrated app once the journeys pass.
-- **Around T−2 days, freeze the demo version.** Run a timed rehearsal with the intended laptop and presentation setup. Test the GitHub Pages build when available and serve the same version on `localhost` for the offline fallback. Save a short recording or ordered screenshots of the demo. After rehearsal, limit changes to issues that block the demo or the final submission.
+- **Around T−2 days, freeze the demo version.** Run a timed rehearsal with the intended laptop and presentation setup. Test the GitHub Pages build when available and rehearse the same frontend on `localhost` with the local Supabase stack as the fallback. Save a short recording or ordered screenshots of the demo. After rehearsal, limit changes to issues that block the demo or the final submission.
 - **T−1 day.** Rehearse again from a reset state, check projector readability and presenter handoffs, and confirm the local Supabase fallback works. If there is less than a week, compress the build milestones and preserve time for both rehearsals.
 
 ## 6. Presentation and final PDF
