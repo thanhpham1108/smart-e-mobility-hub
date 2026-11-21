@@ -4,16 +4,16 @@ This document is the visual and interaction source of truth for the implementati
 
 ## One app, two role shells
 
-- **Student shell:** one 64 px top bar with brand, Hub/Rental/Parking navigation and a sign-out action. Main content uses the same page heading, action position and card layout on every Student route.
-- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The top bar shows the current route and sign-out action. The demo bar below it has the clock, +15 min and shared Reset Demo. On narrow screens, use the shell's compact navigation menu.
+- **Student shell:** one 64 px top bar with brand, Hub/Rental/Parking navigation and a link to the Operator portal. Main content uses the same page heading, action position and card layout on every Student route.
+- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The top bar shows the current route and a link to the Student portal. The demo bar below it has the clock, +15 min and shared Reset Demo. On narrow screens, use the shell's compact navigation menu.
 - **Routing:** hash routes work with the GitHub Pages project URL. A visitor opens directly in the requested portal. The existing role switch links to the other portal. See the [shared implementation contracts](SHARED_CONTRACTS.md).
 - **One state:** Student and Operator views read authorized views of the same PostgreSQL database. Use the Student/Operator link in the header to switch roles.
 
-Member 1 owns the shells and shared UI primitives. Feature owners render page content into the shell and reuse the shared navigation, sign-out, reset controls, feedback and styles.
+Member 1 owns the shells and shared UI primitives. Feature owners render page content into the shell and reuse the shared navigation, portal links, reset controls, feedback and styles.
 
 ## Canonical references and source folders
 
-Use the original Submission 2 screenshots as the PC visual references. **[Reserve Parking Space](../submission-2/ui-design/student-portal/UI_STUDENT_ReserveParkingSpace.png)** shows the Student navigation, cards and reservation summary. **[Network Overview](../submission-2/ui-design/operator-portal/fleet-incident-mockup/UI_OPERATOR_Network_Overview.png)** shows the Operator sidebar, header, indicators and panels.
+Use the Submission 2 prototypes as the PC visual references. **[Reserve Parking Space](ui-reference/student/reference.png)** shows the Student navigation, cards and reservation summary. **[Network Overview](ui-reference/operator/reference.png)** shows the Operator sidebar, header, indicators and panels. The [UI reference folder](ui-reference/README.md) includes the HTML, CSS and JavaScript for both prototypes.
 
 Target folder structure:
 
