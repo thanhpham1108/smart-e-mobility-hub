@@ -1,18 +1,18 @@
 # Implementation plan — Smart E-Mobility Hub
 
-This is the working handoff for the six implementation owners. It follows the latest agreed MVP: **one HTML/CSS/JavaScript app on GitHub Pages, demonstrated in one browser, with seeded data and browser-local state**. The shared PC foundation exists; full feature flows still need implementation. The [UI contract](UI_DESIGN_SYSTEM.md) is mandatory for every feature screen, and the [two selected PC reference frames with source prototypes](ui-reference/README.md) live in this folder.
+This is the working handoff for the six implementation owners. Start with the [contributor guide](../../CONTRIBUTING.md) for local setup, coding conventions and PRs. The Final MVP is **one HTML/CSS/JavaScript app on GitHub Pages**, demonstrated in one tab with seeded data and browser-local state. Use the [shared implementation contracts](SHARED_CONTRACTS.md) for data and service handoffs, and the [UI contract](UI_DESIGN_SYSTEM.md) and [selected PC references](ui-reference/README.md) for screens.
 
-## 1. What the team must agree before parallel coding
+## 1. Shared foundation for parallel coding
 
-Build one app, not six independently styled sites. The shared foundation must land on `develop` before feature branches import it:
+Start from the shared skeleton. The shared store, demo clock and JSON fixture are available. The feature owners implement their service rules and connect their pages to those shared interfaces.
 
 1. **Entry point and routing:** one `index.html`, ES modules, hash routes (for example `#/student/parking` and `#/operator/charging`) so refresh works on GitHub Pages under the repository URL. The shared shell renders navigation, role switch, page header, loading/error feedback and responsive layout.
 2. **State ownership:** one browser store initializes from versioned seed data, persists to `localStorage`, and exposes `readSnapshot()`, `commit(command)` and `resetDemo()`. Each module writes only its own records through a service; cross-module commands apply all related changes together before persisting. A command returns a result or an error without publishing a partial state. Use a schema version so an old browser store can be reset after a fixture change.
-3. **Common contracts:** agree on ID names, enum values, timestamps (`ISO 8601`; display in GMT+7), money-free demo data, result/error shape, idempotency key, current demo user/role, and where validation errors appear. These are JavaScript module contracts, not HTTP endpoints.
-4. **Time and event simulation:** all services receive an injected `now` or clock service. On app start and before relevant actions, reconcile expired vehicle/parking holds, charging start timeouts, due future requests and waiting expiry. An active tab may also run a timer. The demo controls may advance time and emit identified telemetry events. No business transition depends solely on a timer running while the browser is closed.
-5. **Integration boundary:** feature owners publish function signatures, input/output examples and error/status meanings before consumers start their UI. The provider owns the contract; consumers use it without writing provider state directly.
+3. **Common contracts:** use the shared IDs, time format, result shape, retry keys and demo actor defined in [Shared implementation contracts](SHARED_CONTRACTS.md).
+4. **Time and event simulation:** all services use the captured command time or shared clock. Wire expiry and promotion checks against the stored demo time on app start, before relevant actions and when time advances. The Operator control advances time manually. The Fleet module will add identified simulated telemetry events.
+5. **Integration boundary:** use the handoffs in the shared contracts. Feature owners add concrete provider function names and examples as they wire in each service. The provider owns the data and applies its state changes.
 
-Suggested source shape after the foundation is agreed: `src/app/` (entry and router), `src/shared/` (store, clock, IDs and contracts), `src/modules/<module>/` (domain services), `src/ui/shared/` (tokens, components and common feedback), `src/ui/student/` (Student shell and pages), and `src/ui/operator/` (Operator shell and pages). Keep seed fixtures separate from UI code. These are target conventions, not existing directories. The [UI contract](UI_DESIGN_SYSTEM.md) names the two canonical Submission 2 references and explains how feature pages extend them.
+The current foundation has the entry, router and browser store in `src/app/`, plus shared UI, role shells and sample pages under `src/ui/`. Add domain services in `src/modules/<module>/` and keep seed fixtures separate from UI code. The [UI contract](UI_DESIGN_SYSTEM.md) names the two canonical Submission 2 references and explains how feature pages extend them.
 
 ## 2. Member assignments and definition of done
 
@@ -22,9 +22,11 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 
 **Build:** seed users/Hubs; simulated Student/Operator sign-in and sign-out; role-aware navigation; profile update; Hub search, status, freshness and alternatives. Own the shared app shell, router and current-user interface because every feature needs them. The demo login is explicitly simulated; use sample accounts only.
 
-**UI:** login/role switch, Student Hub search/status, shared Student top bar, shared Operator sidebar/header. Implement the shared UI components and token CSS from [UI_DESIGN_SYSTEM.md](UI_DESIGN_SYSTEM.md) before other members build their pages. Do not leave Hub screens in their older blue-only visual language.
+**UI:** login/role switch, Student Hub search/status, shared Student top bar and Operator sidebar/header. Feature owners can start from the existing shells and CSS tokens while Hub & Identity continues. Use the shared UI contract for any additions.
 
 **Handoff:** `currentUser`, `requireRole`, `findHubs`, `getHubStatus`, `findAlternativeHubs`, shared shell/component API. **Done when:** Student and Operator can enter the correct shell; another module can request identity and Hub data from the same store.
+
+**Early handoff:** Provide a sample Student and Operator, stable Hub IDs and a working Hub lookup. Coordinate the identity contract and fixture records with Thành. Profile editing, Hub search and alternative Hub suggestions can continue in parallel with the other features.
 
 ### Member 2 — Vehicle Rental: Nguyễn Khải Ca
 
@@ -68,21 +70,68 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 
 ## 3. Integration order and review gates
 
+**Integration, shared foundation and Final lead:** Phạm Nguyễn Công Thành (Member 5) builds the shared store write interface, JSON fixtures, demo clock and reset. He merges verified PRs into `develop` and owns the Final submission. Each feature owner implements and fixes their module, tests its connections with the other owner, and supplies verified demo steps, screenshots and their AI usage record.
+
+### First handoff for each member
+
+1. **Hub & Identity:** Select a demo Student or Operator and read the same Hub by ID. Verify the matching portal opens.
+2. **Vehicle Rental:** Confirm a reservation for an available vehicle and show the saved reservation and the vehicle's changed status.
+3. **Parking & Private EV:** Confirm a parking interval and show the saved booking and check-in deadline.
+4. **Fleet & Incident:** Show the current Hub resources and send one identified simulated event to its owning service. Verify the result appears in the Operator view.
+5. **Smart Charging:** Save a valid request when the Hub is full and show the same request ID and `Waiting #1` in both portals with Parking.
+6. **What-if Simulation:** Run one demand scenario from a compatible snapshot. Show one changed result metric and verify the original operational records are unchanged.
+
+### How to hand over a feature
+
+1. **Start from `develop`.** Each owner works on a feature branch and first builds one usable action in the existing PC shell. Use a fixture that matches the shared contracts while a dependency is in progress. The first handoff can be as small as confirming a rental and seeing that vehicle become reserved.
+2. **Open a PR to `develop`.** Include the route, the setup or reset step, a short list of clicks, the state change expected after those clicks, and any dependencies still in progress. Link the related PR if the flow spans two modules.
+3. **Check the connection with both owners.** Run the feature, then run the related existing flow to check that it still works. For Parking and Charging, verify the request ID and Waiting status on both portals. If a result differs, the owner of the affected service fixes it on their branch.
+4. **Merge and replay.** Thành merges the verified slice, the owners pull the updated `develop`, and the pair replays the flow from the shared seed. A feature branch can start before a dependency is complete. A cross-module flow is ready for the demo once it runs through the actual shared services and store.
+
+### Which flows to connect first
+
 | Gate | Merge into `develop` when this works | Pair review |
 | --- | --- | --- |
-| 0 — foundation | One app opens locally; role switch, seeded store, reset, shared shells/components and one reference page per role work at PC width. GitHub Pages deployment is verified before release. | All six owners approve contracts and [UI system](UI_DESIGN_SYSTEM.md). |
+| 0 — foundation | One app opens locally in both roles at PC width. One sample Student and Operator, stable Hub IDs, the demo clock and the shared store are available. Verify one real write survives reload and reset restores the seed. | Member 1 and Thành verify the common calls on the existing shells. |
 | 1 — Student core | Hub search, rental reserve/pickup/return and parking reserve/check-in/out use one store. | Members 1–2–3 review IDs, capacity and occupancy. |
 | 2 — Charging | Parking submission creates Scheduled or Waiting correctly; queue position, cancellation, automatic promotion and verified stop appear in Student and Operator views. | Members 3–5 review the same request and allocation after every transition. |
 | 3 — Operations | Incident restriction and partial redistribution call owner services and preserve Hub/resource counts. | Members 2–3–4–5 review cross-module effects. |
 | 4 — Simulation and demo | What-if copy is isolated; all four end-to-end demo journeys can be replayed from `resetDemo()`. | Member 6 checks snapshot; all six verify navigation and visual consistency. |
 
-Each feature branch starts from `develop` and merges through a small pull request after its gate slice runs. Do not wait for all six modules to be complete before integration. Keep `main` for the stable demonstration; merge `develop` there when the integrated app is ready. The [root README](../../README.md) remains the public entry point.
+Use the gates to check integrated behavior as each connected group becomes ready. Keep `main` for the stable demonstration and verify the GitHub Pages deployment before release. The [root README](../../README.md) remains the public entry point.
 
 ## 4. Acceptance scenarios for the final demo
 
 1. **Student rental:** sign in → find Hub/vehicle → reserve → pick up → return; show vehicle and parking counts before/after.
 2. **Student parking + charging:** reserve an interval → check in → submit charging when point is full → see waitlist position → free a point through a verified event → see automatic assignment/start/complete → check out.
-3. **Operator operations:** inspect an issue → restrict the resource → dispatch a transfer → confirm one vehicle arrival → show partial order progress; resolve the incident without clearing unrelated restrictions.
+3. **Operator operations:** inspect an issue → restrict the resource → dispatch a transfer → confirm one vehicle arrival → show partial order progress, then resolve the incident with unrelated restrictions preserved. Extend the shared fixture for this demo with two eligible vehicles and enough destination spaces. Fleet, Rental and Parking agree on those IDs.
 4. **What-if:** capture a baseline → simulate a demand/fault change → inspect metrics/recommendation → compare with baseline → confirm live state did not change.
 
 The original [use-case catalogue](../submission-1/use-case-diagram/use-case-catalogue.md), [Submission 2 interactions](../submission-2/Submission2_Report.md), [class inventory](../submission-3/class-diagram/CLASS_INVENTORY.md) and [method/test catalogues](../submission-3/README.md) provide detail on each flow. If a mockup or older design note conflicts with a later agreed rule, record the decision here and update the Final report to match the implemented MVP.
+
+## 5. Countdown to the classroom presentation
+
+The classroom presentation date, duration and final PDF deadline are pending announcement. In the proposed milestones below, `T` is the presentation date. Track the PDF deadline separately if it falls before the presentation.
+
+- **First work session.** Thành checks the shared store, clock and reset with Member 1, who connects the demo identity and Hub records. Members 3 and 5 verify the Parking → Charging request and status contract. Members 4 and 5 verify the charging event inputs. Member 6 verifies the network snapshot shape with Thành and gets any Hub-specific fields from Member 1. Each owner starts from `develop` and builds the first handoff in the shared PC shell.
+- **Around T−7 days, assemble the first demo.** Connect Student Identity, Rental and Parking in `develop`, then connect Parking and Charging across both portals. Use one seeded Hub with an occupied charger and a scenario that can free it through the normal service flow. Fleet and What-if owners can work against agreed fixture data while these integrations are underway. Start the slide outline and consolidate Submissions 1–3 in parallel.
+- **Around T−4 days, complete the demo routes.** Integrate Fleet/Incident and What-if with the shared state. Run all four journeys from section 4 with the intended starting data. Check visible state changes across portals and confirm that What-if leaves operational records unchanged. Capture the report screens from the integrated app once the journeys pass.
+- **Around T−2 days, freeze the demo version.** Run a timed rehearsal with the intended laptop and presentation setup. Test the GitHub Pages build when available and serve the same version on `localhost` for the offline fallback. Save a short recording or ordered screenshots of the demo. After rehearsal, limit changes to issues that block the demo or the final submission.
+- **T−1 day.** Rehearse again from a reset state, check projector readability and presenter handoffs, and confirm the offline fallback works. If there is less than a week, compress the build milestones and preserve time for both rehearsals.
+
+## 6. Presentation and final PDF
+
+### Suggested classroom run of show
+
+This provisional plan allocates **10 minutes before Q&A**. Adjust it when the lecturer announces the slot. Use one laptop and one person to run the demo. Each owner explains the state change their module contributes as the demo moves through the script.
+
+1. **1 min · Member 1.** Introduce the campus problem, the two portals and their shared browser state. Start as Student and show a Hub.
+2. **1 min · Member 2.** Reserve, pick up and return a seeded vehicle. Point out the change in its availability.
+3. **3 min · Members 3 and 5.** Book parking and check in. Request charging at a full Hub and show the Student's waitlist position. Switch to Operator, complete the existing session through a verified simulated event and show automatic FCFS assignment of the next eligible request. Begin and complete the newly assigned session, then show the final state in Student and check out.
+4. **2 min · Member 4.** Show a fault restricting a resource and confirm one vehicle's arrival on a seeded redistribution order. Show that the order remains partially complete and destination occupancy reflects the confirmed arrival.
+5. **1 min · Member 6.** Run a demand or fault scenario, show one comparison metric and one recommendation, then show the baseline operational state is unchanged.
+6. **2 min · Member 1 and the team.** Close with lessons learned, a live-demo limitation and a buffer for switching screens. Keep use-case details and design diagrams on backup slides for Q&A.
+
+Prepare slides for the problem and roles, the deployed MVP architecture, the demo checkpoints, and lessons learned. Thành coordinates the Final report and presentation materials. Each owner supplies a short explanation, verified screens and their AI usage record while they work.
+
+The [course brief](../BTL_SoftwareEngineering_HK26_v1.pdf) requires an MVP demonstration of the whole project, slides, repeated practice and a brief presentation that includes lessons learned. The final submission is **one PDF** containing Submissions 1–3, the working demonstration as an ordered sequence of screens, and a Generative AI declaration listing tools, scope and level of contribution. Align the submitted architecture views with the browser-only build and capture the report screens from the version used for rehearsal.

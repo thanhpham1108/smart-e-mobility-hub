@@ -5,8 +5,8 @@ This document is the visual and interaction source of truth for the implementati
 ## One app, two role shells
 
 - **Student shell:** one 64 px top bar with brand, Hub/Rental/Parking navigation, current account/role and a role switch. Main content uses the same page heading, action position and card layout on every Student route.
-- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The same 64 px top bar shows current Hub, demo status and role switch. On narrow screens, navigation becomes a compact menu; it is not duplicated inside feature pages.
-- **Routing:** hash routes; every route works after refresh from the GitHub Pages project URL. A direct route that needs a role shows the shared role selection, then returns to the requested route.
+- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The top bar shows the current route and role switch. The demo bar below it has the clock, +15 min and Reset Demo. On narrow screens, use the shell's compact navigation menu.
+- **Routing:** keep the skeleton's hash routes so each page can reopen from the GitHub Pages project URL. When Hub & Identity adds demo sessions, a direct route that needs a role shows the shared role selection, then returns to the requested route. See the [shared implementation contracts](SHARED_CONTRACTS.md) for the current preview behavior and the expected session check.
 - **One state:** Student and Operator views read the same browser store on the demo machine. Switching role changes the shell and available actions, not the underlying data.
 
 Member 1 owns the shells and shared UI primitives. Feature owners render page content into the shell. No feature creates its own navbar, sidebar, role switch, reset control, toast framework, or global CSS rules.
@@ -20,13 +20,14 @@ Target folder structure:
 ```text
 index.html
 src/app/              # main.js, router.js, browser store and demo clock
+src/data/fixtures/    # versioned JSON demo data
 src/ui/shared/        # tokens.css, base.css, components.css, components.js
 src/ui/student/       # shell.js and Hub, Rental, Parking/Charging pages
 src/ui/operator/      # shell.js and Fleet, Incident, Charging, What-if pages
 src/modules/<area>/   # feature services and rules, separate from rendering
 ```
 
-Member 1 first extracts the two reference shells and shared primitives into these folders. Other members add route content inside the appropriate portal folder and call their domain services in `src/modules/`. Do not copy either reference's complete HTML/CSS into each feature: that would create six separately maintained navbars, forms and status badges again. New UI elements should be built from the shared primitives or proposed for addition to `ui/shared`.
+The two shared shells and reference pages already live in these folders. Members add route content inside the appropriate portal folder and call their domain services in `src/modules/`. Use the shared primitives for common UI and coordinate additions to `ui/shared` with Member 1.
 
 ## Shared JavaScript and feature page contract
 
@@ -37,18 +38,18 @@ Use browser-native ES modules (`import`/`export`) and one `index.html` entry. `s
 ```js
 export function mount(root, context) {
   // Render this route and attach only its own event handlers.
-  // context exposes the store, owning services and shared UI helpers.
+  // context currently supplies store and clock. Import UI helpers from ui/shared.
   return () => { /* remove listeners/timers created by this page */ };
 }
 ```
 
-The router calls the returned cleanup function before mounting another route. Pages do not write `window.onhashchange`, register permanent document-wide click handlers, replace the whole document, or create a second app state. The shell owns navigation and role switching; `src/ui/shared/components.js` owns common controls and feedback; `src/modules/<area>/` owns business transitions. A page reads a snapshot, calls an owning service, then refreshes its visible data from the shared store. The exact `context` fields and route names should be frozen in the foundation PR and shown in one working Student page and one working Operator page before the feature branches start.
+The router calls the returned cleanup function before mounting another route. Attach feature listeners to the page root and scope page rendering to that element. The shell owns navigation and role switching. `src/ui/shared/components.js` owns common controls and feedback, and `src/modules/<area>/` owns business transitions. A page reads a snapshot, calls an owning service, then refreshes from the shared store. Feature branches can start with the current routes and reference pages. When a shared context service is ready, wire it into the existing entry point and verify the page against the [shared contracts](SHARED_CONTRACTS.md) before merging the connected flow.
 
 Shared files have one owner and one review path. Feature branches may add a page and its scoped stylesheet. A change to a shared component or token is a separate, small change reviewed with Member 1; after it merges, other features import the updated version. This lets six people work in parallel without editing the same `app.js` or CSS rules. The shared stylesheet is imported once at the entry point; page styles use a route root selector such as `.parking-page` so they cannot restyle another feature.
 
 ## Visual tokens
 
-Implement these as CSS custom properties in one `src/ui/shared/tokens.css`; feature CSS must reference the variables. The tokens follow the common palette already visible in the parking, Fleet and What-if mockups. The older blue Hub prototype should be recolored through these tokens.
+Use the CSS variables in [tokens.css](../../src/ui/shared/tokens.css). They follow the palette of the parking, Fleet and What-if mockups. Apply these tokens to the older Hub prototype when implementing that portal.
 
 | Token | Value | Use |
 | --- | --- | --- |
@@ -65,11 +66,13 @@ Implement these as CSS custom properties in one `src/ui/shared/tokens.css`; feat
 | `--color-border` | `#E2E8F0` | Dividers, input/card borders |
 | `--color-sidebar` | `#0F172A` | Operator navigation |
 
-Use Inter if it is loaded; fall back to system sans serif. Body text is 16 px with line-height about 1.5; secondary text 14 px; compact labels may be 12 px. Page titles are 28 px desktop and 24 px mobile; section headings 18–20 px. Use a spacing scale of 4, 8, 12, 16, 24 and 32 px. Shared cards use a 12 px radius, fields/buttons 8 px, badges pill shaped. Use 1 px borders and restrained shadow only where needed for separation. Do not copy the 9–11 px dashboard body text from some mockups into the working app.
+Use Inter with a system sans-serif fallback. Body text is 16 px with line height about 1.5, secondary text 14 px and compact labels 12 px. Use the existing `pageHeader` styles for page titles and aim for 18–20 px for section headings. Use a spacing scale of 4, 8, 12, 16, 24 and 32 px. Use `--radius-card` for cards and `--radius-control` for fields and buttons. Badges are pill shaped. Use 1 px borders and restrained shadows where needed for separation.
 
 Status is conveyed by **label and color together**: Available/Completed uses positive green; Reserved/In Use/Charging uses info or charging blue; Waiting/At Risk uses amber; Full/Faulted/Cancelled uses red or neutral as appropriate. Each badge receives a visible text label; a color alone does not carry meaning. The exact domain status string comes from its owner module, while the shared badge maps status to visual tone.
 
 ## Shared components and their owners
+
+The skeleton provides `pageHeader()`, `statCard()`, `badge()` and `escapeHtml()` in [components.js](../../src/ui/shared/components.js), plus shared classes for buttons, cards and fields. The table gives ownership and conventions for components as the team adds them.
 
 | Component | Shared rule | Owner |
 | --- | --- | --- |
@@ -104,7 +107,7 @@ Screenshots are **layout references**, not permission to revive superseded rules
 
 ## How six agents keep one visual system
 
-1. **Foundation PR:** Member 1 merges tokens, shells and shared components into `develop`. The team inspects one Student and one Operator reference page at 1440 px before feature UI work starts. Mobile review comes after PC integration.
+1. **Foundation:** use the tokens, shells and reference pages already in `develop`. Member 1 supplies shared additions as features progress, and Thành integrates verified PRs. Compare each portal with its 1440 px reference. Mobile review comes after PC integration.
 2. **Agent handoff:** every feature prompt includes this file, its assigned route, a screenshot reference, the available shared components and the domain status/error contract. Explicitly require importing shared CSS/components and forbid new global styles or new shell markup.
 3. **Feature review:** each PC feature PR includes a screenshot of its working route at 1440 px, plus a short note for any new component or token requested. A new shared component goes through Member 1; a one-off domain visual stays local. Add 390 px screenshots in the later mobile pass.
 4. **Visual acceptance:** compare navigation, heading, card, form, badge, empty/error state and spacing against the two reference pages. Check functional transitions after changing role or Hub. Fix differences before merging into `develop`.
