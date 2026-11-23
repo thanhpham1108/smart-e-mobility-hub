@@ -38,7 +38,7 @@ The allocation history may contain past rows. Partial unique indexes allow one u
 
 Both the demo and account APIs return `{ ok: true, data }` or `{ ok: false, code }`. The client adds friendly error text and maps SQL field names to camel case. The SQL files are authoritative for operation payloads.
 
-- **Reads:** `demo_view(p_role, p_view, p_filter)` delegates to `app_view(p_view, p_filter)` and supports `bootstrap`, `hubs`, `network`, `rental`, `parking`, `parking.review`, `charging`, `fleet`, `incidents` and `simulation`. Overview data exposed to students is aggregate or owned data.
+- **Reads:** `demo_view(p_role, p_view, p_filter)` delegates to `app_view(p_view, p_filter)` and supports `bootstrap`, `hubs`, `network`, `rental`, `parking`, `parking.review`, `parking.detail`, `charging`, `fleet`, `incidents` and `simulation`. Overview data exposed to students is aggregate or owned data.
 - **Writes:** `demo_command(p_role, p_operation, p_input, p_command_id)` delegates to `app_command` with the seeded profile for the current portal.
 - **Rental and Parking:** `rental.reserve/pickup/cancel/return`, `parking.reserve/checkIn/cancel/checkOut`. Confirm parking capacity across the entire window. Shared-vehicle return, transfer arrival and checkout reconcile physical occupancy through the owner transaction.
 - **Charging:** `charging.submit/cancel/stop/adjust/event`. A Student draft references its parking booking, Hub and vehicle. PostgreSQL reads the current battery and vehicle type. If a compatible point is available now, return `Scheduled`; if all compatible points are unavailable, return `Waiting`, `Full` and the Hub queue position; for a future start, return `Waiting` with `FutureStart`. Estimates and planned end are informational. A point is held for 15 minutes without a verified start. Release, timeout or recovery can promote the next eligible request.
@@ -46,3 +46,10 @@ Both the demo and account APIs return `{ ok: true, data }` or `{ ok: false, code
 - **Simulation and demo controls:** `simulation.configure/start/complete/fail`, `identity.profile`, `demo.advance/reset`. Simulation reads a copied baseline and writes only simulation records. Advancing the demo clock reconciles parking, rental and charging expiry in the same transaction.
 
 The shared seed starts at 09:00 ICT on 24 October 2026, with 5 Hubs and 60 charging points. Each Hub has 8 motorcycle and 4 car points. Rent and charging remain free in the MVP.
+
+
+## Parking lifecycle handoff
+
+The [Member 3 handoff](parking-private-ev/README.md) documents the additive Parking migration and complete demo flow. Parking reviews include every covered slot. Owned ticket details return a summary version for cancellation and checkout. The new frontend sends that version and the reviewed expiry deadline when confirming.
+
+Relevant reads reconcile due parking against the demo clock before returning eligibility. No-show cleanup preserves contradictory active visits for reconciliation. Rental and Fleet continue to use the shared parking capacity helper. The Student charging component supports minute-level request windows and preserves typed values through background refresh.

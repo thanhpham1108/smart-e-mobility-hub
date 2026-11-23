@@ -2,6 +2,6 @@
   "name": "smart-e-mobility-hub",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node scripts/check-migrations.mjs" },
+  "scripts": { "test": "node scripts/check-migrations.mjs && node --test tests/parking-service.test.js" },
   "devDependencies": { "@electric-sql/pglite": "0.5.17" }
 }
