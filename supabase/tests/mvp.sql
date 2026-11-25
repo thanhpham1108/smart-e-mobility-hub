@@ -79,20 +79,28 @@ begin
   perform app.need(result->>'ok'='true',result::text);
 
   perform set_config('request.jwt.claim.sub',operator::text,true);
-  result:=public.app_command('fleet.create','{"sourceHubId":"ktx-a","destinationHubId":"hcmut","vehicleIds":["rental-a-01","rental-a-02"]}',gen_random_uuid());
+  args:='{"sourceHubId":"ktx-a","destinationHubId":"hcmut","vehicleIds":["rental-a-01","rental-a-02"]}';
+  result:=public.app_view('fleet.validate',args);
+  result:=public.app_command('fleet.create',args||jsonb_build_object('validationToken',result#>>'{data,validationToken}'),gen_random_uuid());
   transfer:=result#>>'{data,orderId}';
   perform app.need(transfer is not null,result::text);
-  result:=public.app_command('fleet.dispatch',jsonb_build_object('orderId',transfer),gen_random_uuid());
+  result:=public.app_command('fleet.dispatch',jsonb_build_object('orderId',transfer,'expectedVersion',1),gen_random_uuid());
   perform app.need(result#>>'{data,status}'='Dispatched',result::text);
-  result:=public.app_command('fleet.arrive',jsonb_build_object('orderId',transfer,'vehicleId','rental-a-01'),gen_random_uuid());
+  result:=public.app_command('fleet.arrive',jsonb_build_object('orderId',transfer,'vehicleId','rental-a-01','expectedVersion',2),gen_random_uuid());
   perform app.need(result#>>'{data,status}'='Partial',result::text);
   result:=public.app_command('incident.report','{"pointId":"charge-a-03","description":"Test fault"}',gen_random_uuid());
   ticket:=result#>>'{data,incidentId}';
   perform app.need(ticket is not null,result::text);
-  result:=public.app_command('incident.resolve',jsonb_build_object('incidentId',ticket,'verified',true),gen_random_uuid());
+  result:=public.app_command('incident.investigate',jsonb_build_object('incidentId',ticket,'expectedVersion',1),gen_random_uuid());
+  perform app.need(result->>'ok'='true',result::text);
+  result:=public.app_command('incident.plan',jsonb_build_object('incidentId',ticket,'expectedVersion',2,'assignee','Operator','note','Inspect connector'),gen_random_uuid());
+  perform app.need(result->>'ok'='true',result::text);
+  result:=public.app_command('incident.repair',jsonb_build_object('incidentId',ticket,'expectedVersion',3,'note','Connector tested','complete',true),gen_random_uuid());
+  perform app.need(result->>'ok'='true',result::text);
+  result:=public.app_command('incident.resolve',jsonb_build_object('incidentId',ticket,'expectedVersion',4,'verified',true),gen_random_uuid());
   perform app.need(result#>>'{data,status}'='Resolved',result::text);
   result:=public.app_command('telemetry.point','{"pointId":"charge-a-03","status":"Maintenance","eventId":"status-1"}',gen_random_uuid());
-  perform app.need(result#>>'{data,status}'='Maintenance',result::text);
+  perform app.need(result#>>'{data,status}'='APPLIED',result::text);
 
   before_run:=(select jsonb_agg(to_jsonb(v) order by vehicle_id) from app.vehicles v);
   result:=public.app_command('simulation.configure','{"name":"Demand","kind":"Charging surge","hubId":"ktx-a","magnitude":12,"horizonMinutes":60}',gen_random_uuid());
