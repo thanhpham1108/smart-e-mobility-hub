@@ -18,6 +18,7 @@ const errorMessages = {
   STALE_SCHEDULE: "The schedule changed. Review it and try again.",
   COMMAND_CONFLICT: "This action ID was already used with different input.",
   DEMO_NOT_INITIALIZED: "The shared demo database is still being set up.",
+  DATABASE_REJECTED: "The shared database rejected this request.",
   RECONCILIATION_REQUIRED: "The event does not match the active session."
 };
 
@@ -32,8 +33,11 @@ async function rpc(name, args) {
   try {
     const { data, error } = await client.rpc(name, args);
     if (error) {
+      const sqlState = error.code ?? "";
+      const databaseRejected = /^(?!08|57P0)[0-9A-Z]{5}$/.test(sqlState);
       const code = error.code === "42501" || error.code === "PGRST301" ? "AUTH_REQUIRED"
-        : error.code === "PGRST202" ? "DEMO_NOT_INITIALIZED" : "CONNECTION_FAILED";
+        : error.code === "PGRST202" ? "DEMO_NOT_INITIALIZED"
+        : databaseRejected ? "DATABASE_REJECTED" : "CONNECTION_FAILED";
       return { ok: false, code, message: errorMessages[code] ?? "Unable to reach the shared database." };
     }
     if (data.ok) return { ok: true, data: camelize(data.data) };

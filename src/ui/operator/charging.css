@@ -9,9 +9,7 @@
   min-width: 0;
 }
 
-.charging-page .charging-heading,
-.charging-page .charging-panel-head,
-.charging-page .charging-session-summary {
+.charging-page .charging-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -19,23 +17,31 @@
   gap: var(--charging-gap);
 }
 
-.charging-page .charging-heading { padding-bottom: 4px; }
 .charging-page .charging-heading h1 { margin: 0; font-size: 26px; line-height: 1.2; }
 .charging-page p { margin: 0; }
-.charging-page .charging-heading p { margin-top: 4px; color: var(--color-muted); font-size: 14px; }
 
-.charging-page .charging-scope {
+.charging-page .charging-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  color: #475569;
-  font-size: 13px;
+  align-items: end;
+  gap: 10px 16px;
+  padding: 10px 14px 12px;
 }
 
-.charging-page .charging-scope label { font-weight: 600; }
+.charging-page :is(.charging-scope, .charging-date-controls, .charging-point-controls) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.charging-page :is(.charging-scope label, .charging-date-controls label, .charging-point-controls > span) {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.charging-page .charging-scope { flex: 0 1 300px; }
 .charging-page .charging-picker { position: relative; min-width: 158px; max-width: 100%; }
-.charging-page .charging-scope { min-width: 0; }
 .charging-page .charging-picker::before,
 .charging-page .charging-picker::after {
   position: absolute;
@@ -83,24 +89,38 @@
 }
 
 .charging-page .charging-picker select:hover { border-color: var(--color-primary); }
-.charging-page .charging-point-count { white-space: nowrap; color: var(--color-muted); }
 
-.charging-page .charging-panel,
-.charging-page .charging-metrics {
+.charging-page .charging-panel {
   border: 1px solid var(--color-border);
   border-radius: var(--charging-radius);
   background: var(--color-surface);
   min-width: 0;
 }
 
+.charging-page .charging-capacity {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.6fr) minmax(0, 2fr);
+  gap: 20px;
+  padding: 14px 16px;
+}
+.charging-page .charging-capacity-main { display: grid; align-content: center; gap: 9px; }
+.charging-page .charging-capacity-title { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.charging-page .charging-capacity-title strong { color: var(--color-text); font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.charging-page .charging-capacity-bar { display: flex; gap: 3px; height: 9px; border-radius: 4px; overflow: hidden; background: #f1f5f9; }
+.charging-page .charging-capacity--available { background: #a7e5ce; }
+.charging-page .charging-capacity--assigned { background: #c6e6fa; }
+.charging-page .charging-capacity--fault { background: #e11d48; }
+.charging-page .charging-capacity-key { display: flex; flex-wrap: wrap; gap: 5px 12px; margin: 0; padding: 0; list-style: none; color: #475569; font-size: 12px; }
+.charging-page .charging-capacity-key li { display: flex; align-items: center; gap: 4px; }
+.charging-page .charging-capacity-key i { width: 8px; height: 8px; border-radius: 2px; }
+
 .charging-page .charging-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0;
 }
 
-.charging-page .charging-metrics > div { padding: 10px 16px; }
-.charging-page .charging-metrics > div + div { border-left: 1px solid var(--color-border); }
+.charging-page .charging-metrics > div { display: flex; flex-direction: column; justify-content: center; padding: 4px 12px; border-left: 1px solid var(--color-border); }
 .charging-page .charging-metrics dt { color: #475569; font-size: 13px; }
 .charging-page .charging-metrics dd {
   margin: 2px 0 0;
@@ -115,11 +135,10 @@
 .charging-page .charging-panel p { color: var(--color-muted); font-size: 13px; }
 .charging-page .charging-panel-head p { margin-top: 2px; }
 .charging-page .charging-count { color: #475569; font-size: 13px; font-variant-numeric: tabular-nums; }
-.charging-page .charging-date-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.charging-page .charging-date-controls label { color: #475569; font-size: 13px; font-weight: 600; }
+.charging-page .charging-date-input { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .charging-page .charging-date-controls input,
 .charging-page .charging-date-controls .button {
-  min-height: 36px;
+  min-height: 38px;
   padding: 4px 9px;
   border: 1px solid #cbd5e1;
   border-radius: var(--radius-control);
@@ -128,18 +147,17 @@
   font-size: 13px;
 }
 .charging-page .charging-date-controls :is(input, button):hover { border-color: var(--color-primary); }
-.charging-page .charging-legend-row {
+.charging-page .charging-point-filters {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px 12px;
-  padding: 0 14px 9px;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
 }
-.charging-page .charging-point-filters { display: flex; flex-wrap: wrap; gap: 3px; }
 .charging-page .charging-point-filters button {
-  min-height: 34px;
-  padding: 4px 8px;
+  min-height: 32px;
+  padding: 4px 9px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
@@ -175,6 +193,11 @@
 .charging-page .charging-key--history { background: #cbd5e1; }
 .charging-page .charging-key--fault { background: #e11d48; }
 
+.charging-page .charging-workspace,
+.charging-page .charging-session-rail { display: grid; align-items: start; gap: var(--charging-gap); min-width: 0; }
+@media (min-width: 1300px) {
+  .charging-page .charging-workspace--detail { grid-template-columns: minmax(0, 1fr) 272px; }
+}
 .charging-page .charging-timeline-scroll { max-height: 410px; overflow: auto; border-radius: 0 0 var(--charging-radius) var(--charging-radius); }
 .charging-page .charging-timeline-scroll:focus-visible { outline: 2px solid var(--color-info); outline-offset: -2px; }
 .charging-page .charging-timeline { min-width: 650px; font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -201,12 +224,12 @@
   left: 0;
   display: grid;
   place-content: center start;
-  padding: 7px 10px 7px 14px;
+  padding: 5px 10px 5px 14px;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 .charging-page .charging-axis .charging-lane-label { background: #f8fafc; font-size: 14px; }
-.charging-page .charging-lane-label strong { color: var(--color-text); font-size: 14px; overflow-wrap: anywhere; }
+.charging-page .charging-lane-label strong { color: var(--color-text); font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
 .charging-page .charging-lane-label span { display: flex; align-items: center; gap: 5px; color: #475569; }
 .charging-page .charging-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--color-primary); }
 .charging-page .charging-dot--scheduled { background: var(--color-info); }
@@ -236,7 +259,7 @@
   white-space: nowrap;
 }
 
-.charging-page .charging-track { min-height: 46px; }
+.charging-page .charging-track { min-height: 41px; }
 .charging-page .charging-track-grid { position: absolute; inset: 0; pointer-events: none; }
 
 .charging-page .charging-timeline.is-live .charging-track::after {
@@ -307,14 +330,46 @@
 .charging-page .charging-bar[aria-pressed="true"] { outline: 1px solid currentColor; outline-offset: -2px; }
 .charging-page .charging-bar:focus-visible { outline: 2px solid var(--color-info); outline-offset: 2px; }
 
-.charging-page .charging-session { padding: 11px 14px; }
+.charging-page .charging-session-list { max-height: 198px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.charging-page .charging-session-list li { border-top: 1px solid var(--color-border); }
+.charging-page .charging-session-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 7px 13px;
+  border: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: start;
+}
+.charging-page .charging-session-list button:hover { background: #f8fafc; }
+.charging-page .charging-session-list button[aria-pressed="true"] { background: #f1f5f9; box-shadow: inset 3px 0 var(--color-primary); }
+.charging-page .charging-session-list button:focus-visible { outline-offset: -3px; }
+.charging-page .charging-session-list :is(strong, small) { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.charging-page .charging-session-list small { color: var(--color-muted); }
+
+.charging-page .charging-session { padding: 14px; }
+.charging-page .charging-session-head { display: grid; gap: 4px; }
 .charging-page .charging-session-title,
 .charging-page .charging-actions,
-.charging-page .charging-adjust { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.charging-page .charging-session-title { margin-bottom: 4px; }
-.charging-page .charging-adjust { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--color-border); }
-.charging-page .charging-adjust label { margin-right: 4px; color: #475569; font-size: 13px; }
-.charging-page .charging-adjust select { padding: 0 8px; }
+.charging-page .charging-adjust > div { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.charging-page .charging-session-facts { margin: 10px 0 12px; font-size: 12px; }
+.charging-page .charging-session-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.charging-page .charging-session-facts dt { color: #475569; }
+.charging-page .charging-session-facts dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.charging-page .charging-adjust { display: grid; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border); }
+.charging-page .charging-adjust label { color: #475569; font-size: 13px; font-weight: 650; }
+.charging-page .charging-adjust select { flex: 1 1 130px; min-width: 0; padding: 0 8px; }
 .charging-page .charging-actions .button,
 .charging-page .charging-adjust .button { min-height: 36px; padding: 5px 9px; font-size: 12px; }
 .charging-page .charging-actions .button--primary { background: var(--color-primary-dark); }
@@ -338,6 +393,8 @@
 .charging-page .charging-feedback.is-error { border-color: #fecdd3; background: #fff1f2; color: #9f1239; }
 
 @media (max-width: 850px) {
+  .charging-page .charging-capacity { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .charging-page .charging-metrics > div:first-child { padding-left: 0; border-left: 0; }
   .charging-page .charging-queue,
   .charging-page .charging-queue tbody { display: block; }
   .charging-page .charging-queue thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -351,15 +408,13 @@
   .charging-page { --charging-lane-width: 142px; }
   .charging-page .charging-timeline { min-width: 560px; }
   .charging-page .charging-heading h1 { font-size: 23px; }
-  .charging-page .charging-scope { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; }
-  .charging-page .charging-picker { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
+  .charging-page .charging-scope { flex-basis: 100%; }
   .charging-page .charging-picker select { max-width: 100%; }
-  .charging-page .charging-point-count { grid-column: 2; grid-row: 1; }
   .charging-page .charging-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .charging-page .charging-metrics > div { padding: 8px 11px; }
   .charging-page .charging-metrics > div:nth-child(odd) { border-left: 0; }
   .charging-page .charging-metrics > div:nth-child(n + 3) { border-top: 1px solid var(--color-border); }
-  .charging-page .charging-metrics > div:last-child { grid-column: 1 / -1; }
+  .charging-page .charging-metrics > div:nth-child(odd) { padding-left: 0; }
   .charging-page .charging-picker select,
   .charging-page .charging-point-filters button,
   .charging-page .charging-date-controls input,

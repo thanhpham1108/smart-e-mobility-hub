@@ -65,12 +65,11 @@ function pointRows(overview, sessions) {
   });
 }
 
-function header(hubs, hubId, pointCount) {
-  return `<header class="charging-heading">
-    <div>
-      <h1>Charging Schedule</h1>
-      <p>Monitor charging points and the FCFS waitlist.</p>
-    </div>
+function toolbar(hubs, hubId, pointCount, range) {
+  const filters = range ? [{ type: "all", label: "All points", count: pointCount }, ...pointGroups.map(group => ({
+    ...group, count: range.rows.filter(row => chargingVehicleType(row.point) === group.type).length
+  }))] : [];
+  return `<div class="charging-panel charging-toolbar" role="group" aria-label="Schedule filters">
     <div class="charging-scope">
       <label for="charging-hub">Mobility Hub</label>
       <div class="charging-picker">
@@ -78,27 +77,62 @@ function header(hubs, hubId, pointCount) {
           ${hubs.map(hub => `<option value="${escapeHtml(hub.id)}" ${hub.id === hubId ? "selected" : ""}>${escapeHtml(hub.name)}</option>`).join("")}
         </select>
       </div>
-      <span class="charging-point-count">${pointCount} ${pointCount === 1 ? "point" : "points"}</span>
     </div>
-  </header>`;
+    ${range ? `<div class="charging-date-controls">
+      <label for="charging-date">Date (ICT)</label>
+      <div class="charging-date-input">
+        <input id="charging-date" type="date" value="${range.date}" max="${range.today}" data-focus="date">
+        ${range.date === range.today ? "" : '<button class="button button--secondary" type="button" data-today>Today</button>'}
+      </div>
+    </div>
+    <div class="charging-point-controls">
+      <span id="charging-filter-label">Vehicle type</span>
+      <div class="charging-point-filters" role="group" aria-labelledby="charging-filter-label">
+        ${filters.map(filter => `<button type="button" data-point-filter="${filter.type}"
+          data-focus="point-filter-${filter.type}" aria-pressed="${range.pointFilter === filter.type}">
+          ${filter.label} <small>${filter.count}</small>
+        </button>`).join("")}
+      </div>
+    </div>` : ""}
+  </div>`;
 }
 
 function metrics(rows, waiting, today, now) {
   const operational = rows.filter(row => row.condition === "Operational");
+  const available = operational.filter(row => !row.allocation).length;
+  const assigned = rows.filter(row => row.allocation).length;
+  const capacity = [
+    { label: "Available", count: available, kind: "available" },
+    { label: "Assigned", count: operational.length - available, kind: "assigned" },
+    { label: "Out of service", count: rows.length - operational.length, kind: "fault" }
+  ];
   const cutoff = Date.parse(now);
   const start = dayStart(today);
   const sessionsToday = rows.flatMap(row => row.history)
     .filter(session => Date.parse(session.startedAt) >= start && Date.parse(session.startedAt) <= cutoff).length;
   const metrics = [
     ["Operational points", `${operational.length} / ${rows.length}`],
-    ["Available now", operational.filter(row => !row.allocation).length],
-    ["Assigned requests", rows.filter(row => row.allocation).length],
+    ["Assigned requests", assigned],
     ["Waiting requests", waiting.length],
     ["Charging sessions today", sessionsToday]
   ];
-  return `<dl class="charging-metrics" aria-label="Hub charging summary">
-    ${metrics.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("")}
-  </dl>`;
+  return `<section class="charging-panel charging-capacity" aria-labelledby="charging-capacity-heading">
+    <div class="charging-capacity-main">
+      <div class="charging-capacity-title">
+        <h2 id="charging-capacity-heading">Available now</h2>
+        <p><strong>${available}</strong> of ${rows.length} points</p>
+      </div>
+      <div class="charging-capacity-bar" aria-hidden="true">
+        ${capacity.filter(item => item.count).map(item => `<span class="charging-capacity--${item.kind}" style="flex: ${item.count}"></span>`).join("")}
+      </div>
+      <ul class="charging-capacity-key" aria-label="Charging point breakdown">
+        ${capacity.map(item => `<li><i class="charging-capacity--${item.kind}" aria-hidden="true"></i><strong>${item.count}</strong> ${item.label}</li>`).join("")}
+      </ul>
+    </div>
+    <dl class="charging-metrics" aria-label="Hub charging summary">
+      ${metrics.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("")}
+    </dl>
+  </section>`;
 }
 
 function timelineBar(row, scale, now, selectedId) {
@@ -120,7 +154,7 @@ function timelineBar(row, scale, now, selectedId) {
     style="--start:${start}%;--length:${width}%;--actual:${Math.max(0, actual)}%"
     data-allocation="${escapeHtml(allocation.allocationId)}" data-focus="allocation-${escapeHtml(allocation.allocationId)}"
     aria-label="${escapeHtml(title)}" title="${escapeHtml(title)}" aria-controls="charging-session"
-    aria-pressed="${allocation.allocationId === selectedId}"><span>${escapeHtml(label)}</span></button>`;
+    aria-pressed="${allocation.allocationId === selectedId}"><span>${escapeHtml(request.vehicleId)}</span></button>`;
 }
 
 function historicalBar(session, scale, range, now) {
@@ -174,23 +208,9 @@ function timeline(rows, now, selectedDate, today, selectedId, pointFilter) {
   const groups = pointGroups.map(group => ({
     ...group, rows: rows.filter(row => chargingVehicleType(row.point) === group.type)
   }));
-  const filters = [{ type: "all", label: "All points", rows }, ...groups];
   return `<section class="charging-panel" aria-labelledby="charging-timeline-heading">
     <div class="charging-panel-head">
       <div><h2 id="charging-timeline-heading">Point timeline</h2><p>${live ? "Live schedule" : "Session history"} · ICT</p></div>
-      <div class="charging-date-controls">
-        <label for="charging-date">Date</label>
-        <input id="charging-date" type="date" value="${selectedDate}" max="${today}" data-focus="date">
-        ${live ? "" : '<button class="button button--secondary" type="button" data-today>Today</button>'}
-      </div>
-    </div>
-    <div class="charging-legend-row">
-      <div class="charging-point-filters" role="group" aria-label="Filter points by vehicle type">
-        ${filters.map(filter => `<button type="button" data-point-filter="${filter.type}"
-          data-focus="point-filter-${filter.type}" aria-pressed="${pointFilter === filter.type}">
-          ${filter.label} <small>${filter.rows.length}</small>
-        </button>`).join("")}
-      </div>
       <ul class="charging-legend" aria-label="Timeline legend">
         ${legend.map(([label, kind]) => `<li><i class="charging-key charging-key--${kind}" aria-hidden="true"></i>${label}</li>`).join("")}
       </ul>
@@ -236,38 +256,61 @@ function sessionActions(row) {
   return `${targetAction}${stateAction}${eventButton("Complete", "STOP", "COMPLETE")}${eventButton("Cancel", "STOP", "CANCEL")}`;
 }
 
+function sessionList(rows, selectedId) {
+  const sessions = rows.filter(row => row.allocation);
+  return `<section class="charging-panel" aria-labelledby="charging-session-list-heading">
+    <div class="charging-panel-head">
+      <h2 id="charging-session-list-heading">Assigned sessions</h2>
+      <span class="charging-count">${sessions.length}</span>
+    </div>
+    ${sessions.length ? `<ul class="charging-session-list">${sessions.map(({ point, request, allocation }) => {
+      const id = escapeHtml(allocation.allocationId);
+      return `<li><button type="button" data-session-choice="${id}" data-focus="session-${id}"
+        aria-controls="charging-session" aria-pressed="${allocation.allocationId === selectedId}">
+        <span><strong>${escapeHtml(request.vehicleId)}</strong><small>${escapeHtml(point.pointId)}</small></span>
+        ${badge(request.status, statusTones[request.status])}
+      </button></li>`;
+    }).join("")}</ul>` : '<p class="charging-empty">No sessions match these filters.</p>'}
+  </section>`;
+}
+
 function sessionDetails(selected, rows, schedule, now) {
   if (!selected) return "";
   const { point, allocation, request, session } = selected;
   const alternatives = rows.filter(row => row.condition === "Operational" && !row.allocation
     && chargingVehicleType(row.point) === chargingVehicleType(request));
-  const estimated = Number.isFinite(request.estimatedDurationMinutes) ? ` · Est. ${request.estimatedDurationMinutes} min` : "";
   const end = time(allocation.endTime, now);
   const timing = request.status === "Scheduled"
-    ? `Start by ${time(Date.parse(allocation.startTime) + 15 * minute, now)} · Planned end ${end}`
-    : `Started ${time(session?.startedAt ?? request.startedAt ?? allocation.startTime, now)} · Planned end ${end}`;
+    ? ["Start by", time(Date.parse(allocation.startTime) + 15 * minute, now)]
+    : ["Started", time(session?.startedAt ?? request.startedAt ?? allocation.startTime, now)];
   const overdue = request.status !== "Scheduled" && Date.parse(allocation.endTime) <= Date.parse(now);
   const moveForm = request.status === "Scheduled" && alternatives.length && schedule
-    ? `<form class="charging-adjust" data-adjust data-version="${schedule.version}">
+    ? `<form class="charging-adjust" data-adjust data-version="${schedule.version}" data-allocation-id="${escapeHtml(allocation.allocationId)}">
         <label for="charging-move">Move to another point</label>
-        <select id="charging-move" name="point" data-focus="move" required>
-          <option value="">Select available point</option>
-          ${alternatives.map(row => `<option value="${escapeHtml(row.point.pointId)}">${escapeHtml(row.point.pointId)}</option>`).join("")}
-        </select>
-        <button class="button button--secondary" type="submit" data-focus="move-submit">Save</button>
+        <div>
+          <select id="charging-move" name="point" data-focus="move" required>
+            <option value="">Select point</option>
+            ${alternatives.map(row => `<option value="${escapeHtml(row.point.pointId)}">${escapeHtml(row.point.pointId)}</option>`).join("")}
+          </select>
+          <button class="button button--secondary" type="submit" data-focus="move-submit">Save move</button>
+        </div>
       </form>` : "";
 
   return `<section class="charging-panel charging-session" aria-labelledby="charging-session-heading" id="charging-session">
-    <div class="charging-session-summary">
-      <div>
-        <div class="charging-session-title"><h2 id="charging-session-heading" tabindex="-1">${escapeHtml(request.vehicleId)}</h2>
-          ${badge(request.status, statusTones[request.status])}
-          ${overdue ? badge("Past planned end", "warning") : ""}</div>
-        <p>${escapeHtml(point.pointId)} · Battery ${escapeHtml(request.currentBatteryPercent)}% → ${escapeHtml(request.targetBatteryPercent)}%${estimated}</p>
-        <p>${timing} ICT</p>
-      </div>
-      <div class="charging-actions">${sessionActions(selected)}</div>
+    <div class="charging-session-head">
+      <p>Selected session</p>
+      <div class="charging-session-title"><h2 id="charging-session-heading" data-focus="session-heading" tabindex="-1">${escapeHtml(request.vehicleId)}</h2>
+        ${badge(request.status, statusTones[request.status])}
+        ${overdue ? badge("Past planned end", "warning") : ""}</div>
     </div>
+    <dl class="charging-session-facts">
+      <div><dt>Charging point</dt><dd>${escapeHtml(point.pointId)}</dd></div>
+      <div><dt>Battery → target</dt><dd>${escapeHtml(request.currentBatteryPercent)}% → ${escapeHtml(request.targetBatteryPercent)}%</dd></div>
+      <div><dt>${timing[0]} (ICT)</dt><dd>${timing[1]}</dd></div>
+      <div><dt>Planned end (ICT)</dt><dd>${end}</dd></div>
+      ${Number.isFinite(request.estimatedDurationMinutes) ? `<div><dt>Estimated duration</dt><dd>${request.estimatedDurationMinutes} min</dd></div>` : ""}
+    </dl>
+    <div class="charging-actions">${sessionActions(selected)}</div>
     ${moveForm}
   </section>`;
 }
@@ -306,15 +349,16 @@ export function mount(root, { store, api }) {
     const focus = root.contains(document.activeElement) ? document.activeElement.dataset.focus : null;
     const timelineScroll = root.querySelector(".charging-timeline-scroll");
     const { scrollLeft = 0, scrollTop = 0 } = timelineScroll ?? {};
+    const previousMove = root.querySelector("#charging-move");
     const state = store.readSnapshot();
     const overview = getChargingOverview(store, view.hubId);
     const pointCount = state.chargingPoints.filter(point => point.hubId === view.hubId).length;
-    const title = header(state.hubs, view.hubId, pointCount);
+    const title = '<header class="charging-heading"><h1>Charging Schedule</h1></header>';
     if (!overview.ok) {
       selected = null;
       const message = overview.code === "CHARGING_DATA_UNAVAILABLE" && !pointCount
         ? "No charging points are configured at this Hub." : overview.message;
-      root.innerHTML = `<div class="charging-page">${title}<section class="charging-panel">
+      root.innerHTML = `<div class="charging-page">${title}${toolbar(state.hubs, view.hubId, pointCount)}<section class="charging-panel">
         <div class="charging-panel-head"><h2>Point timeline</h2></div>
         <p class="charging-empty" role="status">${escapeHtml(message)}</p>
       </section></div>`;
@@ -329,13 +373,24 @@ export function mount(root, { store, api }) {
         ?? visibleRows.find(row => row.allocation) ?? null;
       view.selectedId = selected?.allocation.allocationId ?? null;
       root.innerHTML = `<div class="charging-page">${title}
+        ${toolbar(state.hubs, view.hubId, pointCount, { rows, date: selectedDate, today, pointFilter: view.pointFilter })}
         ${view.feedback ? `<div class="charging-feedback ${view.feedback.error ? "is-error" : ""}" role="status">${escapeHtml(view.feedback.message)}</div>` : ""}
         ${metrics(rows, waiting, today, currentTime)}
-        ${timeline(rows, currentTime, selectedDate, today, view.selectedId, view.pointFilter)}
-        ${live ? sessionDetails(selected, rows, schedule, currentTime) : ""}
+        <div class="charging-workspace${live ? " charging-workspace--detail" : ""}">
+          ${timeline(rows, currentTime, selectedDate, today, view.selectedId, view.pointFilter)}
+          ${live ? `<div class="charging-session-rail">
+            ${sessionList(visibleRows, view.selectedId)}
+            ${sessionDetails(selected, rows, schedule, currentTime)}
+          </div>` : ""}
+        </div>
         ${waitlist(waiting, currentTime)}
       </div>`;
       root.querySelector(".charging-timeline-scroll").scrollTo(scrollLeft, scrollTop);
+      const nextMove = root.querySelector("#charging-move");
+      if (previousMove && nextMove && previousMove.form.dataset.allocationId === nextMove.form.dataset.allocationId
+        && [...nextMove.options].some(option => option.value === previousMove.value)) {
+        nextMove.value = previousMove.value;
+      }
     }
     if (focus) {
       const replacement = [...root.querySelectorAll("[data-focus]")].find(element => element.dataset.focus === focus);
@@ -373,10 +428,26 @@ export function mount(root, { store, api }) {
       return;
     }
     const bar = event.target.closest("[data-allocation]");
-    if (bar) {
-      view.selectedId = bar.dataset.allocation;
+    const choiceButton = event.target.closest("[data-session-choice]");
+    if (bar || choiceButton) {
+      view.selectedId = bar?.dataset.allocation ?? choiceButton.dataset.sessionChoice;
       view.feedback = null;
       render();
+      if (choiceButton) {
+        const scroll = root.querySelector(".charging-timeline-scroll");
+        const selectedBar = scroll.querySelector('.charging-bar[aria-pressed="true"]');
+        if (selectedBar) {
+          const offset = selectedBar.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
+          const headerHeight = scroll.querySelector(".charging-axis").offsetHeight;
+          if (offset < headerHeight || offset + selectedBar.offsetHeight > scroll.clientHeight) {
+            scroll.scrollTop += offset - headerHeight - 12;
+          }
+        }
+        return;
+      }
+      const heading = root.querySelector("#charging-session-heading");
+      heading?.focus({ preventScroll: true });
+      root.querySelector("#charging-session")?.scrollIntoView({ block: "nearest" });
       return;
     }
     const button = event.target.closest("[data-event]");
