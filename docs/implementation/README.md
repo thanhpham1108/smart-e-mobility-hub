@@ -43,6 +43,8 @@ Member 3 implementation, demo steps, screenshots and AI usage record are in the 
 
 ### Member 4 — Fleet & Incident: Mai Hoàng Phương Đông
 
+Implementation, migration contract, verified screens and repeatable demo: [Member 4 handoff — 2452265](FLEET_INCIDENT_2452265.md).
+
 **Build:** network overview and resource inspection; redistribution validation/creation; dispatch, partial arrival and at-risk handling; incident reporting/investigation/repair; telemetry simulator and validation. Order creation commits vehicles but does not reserve destination capacity. Arrival confirmation rechecks capacity and moves only the confirmed subset. Resolving one incident clears only its own restriction.
 
 **UI:** Operator network overview, transfer form/order progress, incident desk, telemetry/event controls. Use the shared Operator sidebar/header; preserve the existing Fleet mockup's information hierarchy but replace its private shell/styles.

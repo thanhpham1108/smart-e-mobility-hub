@@ -19,6 +19,8 @@ The Student route is `#/student/parking`. It provides interval review, confirmat
 
 Apply `20261123000100_parking_lifecycle.sql` after `20261121000600_demo_access.sql`, before publishing this frontend. It adds Parking helpers and replaces the affected functions through a new migration. Existing tables and seed IDs are reused.
 
+After the Fleet integration and 25 November reset fixes, apply `20261126000100_integrate_parking_fleet.sql`. It combines Fleet occupancy guards and enriched Operator views with the Parking lifecycle and per-slot review. Both Parking and Fleet regression suites run under `npm test`.
+
 | Contract | Behavior |
 | --- | --- |
 | `api.read("parking.review", draft)` | Returns the reviewed Hub/vehicle/window, deadline, availability, first blocked slot and per-slot free capacity. |
