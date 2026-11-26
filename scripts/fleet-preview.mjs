@@ -3,7 +3,15 @@
 import { createServer } from "node:http";
 import { readFile, readdir } from "node:fs/promises";
 import { resolve, sep, extname } from "node:path";
+import { parseArgs } from "node:util";
 import { PGlite } from "@electric-sql/pglite";
+
+const { values } = parseArgs({ options: { port: { type: "string", default: "4173" } } });
+const port = Number(values.port);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  console.error("--port must be an integer between 1 and 65535.");
+  process.exit(1);
+}
 
 const root = resolve(import.meta.dirname, "..");
 const db = await PGlite.create();
@@ -44,5 +52,12 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": types[extname(path)] ?? "application/octet-stream", "Cache-Control": "no-store" }).end(content);
   } catch (error) { console.error(error.message); res.writeHead(500).end("Local preview error"); }
 });
-server.listen(4173, "127.0.0.1", () => console.log("Disposable Fleet preview: http://127.0.0.1:4173/#/operator/network"));
+server.on("error", async error => {
+  console.error(error.code === "EADDRINUSE"
+    ? `Port ${port} is already in use. Try npm run preview:fleet -- --port <free-port>.`
+    : error.message);
+  process.exitCode = 1;
+  await db.close();
+});
+server.listen(port, "127.0.0.1", () => console.log(`Disposable Fleet preview: http://127.0.0.1:${port}/#/operator/network`));
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => server.close(async () => { await db.close(); process.exit(); }));

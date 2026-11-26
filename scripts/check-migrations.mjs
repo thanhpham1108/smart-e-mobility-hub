@@ -19,6 +19,8 @@ try {
   console.log("Passed: seed, roles, demo access, parking + charging, retry, rental, partial transfer, incident, telemetry, simulation and reset.");
   await db.exec(await readFile("supabase/tests/fleet.sql", "utf8"));
   console.log("Passed: Fleet/Incident validation, atomic arrivals, risk recovery, restrictions, telemetry ordering/deduplication, occupancy reconciliation and reset.");
+  await db.exec(await readFile("supabase/tests/rental.sql", "utf8"));
+  console.log("Passed: Rental holds, pickup verification, simulated lock failures, return-slot revalidation and faulted returns.");
 } catch (error) {
   console.error(error.message);
   if (error.where) console.error(error.where);

@@ -59,7 +59,7 @@ export function mountRecords(root, { store, api, viewer }, renderContent, handle
       const custom = handlers[operation];
       const result = custom ? await custom(input, { store, api, viewer, memory }) : await api.command(operation, input);
       message = result.ok ? result.message ?? "Saved to the shared database." : result.message;
-      if (result.ok && !result.readOnly) await store.refresh();
+      if (result.refresh || (result.ok && !result.readOnly)) await store.refresh();
     } catch {
       message = "The action could not be completed. Check the input and try again.";
     } finally {
