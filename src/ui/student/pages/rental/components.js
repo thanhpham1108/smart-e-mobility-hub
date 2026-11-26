@@ -21,13 +21,6 @@ export function hubName(hubs, id) {
   return hubs.find(hub => hub.id === id)?.name ?? id ?? "In transit";
 }
 
-export function hubMapLink(hub) {
-  if (!Number.isFinite(hub?.latitude) || !Number.isFinite(hub.longitude)) return "";
-  const { latitude, longitude } = hub;
-  const url = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`;
-  return `<a class="button button--secondary" href="${e(url)}" target="_blank" rel="noopener">View Hub on map</a>`;
-}
-
 export function vehicleType(type) {
   return type === "ELECTRIC_BICYCLE" ? "E-bike" : type === "ELECTRIC_MOTORCYCLE" ? "E-scooter" : type;
 }

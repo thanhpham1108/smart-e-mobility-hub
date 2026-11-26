@@ -1,5 +1,6 @@
 import { actionForm, button, e, input, panel, timeLabel } from "../../../shared/records.js";
-import { facts, heading, hubMapLink, hubName, link, missing, rentalUrl, statusBadge } from "./components.js";
+import { facts, heading, hubName, link, missing, rentalUrl, statusBadge } from "./components.js";
+import { hubMap } from "./hub-map.js";
 
 export function reservation({ demoTime, hubs, reservations, trips, vehicles }, id) {
   const record = reservations.find(row => row.reservationId === id);
@@ -30,9 +31,7 @@ export function reservation({ demoTime, hubs, reservations, trips, vehicles }, i
         ]))}
       </div>
       <aside class="rental-stack">
-        ${confirmed && pickupHub ? panel("Pickup location",
-          `<p><strong>${e(pickupHub.name)}</strong></p><p class="records-meta">${e(pickupHub.area)}</p>` +
-          hubMapLink(pickupHub)) : ""}
+        ${confirmed && pickupHub ? panel("Pickup location", hubMap(pickupHub, hubs)) : ""}
         ${panel("Pickup actions", (canPickup
         ? "<p>Enter the vehicle ID to simulate identifying and unlocking the vehicle at the Hub.</p>" +
           actionForm("rental.pickup", `<input type="hidden" name="reservationId" value="${e(id)}">` +

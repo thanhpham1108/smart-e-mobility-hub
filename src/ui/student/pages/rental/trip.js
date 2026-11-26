@@ -1,5 +1,6 @@
 import { actionForm, e, field, panel, select, timeLabel } from "../../../shared/records.js";
-import { facts, heading, hubMapLink, hubName, link, missing, rentalUrl, statusBadge } from "./components.js";
+import { facts, heading, hubName, link, missing, rentalUrl, statusBadge } from "./components.js";
+import { hubMap } from "./hub-map.js";
 
 export async function returnOptions({ tripId, hubId }, { api, memory }) {
   memory.returnHubId = hubId;
@@ -42,9 +43,7 @@ export function trip({ demoTime, hubs, trips, vehicles }, id, memory) {
                  record.returnCondition === "OPERATIONAL" ? "Operational" : "Unavailable"]]),
           ["Duration", minutes + " min"], ["Distance", record.distanceKm == null ? "Unavailable" : record.distanceKm + " km"]
         ]))}
-        ${returnHub ? panel("Return location",
-          `<p><strong>${e(returnHub.name)}</strong></p><p class="records-meta">${e(returnHub.area)}</p>` +
-          hubMapLink(returnHub)) : ""}
+        ${returnHub ? panel("Return location", hubMap(returnHub, hubs)) : ""}
         ${!active ? link("Back to my rentals", rentalUrl("history")) : ""}
       </div>
       <aside class="rental-stack">
