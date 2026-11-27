@@ -1,0 +1,97 @@
+.what-if-page {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.what-if-page p { margin: 0; }
+.what-if-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.what-if-heading h1 { margin: 0; font-size: 26px; line-height: 1.25; }
+.what-if-heading p { margin-top: 4px; color: var(--color-muted); font-size: 14px; }
+.what-if-nav { display: flex; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--color-border); }
+.what-if-nav button {
+  min-height: 40px;
+  padding: 7px 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 650;
+}
+.what-if-nav button[aria-current="page"] { color: var(--color-primary-dark); border-bottom-color: var(--color-primary); }
+.what-if-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr); align-items: start; gap: 14px; }
+.what-if-stack { display: grid; min-width: 0; gap: 14px; }
+.what-if-page .records-panel { padding: 16px 18px; }
+.what-if-page .records-panel h2 { margin-bottom: 14px; font-size: 17px; }
+.what-if-page .records-panel h3 { font-size: 15px; overflow-wrap: anywhere; }
+
+.what-if-page form[data-operation="what-if.review"] { display: grid; gap: 14px; }
+.what-if-page form[data-operation="what-if.review"] > .button { justify-self: start; }
+.what-if-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.what-if-page .what-if-form-grid .field,
+.what-if-page .what-if-notes { min-width: 0; max-width: none; }
+.what-if-page .field :is(input, select, textarea) { width: 100%; min-width: 0; }
+.what-if-page .field textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-control);
+  padding: 8px 10px;
+  font: inherit;
+  resize: vertical;
+}
+.what-if-form-group { margin: 0; padding: 10px 0 0; min-width: 0; border: 0; border-top: 1px solid var(--color-border); }
+.what-if-form-group legend { padding-right: 10px; color: var(--color-text); font-size: 14px; font-weight: 650; }
+.what-if-form-group > p { margin-bottom: 8px; }
+.what-if-toggles { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; }
+.what-if-toggle { display: inline-flex; min-height: 36px; align-items: center; gap: 6px; font-size: 13px; }
+.what-if-toggle input { accent-color: var(--color-primary-dark); }
+.what-if-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.what-if-actions form { margin: 0; }
+
+.what-if-list, .what-if-conditions, .what-if-recommendations { margin: 0; }
+.what-if-list, .what-if-conditions { padding: 0; list-style: none; }
+.what-if-list > li { display: flex; align-items: start; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--color-border); font-size: 13px; }
+.what-if-list > li:first-child { border-top: 0; padding-top: 0; }
+.what-if-list > li:last-child { padding-bottom: 0; }
+.what-if-list-copy { display: grid; min-width: 0; justify-items: start; gap: 4px; overflow-wrap: anywhere; }
+.what-if-list > li > .button { min-height: 36px; padding: 5px 10px; }
+.what-if-conditions { display: flex; flex-wrap: wrap; gap: 5px; color: #334155; font-size: 12px; }
+.what-if-conditions li { padding: 2px 7px; border-radius: 4px; background: #f1f5f9; overflow-wrap: anywhere; }
+.what-if-review, .what-if-comparison { display: grid; gap: 12px; }
+.what-if-page form[data-operation="what-if.compare"] .field { flex: 1 1 220px; max-width: none; }
+.what-if-review > p { font-size: 14px; }
+.what-if-empty { padding: 12px 0; color: var(--color-muted); font-size: 14px; }
+.what-if-result-header { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 6px 14px; }
+.what-if-result-header .records-meta { overflow-wrap: anywhere; }
+.what-if-context { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin: 12px 0; }
+.what-if-context dt { color: var(--color-muted); font-size: 12px; }
+.what-if-context dd { margin: 0; font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
+.what-if-result-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px; border: 1px solid var(--color-border); border-radius: 8px; }
+.what-if-result-metrics div { display: grid; gap: 4px; padding: 9px 12px; }
+.what-if-result-metrics div + div { border-left: 1px solid var(--color-border); }
+.what-if-result-metrics span { color: var(--color-muted); font-size: 12px; }
+.what-if-result-metrics strong { color: var(--color-text); font-size: 22px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+
+.what-if-table-scroll { max-width: 100%; overflow-x: auto; margin: 12px 0 8px; }
+.what-if-table { width: 100%; min-width: 390px; border-collapse: collapse; font-size: 13px; }
+.what-if-table th, .what-if-table td { padding: 8px 6px; border-bottom: 1px solid var(--color-border); text-align: right; }
+.what-if-table th:first-child { padding-left: 0; text-align: left; }
+.what-if-table thead th { color: var(--color-muted); font-size: 12px; font-weight: 650; }
+.what-if-table tbody th { font-weight: 500; }
+.what-if-table td { font-variant-numeric: tabular-nums; }
+.what-if-delta { font-weight: 650; }
+.what-if-page .what-if-warning { margin: 10px 0; padding: 8px 10px; border-left: 3px solid var(--color-warning); background: #fffbeb; color: #78350f; font-size: 13px; }
+.what-if-page ul.what-if-warning { padding-left: 28px; }
+.what-if-recommendations { padding-left: 20px; font-size: 13px; }
+.what-if-recommendations li { padding-bottom: 8px; overflow-wrap: anywhere; }
+.what-if-comparison-context { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.what-if-comparison-context p { font-size: 13px; overflow-wrap: anywhere; }
+
+@media (max-width: 1100px) {
+  .what-if-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .what-if-form-grid, .what-if-comparison-context { grid-template-columns: minmax(0, 1fr); }
+  .what-if-page .records-panel { padding: 12px; }
+  .what-if-result-metrics div { padding: 8px; }
+  .what-if-result-metrics strong { font-size: 20px; }
+}
