@@ -4,46 +4,46 @@ This document is the visual and interaction source of truth for the implementati
 
 ## One app, two role shells
 
-- **Student shell:** one 64 px top bar with brand, Hub/Rental/Parking navigation, current account/role and a role switch. Main content uses the same page heading, action position and card layout on every Student route.
-- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The top bar shows the current route and role switch. The demo bar below it has the clock, +15 min and Reset Demo. On narrow screens, use the shell's compact navigation menu.
-- **Routing:** keep the skeleton's hash routes so each page can reopen from the GitHub Pages project URL. When Hub & Identity adds demo sessions, a direct route that needs a role shows the shared role selection, then returns to the requested route. See the [shared implementation contracts](SHARED_CONTRACTS.md) for the current preview behavior and the expected session check.
-- **One state:** Student and Operator views read the same browser store on the demo machine. Switching role changes the shell and available actions, not the underlying data.
+- **Student shell:** one 64 px top bar with brand, Hub/Rental/Parking navigation and a link to the Operator portal. Main content uses the same page heading, action position and card layout on every Student route.
+- **Operator shell:** one 256 px dark slate sidebar on desktop, with Network, Fleet, Incidents, Charging and What-if routes. The top bar shows the current route and a link to the Student portal. The demo bar below it has the clock, +15 min and shared Reset Demo. On narrow screens, use the shell's compact navigation menu.
+- **Routing:** hash routes work with the GitHub Pages project URL. A visitor opens directly in the requested portal. The existing role switch links to the other portal. See the [shared implementation contracts](SHARED_CONTRACTS.md).
+- **One state:** Student and Operator views read authorized views of the same PostgreSQL database. Use the Student/Operator link in the header to switch roles.
 
-Member 1 owns the shells and shared UI primitives. Feature owners render page content into the shell. No feature creates its own navbar, sidebar, role switch, reset control, toast framework, or global CSS rules.
+Member 1 owns the shells and shared UI primitives. Feature owners render page content into the shell and reuse the shared navigation, portal links, reset controls, feedback and styles.
 
 ## Canonical references and source folders
 
-Use **[Reserve Parking Space](ui-reference/student/reference.png)** as the Student visual reference: white 64 px navigation, emerald active route, light slate page, form/cards and a clear summary panel. Use **[Network Overview](ui-reference/operator/reference.png)** as the Operator visual reference: dark sidebar, white top header, page heading, KPI cards and content panels. [Both original prototype sources are copied into this implementation folder](ui-reference/README.md). They define the shell and component language; domain views can have different content layouts.
+Use the Submission 2 prototypes as the PC visual references. **[Reserve Parking Space](ui-reference/student/reference.png)** shows the Student navigation, cards and reservation summary. **[Network Overview](ui-reference/operator/reference.png)** shows the Operator sidebar, header, indicators and panels. The [UI reference folder](ui-reference/README.md) includes the HTML, CSS and JavaScript for both prototypes.
 
 Target folder structure:
 
 ```text
 index.html
-src/app/              # main.js, router.js, browser store and demo clock
-src/data/fixtures/    # versioned JSON demo data
+src/app/              # main.js, router.js, Supabase API client and route read cache
+supabase/migrations/  # shared schema, RPCs and versioned SQL demo data
 src/ui/shared/        # tokens.css, base.css, components.css, components.js
 src/ui/student/       # shell.js and Hub, Rental, Parking/Charging pages
 src/ui/operator/      # shell.js and Fleet, Incident, Charging, What-if pages
-src/modules/<area>/   # feature services and rules, separate from rendering
+src/modules/<area>/   # feature services and formatting helpers, separate from rendering
 ```
 
 The two shared shells and reference pages already live in these folders. Members add route content inside the appropriate portal folder and call their domain services in `src/modules/`. Use the shared primitives for common UI and coordinate additions to `ui/shared` with Member 1.
 
 ## Shared JavaScript and feature page contract
 
-The existing parking and Fleet `app.js` files are self-contained prototypes: each owns its navigation, event listeners, demo state and rendering. Use their appearance and feature flow as references, then extract common code once. Do **not** use either whole `app.js` as a file that every member copies; copied event handlers and state would diverge as soon as features are integrated.
+The Submission 2 parking and Fleet prototypes are visual references. Implement live behavior with the shared portal shells and Supabase API.
 
-Use browser-native ES modules (`import`/`export`) and one `index.html` entry. `src/app/main.js` initializes the store and router. The router selects the role shell and mounts one page into a content element. Each page exports the same small interface:
+Use browser-native ES modules (`import`/`export`) and one `index.html` entry. `src/app/main.js` initializes the Supabase client and router. The router loads the view for the active demo role and mounts the page. Each page exports the same small interface:
 
 ```js
 export function mount(root, context) {
   // Render this route and attach only its own event handlers.
-  // context currently supplies store and clock. Import UI helpers from ui/shared.
+  // context supplies store, api and viewer. Import UI helpers from ui/shared.
   return () => { /* remove listeners/timers created by this page */ };
 }
 ```
 
-The router calls the returned cleanup function before mounting another route. Attach feature listeners to the page root and scope page rendering to that element. The shell owns navigation and role switching. `src/ui/shared/components.js` owns common controls and feedback, and `src/modules/<area>/` owns business transitions. A page reads a snapshot, calls an owning service, then refreshes from the shared store. Feature branches can start with the current routes and reference pages. When a shared context service is ready, wire it into the existing entry point and verify the page against the [shared contracts](SHARED_CONTRACTS.md) before merging the connected flow.
+The router calls the returned cleanup function before mounting another route. Scope rendering and listeners to the page root. The shell owns navigation and portal switching. A page reads the latest authorized result from its route cache, calls the feature API and refreshes after a successful command. The SQL handlers own business transitions. Use the [shared contracts](SHARED_CONTRACTS.md) for API input, roles and errors.
 
 Shared files have one owner and one review path. Feature branches may add a page and its scoped stylesheet. A change to a shared component or token is a separate, small change reviewed with Member 1; after it merges, other features import the updated version. This lets six people work in parallel without editing the same `app.js` or CSS rules. The shared stylesheet is imported once at the entry point; page styles use a route root selector such as `.parking-page` so they cannot restyle another feature.
 
@@ -96,7 +96,7 @@ No component should query or mutate domain state itself. The page calls its owni
 
 | Route group | Required working views | Existing starting point |
 | --- | --- | --- |
-| Student / Hub | Login/role choice, Hub search/status, profile | [Hub & Identity prototype](../submission-2/ui-design/hud-identity/README.md) |
+| Student / Hub | Hub search/status, profile | [Hub & Identity prototype](../submission-2/ui-design/hud-identity/README.md) |
 | Student / Rental | Vehicle list/details, reservation, trips, pickup/return | [Student Portal screenshots](../submission-2/ui-design/student-portal/README.md) |
 | Student / Parking & Charging | Reserve interval, ticket, bookings, charging status/cancel/complete | [Parking prototype](../submission-2/ui-design/student-portal/parking-private-ev/), plus shared charging state |
 | Operator / Fleet | Network overview, redistribution, incident desk, telemetry controls | [Fleet prototype](../submission-2/ui-design/operator-portal/fleet-incident-mockup/README.md) |

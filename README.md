@@ -2,13 +2,13 @@
 
 Smart E-Mobility Hub is a course project for coordinating electric mobility resources across the VNU-HCM Urban Area. A network of Mobility Hubs provides shared electric vehicles, parking spaces and charging points. Students use these resources; Operators monitor capacity, resolve incidents, coordinate vehicles between Hubs and explore hypothetical demand.
 
-**Project status:** Submissions 1–3 document the requirements, interactions and design. The implementation foundation now contains one browser app entry point, shared Student and Operator shells, routing, CSS tokens and two PC reference pages. Feature services and complete use-case flows remain to be built. The target MVP is a responsive HTML/CSS/JavaScript web app hosted on GitHub Pages, with simulated data and state stored in one browser. The diagrams and method descriptions describe the intended design, not completed software.
+**Project status:** Submissions 1–3 document requirements, interactions and design. The Final MVP uses Student and Operator portals with direct demo access and shared Supabase PostgreSQL. See the [implementation guide](docs/implementation/README.md) for feature behavior and demo workflows.
 
 ## What the MVP must demonstrate
 
 | Actor | Main interactions |
 | --- | --- |
-| Student | Sign in; search Hubs and vehicles; reserve, pick up and return a shared vehicle; reserve parking for a private EV; request, view, cancel and complete charging. |
+| Student | Open the Student portal; search Hubs and vehicles; reserve, pick up and return a shared vehicle; reserve parking for a private EV; request, view, cancel and complete charging. |
 | Operator | Inspect network and resource state; coordinate redistribution; investigate incidents; view and adjust charging assignments; configure and compare what-if runs. |
 | External Telemetry Provider | Supply identified, timestamped vehicle, parking and charging observations. An in-browser simulator plays this role in the MVP. These are supporting event flows rather than interactive user goals. |
 
@@ -57,11 +57,11 @@ An Operator configures a scenario, starts a run and reviews predicted metrics an
 
 ## Architecture and integration
 
-The implementation target is one responsive web app deployed through GitHub Pages. JavaScript modules implement the six domain services in the browser. JSON fixtures seed the initial demo state; browser storage keeps changes across reloads on the demo machine. Student and Operator roles, timed events and telemetry observations are simulated within the app. This MVP does not synchronize state across different devices.
+GitHub Pages serves the browser app. The browser starts a Supabase demo session automatically. The Student and Operator portals use seeded profiles. Supabase PostgreSQL owns the clock, bookings, sessions and other live records. See the [Final architecture](docs/implementation/FINAL_ARCHITECTURE.md).
 
-The [deployment view](docs/submission-3/deployment-view/README.md) and [development view](docs/submission-3/development-view/README.md) record the Submission 3 server-based design. They need to be aligned with the browser-only implementation in the Final report. The module ownership and business rules remain the implementation reference. UI components call domain service functions rather than changing resource state directly; a shared browser state adapter applies related changes together.
+The [deployment view](docs/submission-3/deployment-view/README.md) and [development view](docs/submission-3/development-view/README.md) record Submission 3. The Final implementation uses database transactions and authenticated RPCs to enforce the module ownership rules.
 
-| Integration boundary | Agreement needed before parallel coding |
+| Integration boundary | Shared interface |
 | --- | --- |
 | Hub & Identity → all modules | Session and role-check result; Hub IDs, status, capacity and alternative-Hub lookup. |
 | Rental ↔ Parking | Pickup/return effects on physical parking occupancy and Hub projections. |
@@ -70,19 +70,19 @@ The [deployment view](docs/submission-3/deployment-view/README.md) and [developm
 | All operational modules → What-if | One consistent, read-only snapshot with source versions and freshness information. |
 | UI / simulated timer → owning services | Selected demo role, authoritative app time, retry key or event ID, and expiry/timeout triggers. |
 
-The [architecture baseline](docs/submission-3/architectural-design/architecture_baseline.md) is the shared contract when a detail is not repeated here. A module defines its own entity lifecycle; other modules refer to it by ID and service result.
+Use the [shared implementation contracts](docs/implementation/SHARED_CONTRACTS.md) for the SQL runtime, data ownership and API shapes. The Submission 3 baseline supplies the domain context.
 
 ## How to divide and assemble implementation work
 
-The detailed member deliverables, integration gates and shared UI rules are in the [implementation plan](docs/implementation/README.md) and [UI implementation contract](docs/implementation/UI_DESIGN_SYSTEM.md). Use those two documents when opening feature branches or prompting separate coding agents.
+**Start with [CONTRIBUTING.md](CONTRIBUTING.md).** It explains where to read the shared contracts and assignments, how to run the skeleton and where to place code, and how to open and verify a PR to `develop`.
 
-1. **Extend the shared browser app.** The entry point, PC reference shells and sample pages exist. Agree on service function contracts, shared IDs/time format, state adapter and fixtures before feature branches depend on them. Match the two PC visual references first; refine mobile layouts after desktop integration.
+1. **Extend the shared browser app.** Follow the [database setup](docs/implementation/DATABASE_SETUP.md), shared API and stable IDs. Reuse the two portal shells and UI tokens.
 2. **Agree on cross-module contracts first.** The owner of each service writes its request/response shapes and error/status meanings. Its consumers build against the same contract, using temporary adapters or fixtures while the provider is unfinished. In particular, settle the Parking–Charging handoff and Fleet's calls to Rental/Parking/Charging before implementing dependent flows.
 3. **Build feature slices in module branches.** Each owner connects UI → domain service → shared browser state for at least one main flow, then adds the remaining actions and exceptional states. Keep domain rules in the owning service rather than duplicating them in UI components.
 4. **Integrate in dependency order.** Bring up the shared app and Hub & Identity first; connect Rental and Parking; then Charging with Parking; then Fleet/Incident and telemetry; then What-if snapshot reads. Merge small, reviewable changes into the shared branch after each connected flow works.
 5. **Run end-to-end scenarios before the demo.** Verify a Student rental journey, a parking and charging journey with Full/waitlist behavior, an incident and partial redistribution, and an isolated simulation. Check resource counts and lifecycle states after each flow.
 
-One shared integration owner should maintain the app entry point, fixtures and agreed contracts, while feature owners remain responsible for their modules. The team can assign that integration role before coding starts; it is not an additional feature module.
+Phạm Nguyễn Công Thành coordinates PostgreSQL migrations, shared fixtures, demo controls and integration into develop. Feature owners review their module’s contracts, implementation and demo.
 
 ## Final submission
 
@@ -99,4 +99,4 @@ The course brief requires **one final PDF** containing all content from Submissi
 
 ## Development setup
 
-**Stack:** Browser-native HTML, CSS and JavaScript modules. No package installation is needed for the current foundation. From the repository root, run `python3 -m http.server 4173` and open `http://localhost:4173/#/student/parking`; switch to the Operator portal in the header or open `http://localhost:4173/#/operator/network`. The two pages are layout and integration examples, not finished Parking or Fleet features. The app is structured for a GitHub Pages project URL; publishing will be configured when the MVP flows are integrated.
+**Stack:** HTML, CSS and JavaScript on GitHub Pages with Supabase Auth and PostgreSQL. For local frontend and database setup, demo access and migration checks, follow [Database setup](docs/implementation/DATABASE_SETUP.md).

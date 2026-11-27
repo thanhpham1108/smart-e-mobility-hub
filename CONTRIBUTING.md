@@ -1,12 +1,15 @@
-# Collaboration Guidelines
+# Contributing to Smart E-Mobility Hub
 
-Welcome to the team! To keep our repository clean and ensure smooth collaboration for all 6 team members, please follow these basic rules:
+The app uses native HTML, CSS and JavaScript on GitHub Pages. The app opens directly in demo mode, and Supabase PostgreSQL stores shared state. Use the [database setup guide](docs/implementation/DATABASE_SETUP.md) to run a local database or access the hosted demo.
 
-1. **Do not commit directly to main** for normal feature or document work.
-2. **Use feature branches** for your changes (e.g., `feature/login-ui`, `docs/use-case-diagram`).
-3. **Make small, meaningful commits** with clear and descriptive messages.
-4. **Pull/rebase** from the main branch before starting major work when appropriate to avoid conflicts.
-5. **Open a Pull Request** before merging your feature branch into `main`.
-6. **At least one other team member should review** your Pull Request before it is merged.
-7. **Do not commit secrets or personal credentials** (e.g., API keys, passwords).
-8. **Keep documentation and diagrams organized** according to the existing repository structure.
+## Work on a feature
+
+1. Start from `develop` after the SQL frontend cutover. During the rollout, start from `integration/supabase-postgres`. Read your module's assignment, data contract and UI guide in the [implementation guide](docs/implementation/README.md).
+2. Follow [Add a table or demo data](docs/implementation/ADD_DATABASE_CHANGES.md) for a complete migration example. Update the API and data contract, review effects on modules that share the same IDs, then verify the change locally.
+3. Put domain decisions in SQL commands and keep screens focused on collecting input and showing results. Use the shared client and the existing shells. Pass stable IDs across modules. Keep data state in PostgreSQL. Store only the Auth session and temporary interaction state in the browser.
+4. Open a feature PR to the same base branch. Include the route, required portal, setup or seed, steps, expected database changes and any paired module needed for verification. Mention new migrations and their order.
+5. Coordinate deployment with the integration lead. When a frontend change needs a new schema, deploy and verify the migration first. Avoid resetting the hosted demo during another teammate's review.
+
+## Verify a flow
+
+Use `npm ci && npm test` for the local PostgreSQL checks and the browser for portal switching, navigation, errors and persistence. For cross-device behavior open the Student and Operator portals in separate browser profiles. Check that the Operator sees the update within the next visible-tab refresh.

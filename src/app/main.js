@@ -1,5 +1,4 @@
-import { createStore } from "./store.js";
-import { createDemoClock } from "./clock.js";
+import { createDemoApi } from "./backend.js";
 import { startRouter } from "./router.js";
 
 import {
@@ -72,3 +71,4 @@ try {
     </main>
   `;
 }
+startRouter(document.querySelector("#app"), createDemoApi);

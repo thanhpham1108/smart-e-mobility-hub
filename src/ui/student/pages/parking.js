@@ -1,50 +1,63 @@
-import { escapeHtml, pageHeader } from "../../shared/components.js";
-import { demoHubRows } from "../../../app/demo-read-model.js";
+import { badge, pageHeader } from "../../shared/components.js";
+import { mountStudentChargingStatus } from "../components/charging-status.js";
+import { actionForm, button, e, field, fromLocalInput, list, mountRecords, options, panel, select, timeLabel, toLocalInput } from "../../shared/records.js";
 
-const times = ["08:00", "08:15", "08:30", "08:45", "09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30", "10:45", "11:00", "11:15", "11:30", "11:45", "12:00"];
-
-export function mount(root, { store }) {
-  const state = { hubId: "ktx-a", date: "2026-10-24", arrival: "09:00", departure: "11:00" };
-  let unsubscribe = () => {};
-
-  function render() {
-    const hubs = demoHubRows(store.readSnapshot());
-    const selected = hubs.find(hub => hub.id === state.hubId) || hubs[0];
-    if (!selected) {
-      root.innerHTML = pageHeader("Parking & Private EV", "No Hubs available", "Reset demo data to restore the sample Hubs.");
-      return;
+export function mount(root, context) {
+  root.innerHTML = '<div data-parking-records></div><div data-charging-status></div>';
+  const unmount = mountRecords(root.querySelector("[data-parking-records]"), context, (state, viewer, memory) => {
+    const { hubs, privateVehicles, parkingReservations, parkingSessions, notifications } = state;
+    const rounded = Math.ceil(Date.parse(state.demoTime) / 900000) * 900000;
+    const draft = memory.draft ?? {};
+    const renderTime = (name, label, value) => field(name, label, `<input name="{{name}}" type="datetime-local" step="900" value="${e(value)}" required>`);
+    const saved = memory.review;
+    const optionSelection = (rows, key, label, selected) => options(rows,key,label)
+      .replace(`value="${e(selected)}"`,`value="${e(selected)}" selected`);
+    return `${pageHeader("Student Portal", "Parking & Charging", "Reserve a parking window and request a compatible charging point.")}
+      ${panel("Reserve parking", actionForm("parking.review",
+        select("hubId","Mobility Hub",optionSelection(hubs,"id","name",draft.hubId))
+        + select("vehicleId","Private vehicle",optionSelection(privateVehicles,"vehicleId","name",draft.vehicleId))
+        + renderTime("arrivalTime","Arrival (ICT)",draft.arrivalTime ?? toLocalInput(rounded))
+        + renderTime("departureTime","Departure (ICT)",draft.departureTime ?? toLocalInput(rounded + 3600000)), "Review availability")
+        + (saved ? `<p>${saved.available ? "Space is available. Check in before " + timeLabel(saved.expiresAt)
+          : "No space at " + timeLabel(saved.blockedSlot) + ". Try a different Hub or interval."}</p>
+          ${saved.available ? button("Confirm booking", "parking.confirm", {}) : ""}` : ""))}
+      ${panel("My bookings", list(parkingReservations, booking => {
+        const session = parkingSessions.find(item => item.reservationId === booking.reservationId);
+        return `<article><h3>${e(hubs.find(hub => hub.id === booking.hubId)?.name ?? booking.hubId)} ${badge(booking.status)}</h3>
+          <p>${e(booking.vehicleId)} · ${timeLabel(booking.arrivalTime)} → ${timeLabel(booking.departureTime)}</p>
+          <p class="records-meta">Booking ${e(booking.reservationId)} ${session ? "· Space " + e(session.parkingSpaceId) : "· Check-in deadline " + timeLabel(booking.expiresAt)}</p>
+          ${booking.status === "Confirmed" ? button("Check in", "parking.checkIn", { reservationId:booking.reservationId })
+            + button("Cancel booking", "parking.cancel", { reservationId:booking.reservationId }) : ""}
+          ${booking.status === "Checked In" ? button("Check out", "parking.checkOut", { reservationId:booking.reservationId }) : ""}</article>`;
+      }, "No parking bookings."))}
+      ${notifications.length ? panel("Charging notifications", list(notifications.slice(0, 5), notice =>
+        `<p>${e(notice.message)} <small>${timeLabel(notice.createdAt)}</small></p>`, "")) : ""}`;
+  }, {
+    async "parking.review"(input, { api, memory }) {
+      memory.draft = input;
+      memory.review = null;
+      const payload = { ...input, arrivalTime:fromLocalInput(input.arrivalTime), departureTime:fromLocalInput(input.departureTime) };
+      const result = await api.read("parking.review", payload);
+      if (result.ok) { memory.review=result.data; memory.payload=payload; }
+      return { ...result, readOnly:true, message:"Availability reviewed." };
+    },
+    async "parking.confirm"(_, { api, memory }) {
+      if (!memory.review?.available) return { ok:false, message:"Review the available parking window first." };
+      const result = await api.command("parking.reserve",memory.payload);
+      if (result.ok) memory.review=null;
+      return result;
+    },
+    "parking.cancel"(input,{ api }) {
+      return globalThis.confirm("Cancel this booking and any unused charging request?") ? api.command("parking.cancel",input) :
+        { ok:true, readOnly:true, message:"Booking kept." };
+    },
+    "parking.checkOut"(input,{ api }) {
+      return globalThis.confirm("Check out and release this parking space?") ? api.command("parking.checkOut",input) :
+        { ok:true, readOnly:true, message:"Parking visit kept." };
     }
-    root.innerHTML = `${pageHeader("Parking & Private EV", "Your space. Your schedule.", "Choose a campus Hub and preview parking for your whole visit.", '<span class="badge badge--info">Foundation demo</span>')}
-      <div class="parking-layout"><section class="card parking-form" aria-label="Parking preview">
-        <h2>1 &nbsp; Choose your Hub</h2><div class="hub-picker">${hubs.slice(0, 3).map(hub => `<button type="button" class="hub-choice ${state.hubId === hub.id ? "is-selected" : ""}" data-hub="${escapeHtml(hub.id)}" aria-pressed="${state.hubId === hub.id}"><strong>${escapeHtml(hub.name)}</strong><small>${escapeHtml(hub.area)}</small><span>${hub.parkingFree} spaces free in seed data</span></button>`).join("")}</div>
-        <hr class="section-divider"><h2>2 &nbsp; Plan your visit</h2><div class="parking-fields"><div class="field"><label for="parking-date">Parking date</label><input id="parking-date" type="date" value="${state.date}"></div><div class="field"><label for="parking-arrival">Arrival</label><select id="parking-arrival">${times.map(time => `<option ${time === state.arrival ? "selected" : ""}>${time}</option>`).join("")}</select></div><div class="field"><label for="parking-departure">Departure</label><select id="parking-departure">${times.map(time => `<option ${time === state.departure ? "selected" : ""}>${time}</option>`).join("")}</select></div></div>
-        <p class="parking-note" id="parking-feedback" role="status">Choose a Hub and visit time to preview the shared layout.</p>
-        <hr class="section-divider"><h2>3 &nbsp; Your vehicle</h2><p style="margin-bottom:0;color:var(--color-muted);font-size:14px">Vehicle selection and reservation rules will be added by the Parking feature owner.</p>
-      </section><aside class="card parking-summary" aria-label="Visit summary"><div class="parking-summary__head"><p class="eyebrow">Your visit at a glance</p><h2>Reservation summary</h2></div><div class="parking-summary__body"><div class="parking-map" aria-hidden="true">Campus access · ${escapeHtml(selected.name)}</div><strong>${escapeHtml(selected.name)}</strong><p style="color:var(--color-muted);font-size:13px">${escapeHtml(selected.area)}</p><div class="summary-row"><span>Date</span><strong id="summary-date">${escapeHtml(state.date)}</strong></div><div class="summary-row"><span>Arrival</span><strong id="summary-arrival">${escapeHtml(state.arrival)}</strong></div><div class="summary-row"><span>Departure</span><strong id="summary-departure">${escapeHtml(state.departure)}</strong></div><button type="button" class="button button--primary" disabled title="Reservation service is not implemented yet">Review reservation</button><p class="parking-summary__caption">Preview only; no space has been reserved.</p></div></aside></div>`;
-  }
-
-  function onClick(event) {
-    const choice = event.target.closest("[data-hub]");
-    if (!choice || !root.contains(choice)) return;
-    state.hubId = choice.dataset.hub;
-    render();
-  }
-  function onChange(event) {
-    if (!root.contains(event.target)) return;
-    if (event.target.id === "parking-date") state.date = event.target.value;
-    if (event.target.id === "parking-arrival") state.arrival = event.target.value;
-    if (event.target.id === "parking-departure") state.departure = event.target.value;
-    if (!["parking-date", "parking-arrival", "parking-departure"].includes(event.target.id)) return;
-    const valid = state.arrival < state.departure;
-    root.querySelector("#parking-feedback").textContent = valid ? "Preview updated. No reservation has been created." : "Departure must be later than arrival.";
-    root.querySelector("#summary-date").textContent = state.date;
-    root.querySelector("#summary-arrival").textContent = state.arrival;
-    root.querySelector("#summary-departure").textContent = state.departure;
-  }
-
-  render();
-  root.addEventListener("click", onClick);
-  root.addEventListener("change", onChange);
-  unsubscribe = store.subscribe(render);
-  return () => { unsubscribe(); root.removeEventListener("click", onClick); root.removeEventListener("change", onChange); };
+  });
+  const unmountCharging = mountStudentChargingStatus(root.querySelector("[data-charging-status]"), {
+    ...context, actorId: context.viewer.userId
+  });
+  return () => { unmount(); unmountCharging(); };
 }
