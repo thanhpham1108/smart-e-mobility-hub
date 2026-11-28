@@ -20,6 +20,11 @@ assert.deepEqual(sample, inputBefore, "Simulation mutated its input snapshot.");
 assert.equal(projected.chargingRejected, 5, "Cars must not satisfy motorcycle charging demand.");
 assert.equal(projected.chargingCompleted, 1);
 assert.equal(projected.chargingUtilization, 67);
+const heldParking = evaluateScenario({ ...scenario, conditions: [{ kind: "Parking surge", magnitude: 3 }] },
+  { ...sample, parkingAdmissionFree: 0 });
+assert.equal(heldParking.metrics.baseline.availableParking, 0);
+assert.equal(heldParking.metrics.baseline.parkingUtilization, 33);
+assert.equal(heldParking.metrics.projected.unserved, 3);
 assert.equal(evaluateScenario({ ...scenario, conditions: [{ kind: "Hub outage", magnitude: 1 }] }, sample)
   .metrics.projected.chargingPaused, 1);
 assert.throws(() => evaluateScenario(scenario, { ...sample, chargingPoints: [] }), /incomplete/);
@@ -81,6 +86,7 @@ try {
   const baseline = started.data.snapshot.baseline;
   const result = evaluateScenario(scenarioInput, {
     ...baseline, vehiclesFree: baseline.vehicles_free, parkingFree: baseline.parking_free,
+    parkingAdmissionFree: baseline.parking_admission_free,
     parkingTotal: baseline.parking_total, chargingTotal: baseline.charging_total
   });
   assert.ok(result.metrics.projected.chargingRejected > 0);

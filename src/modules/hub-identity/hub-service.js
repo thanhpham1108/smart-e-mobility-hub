@@ -2,7 +2,7 @@ const serviceTests = {
   bikes: hub => hub.vehicleBatteries?.some(vehicle => vehicle.vehicleType === "ELECTRIC_BICYCLE"),
   scooters: hub => hub.vehicleBatteries?.some(vehicle => vehicle.vehicleType === "ELECTRIC_MOTORCYCLE"),
   cars: hub => hub.vehicleBatteries?.some(vehicle => vehicle.vehicleType === "CAR"),
-  parking: hub => hub.parkingFree > 0 && !hub.parkingDiscrepancy,
+  parking: hub => (hub.parkingAdmissionFree ?? hub.parkingFree) > 0 && !hub.parkingDiscrepancy,
   charging: hub => hub.chargingFree > 0
 };
 

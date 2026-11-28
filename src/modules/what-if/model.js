@@ -114,8 +114,10 @@ export function evaluateScenario(scenario, snapshot) {
   // The worker receives a structured clone; the projected objects below are independent
   // of the immutable baseline even when this function is called outside the worker.
   const { horizonMinutes: horizon, hubId } = scenario;
+  const admissionFree = snapshot?.parkingAdmissionFree ?? snapshot?.parkingFree;
   if (!snapshot || snapshot.id !== hubId || !Number.isInteger(horizon) || horizon < 15 || horizon > 1440 ||
-      ![snapshot.vehiclesFree, snapshot.parkingFree, snapshot.parkingTotal, snapshot.chargingTotal].every(needCount) ||
+      ![snapshot.vehiclesFree, snapshot.parkingFree, snapshot.parkingTotal, snapshot.chargingTotal, admissionFree].every(needCount) ||
+      admissionFree > snapshot.parkingFree ||
       snapshot.parkingFree > snapshot.parkingTotal || !Array.isArray(snapshot.chargingPoints) ||
       snapshot.chargingPoints.length !== snapshot.chargingTotal) {
     throw new Error("The captured Hub baseline is incomplete. Start a new run after its data is available.");
@@ -157,10 +159,10 @@ export function evaluateScenario(scenario, snapshot) {
 
   const rentalDemand = rateOverHorizon(strength("Vehicle surge"), horizon);
   const parkingDemand = rateOverHorizon(strength("Parking surge"), horizon);
-  const additionalVehicles = online ? Math.min(snapshot.parkingFree, strength("Vehicle concentration")) : 0;
+  const additionalVehicles = online ? Math.min(admissionFree, strength("Vehicle concentration")) : 0;
   const physicalOccupancy = snapshot.parkingTotal - snapshot.parkingFree;
   const parkingMadeFull = online && conditions.has("Parking full");
-  const availableBeforeParking = online && !parkingMadeFull ? snapshot.parkingFree - additionalVehicles : 0;
+  const availableBeforeParking = online && !parkingMadeFull ? admissionFree - additionalVehicles : 0;
   const parked = Math.min(parkingDemand, availableBeforeParking);
   const availableBeforeRental = online ? snapshot.vehiclesFree + additionalVehicles : 0;
   const rented = Math.min(rentalDemand, availableBeforeRental);
@@ -182,7 +184,7 @@ export function evaluateScenario(scenario, snapshot) {
   };
   const baseline = {
     availableVehicles: wasOnline ? snapshot.vehiclesFree : 0,
-    availableParking: wasOnline ? snapshot.parkingFree : 0,
+    availableParking: wasOnline ? admissionFree : 0,
     parkingUtilization: percentage(physicalOccupancy, snapshot.parkingTotal),
     availableCharging: wasOnline ? originalPoints.filter(point => point.available).length : 0,
     chargingUtilization: percentage(baselineActive, wasOnline ? originalPoints.length : 0),

@@ -12,11 +12,15 @@ function vehicleIdentity(vehicle, id, detail) {
 export function mountFleet(root, context) {
   return mountFleetView(root, context, { source: "ktx-a", selected: null, review: null }, (data, ui) => {
     const hubName = id => data.hubs.find(h => h.id === id)?.name ?? id;
-    const candidates = data.vehicles.filter(v => v.currentHubId === ui.source && vehicleEligible(v));
+    const cutoff = Date.parse(data.demoTime) - data.policy.staleMinutes * 60000;
+    const openHubs = new Set(data.hubs.filter(hub => hub.status === "Operational").map(hub => hub.id));
+    const ready = data.vehicles.filter(vehicle => openHubs.has(vehicle.currentHubId)
+      && vehicleEligible(vehicle) && Date.parse(vehicle.lastUpdated) > cutoff);
+    const candidates = ready.filter(vehicle => vehicle.currentHubId === ui.source);
     const order = data.orders.find(o => o.orderId === ui.selected) ?? data.orders.find(isTransferOpen) ?? data.orders[0];
     const attrs = order ? `data-order-id="${e(order.orderId)}" data-expected-version="${order.version}"` : "";
     return `${pageHeader("Operations / Fleet", "Fleet & Redistribution", "Balance vehicle supply, review capacity and track every confirmed arrival.", '<a class="button button--secondary" href="#/operator/network">Inspect network</a>')}
-      <div class="fi-stats">${statCard("Ready to move", data.vehicles.filter(vehicleEligible).length, "Available shared vehicles")}${statCard("Active transfers", data.orders.filter(isTransferOpen).length, "Capacity checked again on arrival", "info")}${statCard("Orders at risk", data.orders.filter(o => o.status === "AtRisk").length, "Resolve the cause before continuing", "warning")}</div>
+      <div class="fi-stats">${statCard("Ready to move", ready.length, "Available vehicles with fresh readings")}${statCard("Active transfers", data.orders.filter(isTransferOpen).length, "Capacity checked again on arrival", "info")}${statCard("Orders at risk", data.orders.filter(o => o.status === "AtRisk").length, "Resolve the cause before continuing", "warning")}</div>
       <div class="fi-columns">${panel("Plan a transfer", `
         <form data-action="source" class="fi-inline">${select("source", "Source Hub", options(data.hubs.filter(h => h.status === "Operational"), "id", "name", ui.source))}<button class="button button--secondary">Load vehicles</button></form>
         <form data-action="review" data-draft="transfer-${e(ui.source)}" class="fi-form">

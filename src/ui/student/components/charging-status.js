@@ -6,6 +6,14 @@ const showTime = value => value ? new Intl.DateTimeFormat("en-GB", { timeZone: "
 const toICTInput = value => new Date(Date.parse(value) + 7 * 60 * 60_000).toISOString().slice(0, 16);
 const fromICTInput = value => new Date(`${value}:00+07:00`).toISOString();
 
+function waitingMessage(request) {
+  const position = `You are #${request.queuePosition} in the queue.`;
+  if (request.waitingReason === "VehicleUnavailable") return `The vehicle is currently unavailable. ${position}`;
+  if (request.waitingReason === "HubUnavailable") return `The Hub is currently unavailable. ${position}`;
+  if (request.full) return `No compatible charging point is available. You are #${request.queuePosition} on the waitlist.`;
+  return `${position} No point is reserved before your requested start.`;
+}
+
 // Parking can mount this component in its booking view after a charging request is submitted.
 export function mountStudentChargingStatus(root, { store, api, actorId }) {
   let feedback = "";
@@ -15,15 +23,18 @@ export function mountStudentChargingStatus(root, { store, api, actorId }) {
   function render() {
     if (!active || busy) return;
     const state = store.readSnapshot();
+    const hubName = id => state.hubs.find(hub => hub.id === id)?.name ?? id;
+    const vehicleInfo = id => state.privateVehicles.find(vehicle => vehicle.vehicleId === id)
+      ?? state.vehicles?.find(vehicle => vehicle.vehicleId === id);
     const requests = studentChargingRows(store, actorId);
     const bookings = state.parkingReservations.filter(booking => booking.studentId === actorId
       && ["Confirmed", "Checked In"].includes(booking.status) && Date.parse(booking.departureTime) > Date.parse(state.demoTime)
       && (booking.status !== "Confirmed" || Date.parse(booking.expiresAt) > Date.parse(state.demoTime)))
       .map(booking => {
-        const vehicle = state.privateVehicles.find(item => item.vehicleId === booking.vehicleId) || (state.vehicles ?? []).find(item => item.vehicleId === booking.vehicleId);
+        const vehicle = vehicleInfo(booking.vehicleId);
         const currentBatteryPercent = vehicle?.batteryLevel ?? vehicle?.batteryPercent;
-        const openRequest = state.chargingRequests.some(item => item.parkingReservationId === booking.reservationId && !["Completed", "Cancelled", "Expired"].includes(item.status));
-        return { ...booking, currentBatteryPercent, openRequest };
+        const openRequest = requests.some(item => item.vehicleId === booking.vehicleId && !["Completed", "Cancelled", "Expired"].includes(item.status));
+        return { ...booking, vehicleName: vehicle?.name ?? booking.vehicleId, currentBatteryPercent, openRequest };
       }).filter(booking => Number.isFinite(booking.currentBatteryPercent) && booking.currentBatteryPercent < 100 && !booking.openRequest);
     root.innerHTML = `<section class="student-charging"><div class="student-charging__heading"><div><p class="eyebrow">Smart Charging</p><h2>Charging requests</h2></div><span class="student-charging__note">Estimated times are informational</span></div>
       ${feedback ? `<p class="student-charging__feedback" role="status">${escapeHtml(feedback)}</p>` : ""}
@@ -31,13 +42,13 @@ export function mountStudentChargingStatus(root, { store, api, actorId }) {
         const saved = drafts.get(booking.reservationId) ?? {};
         const requestedStart = saved.requestedStart ?? toICTInput(Date.parse(booking.arrivalTime) > Date.parse(state.demoTime) ? booking.arrivalTime : state.demoTime);
         const requestedEnd = saved.requestedEnd ?? toICTInput(booking.departureTime);
-        return `<form class="student-charging__request-form" data-submit-charging="${escapeHtml(booking.reservationId)}"><div class="student-charging__booking-heading"><div><strong>Request charging for ${escapeHtml(booking.vehicleId)}</strong><small>${escapeHtml(booking.hubId)} · Parking booking ${escapeHtml(booking.reservationId)} · Current battery ${booking.currentBatteryPercent}%</small></div><span class="badge badge--info">${escapeHtml(booking.status)}</span></div>
-          <input type="hidden" name="hubId" value="${escapeHtml(booking.hubId)}"><input type="hidden" name="vehicleId" value="${escapeHtml(booking.vehicleId)}"><input type="hidden" name="currentBatteryPercent" value="${booking.currentBatteryPercent}">
+        return `<form class="student-charging__request-form" data-submit-charging="${escapeHtml(booking.reservationId)}"><div class="student-charging__booking-heading"><div><strong>Request charging for ${escapeHtml(booking.vehicleName)}</strong><small>${escapeHtml(hubName(booking.hubId))} · Parking booking ${escapeHtml(booking.reservationId)} · Current battery ${booking.currentBatteryPercent}%</small></div><span class="badge badge--info">${escapeHtml(booking.status)}</span></div>
+          <input type="hidden" name="hubId" value="${escapeHtml(booking.hubId)}"><input type="hidden" name="vehicleId" value="${escapeHtml(booking.vehicleId)}">
           <div class="student-charging__fields"><div class="field"><label for="target-${escapeHtml(booking.reservationId)}">Target battery (%)</label><input id="target-${escapeHtml(booking.reservationId)}" name="targetBatteryPercent" type="number" min="${booking.currentBatteryPercent + 1}" max="100" value="${escapeHtml(saved.targetBatteryPercent ?? Math.min(100, booking.currentBatteryPercent + 20))}" required></div><div class="field"><label for="start-${escapeHtml(booking.reservationId)}">Requested start</label><input id="start-${escapeHtml(booking.reservationId)}" name="requestedStart" type="datetime-local" step="60" min="${toICTInput(booking.arrivalTime)}" max="${toICTInput(booking.departureTime)}" value="${escapeHtml(requestedStart)}" required></div><div class="field"><label for="end-${escapeHtml(booking.reservationId)}">Requested end</label><input id="end-${escapeHtml(booking.reservationId)}" name="requestedEnd" type="datetime-local" step="60" min="${escapeHtml(requestedStart)}" max="${toICTInput(booking.departureTime)}" value="${escapeHtml(requestedEnd)}" required></div><button class="button button--primary" type="submit">Submit request</button></div><small class="student-charging__note">A future request waits without reserving a point. If all points are in use, you join the waitlist.</small></form>`;
       }).join("")}</div>` : ""}
-      ${requests.length ? `<div class="student-charging__list">${requests.map(request => `<article class="student-charging__item"><div class="student-charging__top"><div><strong>${escapeHtml(request.vehicleId)}</strong><small>${escapeHtml(request.hubId)} · ${escapeHtml(request.requestId)}</small></div>${badge(request.status, stateTone(request.status))}</div>
+      ${requests.length ? `<div class="student-charging__list">${requests.map(request => `<article class="student-charging__item"><div class="student-charging__top"><div><strong>${escapeHtml(vehicleInfo(request.vehicleId)?.name ?? request.vehicleId)}</strong><small>${escapeHtml(hubName(request.hubId))} · ${escapeHtml(request.requestId)}</small></div>${badge(request.status, stateTone(request.status))}</div>
         <p class="student-charging__window">Requested ${escapeHtml(showTime(request.requestedStart))} to ${escapeHtml(showTime(request.requestedEnd))}</p>
-        <div class="student-charging__detail">${request.status === "Waiting" ? `<strong>${request.full ? `No compatible charging point is available. You are #${request.queuePosition} on the waitlist.` : `You are #${request.queuePosition} in the queue. No point is reserved before your requested start.`}</strong>` : ""}${request.point ? `<span>Point ${escapeHtml(request.point.pointId)}</span>` : ""}${Number.isFinite(request.estimatedDurationMinutes) ? `<span>Estimated charging time: ${request.estimatedDurationMinutes} min</span>` : ""}${request.status === "Charging" || request.status === "Suspended" ? `<span>Your point remains occupied until the session is verified as stopped.</span>` : ""}</div>
+        <div class="student-charging__detail">${request.status === "Waiting" ? `<strong>${escapeHtml(waitingMessage(request))}</strong>` : ""}${request.point ? `<span>Point ${escapeHtml(request.point.pointId)}</span>` : ""}${Number.isFinite(request.estimatedDurationMinutes) ? `<span>Estimated charging time: ${request.estimatedDurationMinutes} min</span>` : ""}${Number.isFinite(request.finalBatteryPercent) ? `<span>Final battery: ${request.finalBatteryPercent}%</span>` : ""}${request.status === "Charging" || request.status === "Suspended" ? `<span>Your point remains occupied until the session is verified as stopped.</span>` : ""}</div>
         ${["Waiting", "Scheduled"].includes(request.status) ? `<button class="button button--secondary" type="button" data-cancel="${escapeHtml(request.requestId)}">Cancel request</button>` : ""}
         ${["Charging", "Suspended"].includes(request.status) ? `<div class="student-charging__actions"><button class="button button--secondary" type="button" data-stop="COMPLETE" data-request="${escapeHtml(request.requestId)}">Complete charging</button><button class="button button--danger" type="button" data-stop="CANCEL" data-request="${escapeHtml(request.requestId)}">Stop and cancel</button></div>` : ""}</article>`).join("")}</div>` : '<div class="student-charging__empty"><strong>No charging requests yet</strong><p>Submit a request from an eligible parking booking.</p></div>'}</section>`;
   }

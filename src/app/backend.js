@@ -24,6 +24,7 @@ const errorMessages = {
   HUB_UNAVAILABLE: "This Hub is unavailable. Choose another Hub.",
   TRIP_NOT_FOUND: "This active trip could not be found in your rentals.",
   STALE_SCHEDULE: "The schedule changed. Review it and try again.",
+  STALE_VEHICLE_BATTERY: "A newer battery reading is already recorded. Refresh the vehicle and retry with the latest observation.",
   COMMAND_CONFLICT: "This action ID was already used with different input.",
   DEMO_NOT_INITIALIZED: "The shared demo database is still being set up.",
   DATABASE_REJECTED: "The shared database rejected this request.",
@@ -58,6 +59,9 @@ async function rpc(name, args) {
 }
 
 let pendingSession;
+const demoChanges = new EventTarget();
+const demoChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel("smarthub-demo-changes") : null;
+demoChannel?.addEventListener("message", () => demoChanges.dispatchEvent(new Event("change")));
 
 async function openDemoSession() {
   const { data, error } = await client.auth.getSession();
@@ -74,10 +78,15 @@ export async function createDemoApi(role) {
     read(name, filter = {}) {
       return rpc("demo_view", { p_role: role, p_view: name, p_filter: filter });
     },
-    command(operation, input = {}, commandId = crypto.randomUUID()) {
+    async command(operation, input = {}, commandId = crypto.randomUUID()) {
       const args = { p_role: role, p_operation: operation, p_input: input, p_command_id: commandId };
-      return rpc("demo_command", args).then(result =>
-        result.code === "CONNECTION_FAILED" ? rpc("demo_command", args) : result);
+      let result = await rpc("demo_command", args);
+      if (result.code === "CONNECTION_FAILED") result = await rpc("demo_command", args);
+      if (result.ok) {
+        demoChanges.dispatchEvent(new Event("change"));
+        demoChannel?.postMessage("changed");
+      }
+      return result;
     }
   };
 }
@@ -90,7 +99,9 @@ export function routeData(api, name, onError) {
   let pending;
   let errorShown = false;
 
-  async function refresh() {
+  async function refresh(afterWrite = false) {
+    // A read already underway may have taken its snapshot before the write committed.
+    if (afterWrite && pending) await pending;
     if (!active) return false;
     if (pending) return pending;
     pending = (async () => {
@@ -121,7 +132,9 @@ export function routeData(api, name, onError) {
     if (document.visibilityState === "visible") refresh();
   }, 5000);
   const resume = () => { if (document.visibilityState === "visible") refresh(); };
+  const onChange = () => { refresh(true); };
   document.addEventListener("visibilitychange", resume);
+  demoChanges.addEventListener("change", onChange);
 
   return {
     refresh,
@@ -135,6 +148,7 @@ export function routeData(api, name, onError) {
       listeners.clear();
       clearInterval(timer);
       document.removeEventListener("visibilitychange", resume);
+      demoChanges.removeEventListener("change", onChange);
     }
   };
 }

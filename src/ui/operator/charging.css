@@ -388,6 +388,15 @@
 .charging-page .charging-queue td:first-child { padding-left: 14px; }
 .charging-page .charging-queue td:not(:nth-child(2)) { font-variant-numeric: tabular-nums; }
 .charging-page .charging-queue small { display: block; overflow: hidden; color: var(--color-muted); text-overflow: ellipsis; white-space: nowrap; }
+.charging-page .charging-latest { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; padding: 0.75rem 0.875rem; }
+.charging-page .charging-latest > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.25rem 0.75rem; }
+.charging-page .charging-latest > div > span { color: var(--color-muted); }
+.charging-page .charging-latest button { margin-inline-start: auto; }
+.charging-page .charging-activity th:first-child { width: 15%; }
+.charging-page .charging-activity th:nth-child(3) { width: 20%; }
+.charging-page .charging-activity th:nth-child(4) { width: 23%; }
+.charging-page .charging-activity .text-button { white-space: normal; text-align: left; }
+.charging-page .charging-session-facts dd { overflow-wrap: anywhere; }
 
 .charging-page .charging-feedback { padding: 8px 12px; border: 1px solid #a7e5ce; border-radius: var(--radius-control); background: var(--color-primary-soft); color: #06543f; font-size: 13px; }
 .charging-page .charging-feedback.is-error { border-color: #fecdd3; background: #fff1f2; color: #9f1239; }

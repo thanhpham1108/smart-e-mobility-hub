@@ -83,7 +83,8 @@ function hubDetails(hub) {
     ${live ? "" : '<p class="hub-stale">These are last reported counts. Confirm availability before you travel.</p>'}
     ${hub.parkingDiscrepancy ? '<p class="hub-stale">Parking occupancy is being verified by an Operator.</p>' : ""}
     ${metrics(hub)}
-    <p class="records-meta">Parking occupancy reflects the current ledger. Review a time window for future availability.</p>
+    <p class="records-meta">${hub.parkingAdmissionFree == null ? "" : `<strong>${e(hub.parkingAdmissionFree)} available for arrivals now.</strong> `}
+      Review a time window for future parking availability.</p>
     ${hub.status === "Operational" ? `<div class="hub-actions">
       <a class="button button--primary" href="#/student/rental?hub=${url}">Browse vehicles</a>
       <a class="button button--secondary" href="#/student/parking?hub=${url}">Review parking</a>
@@ -117,7 +118,7 @@ export function mount(root, context) {
     const required = services.filter(([id]) => form["service-" + id]).map(([id]) => id);
     const matching = memory.alternativeFrom
       ? findAlternativeHubs(hubs, memory.alternativeFrom, hub => hub.freshness === "Live" &&
-        (hub.vehiclesFree > 0 || (hub.parkingFree > 0 && !hub.parkingDiscrepancy) || hub.chargingFree > 0))
+        (hub.vehiclesFree > 0 || ((hub.parkingAdmissionFree ?? hub.parkingFree) > 0 && !hub.parkingDiscrepancy) || hub.chargingFree > 0))
       : findHubs(hubs, { query: form.query, origin, radiusKm: Number(form.radius) || 0, services: required });
     const selected = getHubStatus(matching, memory.selectedId)
       ?? getHubStatus(matching, "ktx-a") ?? matching[0];

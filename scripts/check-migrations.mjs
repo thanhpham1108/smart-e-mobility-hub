@@ -36,6 +36,10 @@ try {
   console.log("Passed: Rental holds, pickup verification, simulated lock failures, return-slot revalidation and faulted returns.");
   await db.exec(await readFile("supabase/tests/hub_identity.sql", "utf8"));
   console.log("Passed: Hub telemetry freshness, shared vehicle readings and profile validation.");
+  await db.exec(await readFile("supabase/tests/operator_request_activity.sql", "utf8"));
+  console.log("Passed: shared Parking and Charging request activity, check-in, checkout and waitlist.");
+  await db.exec(await readFile("supabase/tests/shared_availability.sql", "utf8"));
+  console.log("Passed: cross-module Hub availability, parking holds, immutable snapshots and charging/fleet eligibility.");
 } catch (error) {
   console.error(error.message);
   if (error.where) console.error(error.where);

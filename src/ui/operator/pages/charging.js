@@ -1,6 +1,6 @@
 import { badge, escapeHtml } from "../../shared/components.js";
 import {
-  chargingCommand, chargingVehicleType, getChargingOverview
+  chargingCommand, chargingVehicleType, chargingWaitReason, getChargingOverview
 } from "../../../modules/smart-charging/service.js";
 
 const minute = 60_000;
@@ -9,6 +9,7 @@ const slotCount = 6;
 const day = 24 * 60 * minute;
 const commitmentStates = new Set(["Scheduled", "Charging", "Suspended"]);
 const statusTones = { Scheduled: "info", Charging: "positive", Suspended: "warning" };
+const activityTones = { ...statusTones, Confirmed: "info", "Checked In": "positive", Completed: "positive", Waiting: "warning" };
 const pointGroups = [
   { type: "MOTORCYCLE", label: "Motorcycles", pointLabel: "Motorcycle points" },
   { type: "CAR", label: "Cars", pointLabel: "Car points" }
@@ -61,7 +62,10 @@ function pointRows(overview, sessions) {
     const pointSessions = sessions.filter(item => item.pointId === point.pointId);
     const session = commitment && pointSessions.find(item => item.sessionId === commitment.request.activeSessionId);
     const history = pointSessions.map(item => ({ ...item, requestStatus: requests.get(item.requestId)?.status }));
-    return { point, condition: condition(point), ...commitment, session, history };
+    const pointCondition = condition(point);
+    const blockedHub = overview.hub.status !== "Operational";
+    return { point, condition: blockedHub && pointCondition === "Operational" ? "Hub unavailable" : pointCondition,
+      ...commitment, session, history };
   });
 }
 
@@ -132,6 +136,58 @@ function metrics(rows, waiting, today, now) {
     <dl class="charging-metrics" aria-label="Hub charging summary">
       ${metrics.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("")}
     </dl>
+  </section>`;
+}
+
+function requestActivity(state) {
+  const bookings = (state.parkingBookings ?? []).map(booking => ({
+    ...booking, id: booking.reservationId, kind: "Parking booking",
+    start: booking.arrivalTime, end: booking.departureTime, receivedAt: booking.createdAt ?? booking.arrivalTime
+  }));
+  const requests = state.chargingRequests.map(request => ({
+    ...request, id: request.requestId, kind: "Charging request",
+    start: request.requestedStart, end: request.requestedEnd, receivedAt: request.acceptedAt ?? request.submittedAt
+  }));
+  return [...bookings, ...requests].sort((a, b) => Date.parse(b.receivedAt) - Date.parse(a.receivedAt) || b.id.localeCompare(a.id));
+}
+
+function latestRequest(entry, hubs) {
+  if (!entry) return "";
+  const hub = hubs.find(item => item.id === entry.hubId);
+  return `<section class="charging-panel charging-latest" aria-label="Latest request across all Hubs">
+    <div><strong>Latest request</strong><span>${escapeHtml(entry.kind)} · ${escapeHtml(hub?.name ?? entry.hubId)}
+      · ${escapeHtml(entry.vehicleName ?? entry.vehicleId)}</span></div>
+    ${badge(entry.status, activityTones[entry.status])}
+    <button class="text-button" type="button" data-open-activity>View activity</button>
+  </section>`;
+}
+
+function activityPanel(entries, hubs, now) {
+  const block = entries.slice(0, 10);
+  return `<section class="charging-panel" id="charging-activity" aria-labelledby="charging-activity-heading">
+    <div class="charging-panel-head"><div>
+      <h2 id="charging-activity-heading" tabindex="-1">Recent requests across all Hubs</h2>
+      <p>Parking bookings and charging requests are tracked separately.</p>
+    </div><span class="charging-count">${block.length} of ${entries.length}</span></div>
+    ${block.length ? `<table class="charging-queue charging-activity">
+      <thead><tr><th scope="col">Request type</th><th scope="col">Vehicle / reference</th><th scope="col">Hub</th>
+      <th scope="col">Requested window (ICT)</th><th scope="col">Status</th></tr></thead>
+      <tbody>${block.map(entry => {
+        const hub = hubs.find(item => item.id === entry.hubId);
+        const query = new URLSearchParams({ hub: entry.hubId });
+        if (entry.requestId) query.set("request", entry.requestId);
+        return `<tr>
+          <td data-label="Request type">${entry.kind}</td>
+          <td data-label="Vehicle"><strong>${escapeHtml(entry.vehicleName ?? entry.vehicleId)}</strong>
+            <small title="${escapeHtml(entry.id)}">${escapeHtml(entry.id)}</small>
+            ${entry.parkingReservationId ? `<small>Parking ${escapeHtml(entry.parkingReservationId)}</small>` : ""}</td>
+          <td data-label="Hub"><a class="text-button" href="#/operator/charging?${escapeHtml(query.toString())}">${escapeHtml(hub?.name ?? entry.hubId)}</a></td>
+          <td data-label="Window">${time(entry.start, now)} – ${time(entry.end, now)}</td>
+          <td data-label="Status">${badge(entry.status, activityTones[entry.status])}
+            ${entry.status === "Waiting" && entry.queuePosition ? `<small>Queue #${entry.queuePosition}</small>` : ""}</td>
+        </tr>`;
+      }).join("")}</tbody>
+    </table>` : '<p class="charging-empty">No parking bookings or charging requests have been recorded.</p>'}
   </section>`;
 }
 
@@ -246,11 +302,14 @@ function eventButton(label, kind, choice, primary = false) {
 function sessionActions(row) {
   const { request } = row;
   if (request.status === "Scheduled") {
+    if (request.vehicleCondition && request.vehicleCondition !== "OPERATIONAL") return "<p>Vehicle restricted by an active incident.</p>";
+    if (request.parkingStatus && request.parkingStatus !== "Checked In") return "<p>Waiting for parking check-in.</p>";
     return row.condition === "Operational" ? eventButton("Confirm plug-in", "START", null, true) : "";
   }
   const stateAction = request.status === "Charging"
     ? eventButton("Suspend", "SUSPEND")
-    : eventButton("Resume", "RESUME");
+    : row.condition === "Operational" && (!request.vehicleCondition || request.vehicleCondition === "OPERATIONAL")
+      ? eventButton("Resume", "RESUME") : "";
   const targetAction = request.status === "Charging"
     ? eventButton("Simulate target reached", "TARGET_REACHED", null, true) : "";
   return `${targetAction}${stateAction}${eventButton("Complete", "STOP", "COMPLETE")}${eventButton("Cancel", "STOP", "CANCEL")}`;
@@ -267,7 +326,7 @@ function sessionList(rows, selectedId) {
       const id = escapeHtml(allocation.allocationId);
       return `<li><button type="button" data-session-choice="${id}" data-focus="session-${id}"
         aria-controls="charging-session" aria-pressed="${allocation.allocationId === selectedId}">
-        <span><strong>${escapeHtml(request.vehicleId)}</strong><small>${escapeHtml(point.pointId)}</small></span>
+        <span><strong>${escapeHtml(request.vehicleName ?? request.vehicleId)}</strong><small>${escapeHtml(point.pointId)}</small></span>
         ${badge(request.status, statusTones[request.status])}
       </button></li>`;
     }).join("")}</ul>` : '<p class="charging-empty">No sessions match these filters.</p>'}
@@ -299,13 +358,15 @@ function sessionDetails(selected, rows, schedule, now) {
   return `<section class="charging-panel charging-session" aria-labelledby="charging-session-heading" id="charging-session">
     <div class="charging-session-head">
       <p>Selected session</p>
-      <div class="charging-session-title"><h2 id="charging-session-heading" data-focus="session-heading" tabindex="-1">${escapeHtml(request.vehicleId)}</h2>
+      <div class="charging-session-title"><h2 id="charging-session-heading" data-focus="session-heading" tabindex="-1">${escapeHtml(request.vehicleName ?? request.vehicleId)}</h2>
         ${badge(request.status, statusTones[request.status])}
         ${overdue ? badge("Past planned end", "warning") : ""}</div>
     </div>
     <dl class="charging-session-facts">
       <div><dt>Charging point</dt><dd>${escapeHtml(point.pointId)}</dd></div>
-      <div><dt>Battery → target</dt><dd>${escapeHtml(request.currentBatteryPercent)}% → ${escapeHtml(request.targetBatteryPercent)}%</dd></div>
+      ${request.parkingReservationId ? `<div><dt>Parking ticket</dt><dd>${escapeHtml(request.parkingReservationId)} · ${escapeHtml(request.parkingStatus ?? "—")}</dd></div>` : ""}
+      <div><dt>Battery at request → target</dt><dd>${escapeHtml(request.currentBatteryPercent)}% → ${escapeHtml(request.targetBatteryPercent)}%</dd></div>
+      ${Number.isFinite(request.vehicleBatteryPercent) ? `<div><dt>Latest vehicle battery</dt><dd>${request.vehicleBatteryPercent}%</dd></div>` : ""}
       <div><dt>${timing[0]} (ICT)</dt><dd>${timing[1]}</dd></div>
       <div><dt>Planned end (ICT)</dt><dd>${end}</dd></div>
       ${Number.isFinite(request.estimatedDurationMinutes) ? `<div><dt>Estimated duration</dt><dd>${request.estimatedDurationMinutes} min</dd></div>` : ""}
@@ -322,25 +383,26 @@ function waitlist(waiting, now) {
       <span class="charging-count">${waiting.length} waiting</span>
     </div>
     ${waiting.length ? `<table class="charging-queue">
-      <thead><tr><th scope="col">Queue</th><th scope="col">Vehicle / request</th><th scope="col">Battery</th><th scope="col">Submitted</th><th scope="col">Requested window</th><th scope="col">Reason</th></tr></thead>
+      <thead><tr><th scope="col">Queue</th><th scope="col">Vehicle / request</th><th scope="col">Battery at request</th><th scope="col">Submitted</th><th scope="col">Requested window</th><th scope="col">Reason</th></tr></thead>
       <tbody>${waiting.map(request => `<tr>
         <td data-label="Queue">#${request.queuePosition}</td>
-        <td data-label="Vehicle"><strong>${escapeHtml(request.vehicleId)}</strong><small title="${escapeHtml(request.requestId)}">${chargingVehicleType(request) === "CAR" ? "Car" : "Motorcycle"} · ${escapeHtml(request.requestId)}</small></td>
+        <td data-label="Vehicle"><strong>${escapeHtml(request.vehicleName ?? request.vehicleId)}</strong><small title="${escapeHtml(request.requestId)}">${chargingVehicleType(request) === "CAR" ? "Car" : "Motorcycle"} · ${escapeHtml(request.requestId)}</small></td>
         <td data-label="Battery">${escapeHtml(request.currentBatteryPercent)}% → ${escapeHtml(request.targetBatteryPercent)}%</td>
         <td data-label="Submitted">${time(request.submittedAt, now)}</td>
         <td data-label="Requested">${time(request.requestedStart, now)} – ${time(request.requestedEnd, now)}</td>
-        <td data-label="Reason">${request.full ? badge("Full", "warning") : badge("Future start", "info")}</td>
+        <td data-label="Reason">${badge(chargingWaitReason(request), chargingWaitReason(request) === "Future start" ? "info" : "warning")}</td>
       </tr>`).join("")}</tbody>
     </table>` : '<p class="charging-empty">No vehicles are waiting for a charging point at this Hub.</p>'}
   </section>`;
 }
 
-export function mount(root, { store, api }) {
+export function mount(root, { store, api, query }) {
+  const initial = store.readSnapshot();
   const view = {
-    hubId: store.readSnapshot().hubs[0]?.id,
+    hubId: initial.hubs.find(hub => hub.id === query?.get("hub"))?.id ?? initial.hubs[0]?.id,
     date: null,
     pointFilter: "all",
-    selectedId: null,
+    selectedId: initial.chargingAllocations.find(allocation => allocation.requestId === query?.get("request"))?.allocationId ?? null,
     feedback: null
   };
   let selected;
@@ -351,6 +413,8 @@ export function mount(root, { store, api }) {
     const { scrollLeft = 0, scrollTop = 0 } = timelineScroll ?? {};
     const previousMove = root.querySelector("#charging-move");
     const state = store.readSnapshot();
+    const recent = requestActivity(state);
+    const activity = activityPanel(recent, state.hubs, state.demoTime);
     const overview = getChargingOverview(store, view.hubId);
     const pointCount = state.chargingPoints.filter(point => point.hubId === view.hubId).length;
     const title = '<header class="charging-heading"><h1>Charging Schedule</h1></header>';
@@ -361,7 +425,7 @@ export function mount(root, { store, api }) {
       root.innerHTML = `<div class="charging-page">${title}${toolbar(state.hubs, view.hubId, pointCount)}<section class="charging-panel">
         <div class="charging-panel-head"><h2>Point timeline</h2></div>
         <p class="charging-empty" role="status">${escapeHtml(message)}</p>
-      </section></div>`;
+      </section>${activity}</div>`;
     } else {
       const { waiting, schedule, currentTime } = overview.data;
       const today = dateKey(currentTime);
@@ -376,6 +440,7 @@ export function mount(root, { store, api }) {
         ${toolbar(state.hubs, view.hubId, pointCount, { rows, date: selectedDate, today, pointFilter: view.pointFilter })}
         ${view.feedback ? `<div class="charging-feedback ${view.feedback.error ? "is-error" : ""}" role="status">${escapeHtml(view.feedback.message)}</div>` : ""}
         ${metrics(rows, waiting, today, currentTime)}
+        ${latestRequest(recent[0], state.hubs)}
         <div class="charging-workspace${live ? " charging-workspace--detail" : ""}">
           ${timeline(rows, currentTime, selectedDate, today, view.selectedId, view.pointFilter)}
           ${live ? `<div class="charging-session-rail">
@@ -384,6 +449,7 @@ export function mount(root, { store, api }) {
           </div>` : ""}
         </div>
         ${waitlist(waiting, currentTime)}
+        ${activity}
       </div>`;
       root.querySelector(".charging-timeline-scroll").scrollTo(scrollLeft, scrollTop);
       const nextMove = root.querySelector("#charging-move");
@@ -413,6 +479,11 @@ export function mount(root, { store, api }) {
   }
 
   async function onClick(event) {
+    if (event.target.closest("[data-open-activity]")) {
+      root.querySelector("#charging-activity-heading")?.focus();
+      root.querySelector("#charging-activity")?.scrollIntoView({ block: "start" });
+      return;
+    }
     const filter = event.target.closest("[data-point-filter]");
     if (filter) {
       if (filter.dataset.pointFilter === view.pointFilter) return;

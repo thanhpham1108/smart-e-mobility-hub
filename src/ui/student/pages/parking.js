@@ -2,6 +2,7 @@ import { badge, pageHeader, escapeHtml as e } from "../../shared/components.js";
 import { timeLabel } from "../../shared/records.js";
 import { vehiclePhoto, vehiclePhotoCredits } from "../../shared/vehicle-photo.js";
 import { findAlternativeHubs, getHubStatus } from "../../../modules/hub-identity/hub-service.js";
+import { chargingWaitReason } from "../../../modules/smart-charging/service.js";
 import { createParkingService, defaultDraft, parkingInput, validateDraft } from "../../../modules/parking/service.js";
 import { mountStudentChargingStatus } from "../components/charging-status.js";
 
@@ -61,7 +62,11 @@ export function mount(root, { store, api, viewer, query }) {
     return `<div class="parking-layout">
       <form class="card parking-form" data-form="review" novalidate>
         <h2>Choose your Hub</h2>
-        <div class="hub-picker">${state.hubs.map(item => `<button type="button" class="hub-choice ${draft.hubId === item.id ? "is-selected" : ""}" data-action="hub" data-id="${e(item.id)}" aria-pressed="${draft.hubId === item.id}" ${item.status !== "Operational" ? "disabled" : ""}><strong>${e(item.name)}</strong><small>${e(item.area)}</small><span>${item.status === "Operational" ? e(item.parkingFree) + " physical spaces free now" : e(item.status)}</span></button>`).join("")}</div>
+        <div class="hub-picker">${state.hubs.map(item => {
+          const capacity = item.parkingDiscrepancy ? "Occupancy under verification"
+            : (item.parkingAdmissionFree ?? item.parkingFree) + " spaces available for arrivals now";
+          return `<button type="button" class="hub-choice ${draft.hubId === item.id ? "is-selected" : ""}" data-action="hub" data-id="${e(item.id)}" aria-pressed="${draft.hubId === item.id}" ${item.status !== "Operational" ? "disabled" : ""}><strong>${e(item.name)}</strong><small>${e(item.area)}</small><span>${e(item.status === "Operational" ? capacity : item.status)}</span></button>`;
+        }).join("")}</div>
         <p class="parking-field-error">${e(errors.hubId ?? "")}</p>
         <h2>Plan your visit</h2>
         <p class="records-meta">Choose times in 15-minute steps. Availability is checked across your entire visit.</p>
@@ -129,7 +134,7 @@ export function mount(root, { store, api, viewer, query }) {
       ${parked && now >= Date.parse(booking.departureTime) ? '<p class="parking-notice parking-notice--warning">Your booked departure has passed. The visit and occupied space remain active until checkout.</p>' : ""}
       ${booking.reconciliationRequired ? '<p class="parking-notice parking-notice--warning">The check-in deadline has passed. Cleanup needs Operator verification. Admission is unavailable.</p>' : ""}
       <h3>Linked charging</h3>
-      ${requests.length ? requests.map(request => `<p class="parking-charge-link"><span class="parking-reference">${e(request.requestId)}</span> ${badge(request.status, ["Waiting", "Suspended"].includes(request.status) ? "warning" : "info")}${request.status === "Waiting" ? `<span>Queue #${e(request.queuePosition)} · ${request.full ? "Full" : "Future start"}</span>` : ""}</p>`).join("") : '<p class="records-meta">No charging request linked to this visit.</p>'}
+      ${requests.length ? requests.map(request => `<p class="parking-charge-link"><span class="parking-reference">${e(request.requestId)}</span> ${badge(request.status, ["Waiting", "Suspended"].includes(request.status) ? "warning" : "info")}${request.status === "Waiting" ? `<span>Queue #${e(request.queuePosition)} · ${e(chargingWaitReason(request))}</span>` : ""}</p>`).join("") : '<p class="records-meta">No charging request linked to this visit.</p>'}
       ${intent ? `<div class="parking-confirmation" role="region" aria-label="Confirm parking action"><h3>${intent === "checkIn" ? "Confirm your arrival" : intent === "cancel" ? "Confirm cancellation" : "Confirm departure"}</h3>
         <p>${intent === "checkIn" ? "Confirm that you are arriving with the vehicle at the Hub shown on this ticket." : `This will release the remaining parking allocation and cancel ${unused.length} unused charging request(s).`}</p>
         ${intent === "checkOut" && charging ? '<p class="parking-notice parking-notice--warning">Complete or stop charging below. After the stop is confirmed, review checkout again.</p>' :

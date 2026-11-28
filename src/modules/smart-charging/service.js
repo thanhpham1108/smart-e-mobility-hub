@@ -2,6 +2,11 @@ export function chargingVehicleType(record) {
   return record?.chargingVehicleType === "CAR" ? "CAR" : "MOTORCYCLE";
 }
 
+export function chargingWaitReason(request) {
+  const names = { VehicleUnavailable: "Vehicle unavailable", HubUnavailable: "Hub unavailable", FutureStart: "Future start", Full: "Full" };
+  return names[request.waitingReason] ?? (request.full ? "Full" : "Future start");
+}
+
 export function getChargingOverview(store, hubId) {
   const state = store.readSnapshot();
   const hub = state.hubs.find(item => item.id === hubId);

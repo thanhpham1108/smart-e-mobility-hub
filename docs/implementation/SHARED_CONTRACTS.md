@@ -6,7 +6,7 @@ The Final MVP uses Supabase PostgreSQL. See [database setup](DATABASE_SETUP.md) 
 
 - Keep one GitHub Pages entry point with Student and Operator shells and hash routes. Feature pages mount using `mount(root, { store, api, viewer })` and return a cleanup function. Here `store` holds the screen's latest read result in memory. The database is the authoritative source.
 - Demo visitors get a Supabase anonymous session and can select either portal. The demo RPCs map its role to a fixed, unlinked sample profile. Existing account RPCs still resolve their actor from the linked Auth UUID.
-- Screens read via `api.read(view, filter)` and re-read every five seconds while visible, on return to the tab and after successful writes. Each read returns the demo time and revision. Keep loading, unavailable and empty states distinct.
+- Screens read via `api.read(view, filter)` and re-read every five seconds while visible, on return to the tab and after successful writes. Tabs in the same browser also signal each other to refresh after a successful write. Each read returns the demo time and revision. Keep loading, unavailable and empty states distinct.
 - `api.command(operation, payload, commandId)` uses a UUID per action. PostgreSQL serializes demo writes using the shared state row and retains successful receipts by caller, operation and key. Matching retries return the original result. A different payload with the same key fails.
 - GitHub Pages serves the static frontend. Supabase hosts authentication and SQL. App tables are in the unexposed `app` schema. RPCs granted to authenticated clients check roles and ownership. Keep administrative credentials outside browser code and Git.
 
@@ -17,6 +17,10 @@ The Final MVP uses Supabase PostgreSQL. See [database setup](DATABASE_SETUP.md) 
 - Charging uses `charging_points`, `charging_requests`, `charging_schedules`, `charging_allocations`, `charging_sessions` and `notifications`.
 - Fleet uses `redistribution_orders`, `redistribution_order_vehicles`, `incident_tickets`, `resource_restrictions`, `telemetry_events`, `fleet_policy`, `fleet_observations`, `incident_history`, `transfer_history` and `fleet_event_results`.
 - What-if keeps `what_if_scenarios`, `simulation_snapshots`, `simulation_runs`, `simulation_results` and `simulation_recommendations` separate from live operation. `demo_state` and `command_receipts` coordinate time, revisions and safe retries.
+
+Hub discovery, Parking, Rental, Operator views and new What-if snapshots share the `hub_summary` read model. `parkingFree` is physical ledger space. `parkingAdmissionFree` accounts for the current slot's holds and admissions restrictions. Confirmed bookings awaiting check-in are counted separately as `parkingPending`. A future interval still requires a full Parking review. `chargingCommitted` counts held and occupied points, including suspended sessions.
+
+The Operator Charging workspace shows recent parking bookings and charging requests across all Hubs. A booking only holds parking. A linked charging request uses the same status and wait reason on both portals, and its start requires an active parking visit. Fleet restrictions block new starts or allocations for an affected vehicle while an existing commitment continues through the Charging lifecycle.
 
 Typical relationships follow this path:
 

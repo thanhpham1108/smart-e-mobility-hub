@@ -131,8 +131,9 @@ function runContext(run, scenario, hubName) {
 
 function recommendations(run, liveHub) {
   const snapshot = run.baseline;
-  const summaryFields = ["vehiclesFree", "parkingFree", "chargingFree", "freshness", "status"];
-  const changed = liveHub && snapshot && summaryFields.some(field => liveHub[field] !== snapshot[field]);
+  const summaryFields = ["vehiclesFree", "parkingFree", "parkingAdmissionFree", "chargingFree", "freshness", "status"];
+  const changed = liveHub && snapshot && summaryFields.some(field =>
+    Object.hasOwn(snapshot, field) && liveHub[field] !== snapshot[field]);
   return panel("Recommendations", `
     ${changed ? '<p class="what-if-warning" role="status">Hub availability or status differs from this snapshot. Recheck the live Hub before acting.</p>' : ""}
     ${run.recommendations?.length ? `<ol class="what-if-recommendations">${run.recommendations.map(text =>
