@@ -105,6 +105,21 @@ const demoTimeFormat = new Intl.DateTimeFormat(
   "/operator/what-if": { role: "operator", title: "What-if Simulation", view: "simulation", mount: mountSimulation }
 };
 
+const rentalScreens = { vehicles: "vehicle", reservations: "reservation", trips: "trip" };
+
+function matchRoute(path) {
+  if (Object.hasOwn(routes, path)) return routes[path];
+  const rental = routes["/student/rental"];
+  if (path === "/student/rental/history") return { ...rental, screen: "history" };
+  const match = /^\/student\/rental\/(vehicles|reservations|trips)\/([^/]+)$/.exec(path);
+  if (!match) return null;
+  try {
+    return { ...rental, screen: rentalScreens[match[1]], recordId: decodeURIComponent(match[2]) };
+  } catch {
+    return null;
+  }
+}
+
 const dateTime = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Ho_Chi_Minh", dateStyle: "medium", timeStyle: "short"
 });
@@ -406,11 +421,13 @@ export function startRouter(root, createDemoApi) {
     const current = ++generation;
     clean();
     let path = location.hash.slice(1);
-    if (!Object.hasOwn(routes, path)) {
+    let selected = matchRoute(path);
+    if (!selected) {
       path = "/student/parking";
       history.replaceState(null, "", `#${path}`);
+      selected = routes[path];
     }
-    const { role, title, view, mount } = routes[path];
+    const { role, title, view, mount, screen, recordId } = selected;
     root.innerHTML = role === "operator" ? operatorShell(path, title) : studentShell(path);
     const page = root.querySelector("#page-root");
     const feedback = root.querySelector("[data-demo-feedback]");
@@ -447,7 +464,7 @@ export function startRouter(root, createDemoApi) {
         timeElement.dateTime = state.demoTime;
         timeElement.textContent = dateTime.format(new Date(state.demoTime));
       }
-      if (!mounted) { mounted = true; unmount = mount(page, { store, api, viewer }) ?? unmount; }
+      if (!mounted) { mounted = true; unmount = mount(page, { store, api, viewer, screen, recordId }) ?? unmount; }
     });
     clean = () => { stop(); unmount(); store.dispose(); };
     controls.forEach(button => { button.disabled = false; });
