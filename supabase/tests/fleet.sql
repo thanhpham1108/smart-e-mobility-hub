@@ -139,11 +139,19 @@ begin
   r:=pg_temp.fleet_cmd('telemetry.parking','{"hubId":"hcmut","occupiedCount":1,"eventId":"parking-mismatch"}');
   perform app.need(r->>'status'='RECONCILIATION_REQUIRED',r::text);
   perform app.need(app.free_space('hcmut',(select demo_time from app.demo_state),true) is null,'MISMATCH_ADMITTED_VEHICLE');
+  perform app.need(public.demo_view('student','parking.review',jsonb_build_object(
+    'hubId','hcmut','vehicleId','private-student-01',
+    'arrivalTime',(select demo_time from app.demo_state),'departureTime',(select demo_time+interval '1 hour' from app.demo_state)))
+    ->>'code'='PARKING_RECONCILIATION_REQUIRED','MISMATCH_ALLOWED_PARKING_REVIEW');
   perform app.need(public.demo_view('operator','fleet.validate',d)#>>'{data,feasible}'='false','MISMATCH_TRANSFER_ALLOWED');
   perform pg_temp.fleet_cmd('demo.advance');
   r:=pg_temp.fleet_cmd('telemetry.parking','{"hubId":"hcmut","occupiedCount":0,"eventId":"parking-reconciled"}');
   perform app.need(r->>'status'='APPLIED',r::text);
   perform app.need(app.free_space('hcmut',(select demo_time from app.demo_state),true) is not null,'RECONCILED_CAPACITY_BLOCKED');
+  r:=public.demo_view('student','parking.review',jsonb_build_object(
+    'hubId','hcmut','vehicleId','private-student-01',
+    'arrivalTime',(select demo_time from app.demo_state),'departureTime',(select demo_time+interval '1 hour' from app.demo_state)));
+  perform app.need(r#>>'{data,available}'='true' and jsonb_array_length(r#>'{data,slots}')=4,'PARKING_SLOT_REVIEW_LOST_AFTER_FLEET');
   perform app.restore_demo();
   perform app.need(not exists(select from app.fleet_observations) and not exists(select from app.fleet_event_results)
     and not exists(select from app.incident_history) and not exists(select from app.transfer_history),'RESET_LEFT_FLEET_DATA');

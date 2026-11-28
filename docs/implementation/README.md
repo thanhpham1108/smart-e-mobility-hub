@@ -39,6 +39,8 @@ Every owner delivers **service logic + screen(s) + integration function(s) + a r
 
 **Handoff with Member 5:** submit charging with parking reference, Hub/vehicle, battery values and requested window; read request/status/queue position; cancel linked Waiting/Scheduled requests on parking cancellation/no-show/checkout; require a verified stop before checkout if charging is active. **Done when:** no partial parking holds or double occupancy occur and the charging link shows the same state in both modules.
 
+Member 3 implementation, demo steps, screenshots and AI usage record are in the [Parking handoff](parking-private-ev/README.md).
+
 ### Member 4 — Fleet & Incident: Mai Hoàng Phương Đông
 
 Implementation, migration contract, verified screens and repeatable demo: [Member 4 handoff — 2452265](FLEET_INCIDENT_2452265.md).

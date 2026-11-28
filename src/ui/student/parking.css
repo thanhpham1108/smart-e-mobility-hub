@@ -1,0 +1,42 @@
+.parking-page .parking-tabs { display: flex; flex-wrap: wrap; gap: 24px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px; }
+.parking-page .parking-tabs button { min-height: 44px; padding: 10px 0; background: transparent; border: 0; border-bottom: 3px solid transparent; color: var(--color-muted); font-size: 14px; }
+.parking-page .parking-tabs [aria-current] { border-color: var(--color-primary); color: var(--color-primary-dark); font-weight: 700; }
+.parking-page .parking-clock { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); color: var(--color-muted); font-size: 12px; white-space: nowrap; }
+.parking-page .parking-visit-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.parking-page .parking-field-error { color: var(--color-danger); font-size: 12px; min-height: 1em; }
+.parking-page .parking-feedback { min-height: 1.4em; font-size: 14px; color: var(--color-primary-dark); }
+.parking-page .parking-feedback--error { color: var(--color-danger); }
+.parking-page .parking-notice { padding: 12px 16px; margin: 16px 0; background: var(--color-primary-soft); border-radius: var(--radius-control); font-size: 14px; }
+.parking-page .parking-notice--warning { background: #fffbeb; color: #92400e; }
+.parking-page .parking-deadline { font-size: 14px; }
+.parking-page .parking-deadline strong { display: block; margin-top: 4px; }
+.parking-page .parking-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.parking-page .parking-details { margin: 16px 0; }
+.parking-page .parking-details > div { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--color-border); font-size: 14px; }
+.parking-page .parking-details dt { color: var(--color-muted); }
+.parking-page .parking-details dd { text-align: right; margin: 0; overflow-wrap: anywhere; }
+.parking-page .parking-slots { grid-column: 1 / -1; padding: 20px; }
+.parking-page .parking-slots h2 { font-size: 18px; }
+.parking-page .parking-slot-list { display: flex; gap: 8px; overflow: auto; padding-bottom: 8px; max-height: 220px; }
+.parking-page .parking-slot { display: grid; flex: 0 0 84px; gap: 4px; padding: 10px; border: 1px solid #a7f3d0; border-radius: 8px; background: var(--color-primary-soft); font-size: 12px; }
+.parking-page .parking-slot--full { border-color: #fecaca; background: #fff1f2; color: #b91c1c; }
+.parking-page .parking-section-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+.parking-page .parking-booking { display: flex; justify-content: space-between; gap: 20px; padding: 20px 0; border-top: 1px solid var(--color-border); }
+.parking-page .parking-booking h3 { margin-bottom: 8px; font-size: 16px; }
+.parking-page .parking-booking p { margin-bottom: 8px; }
+.parking-page .parking-booking-actions { display: flex; align-items: center; gap: 12px; }
+.parking-page .parking-reference { overflow-wrap: anywhere; color: var(--color-muted); font-size: 12px; }
+.parking-page .parking-empty { padding: 32px 0; color: var(--color-muted); }
+.parking-page .parking-lookup { display: flex; gap: 12px; align-items: end; margin: 16px 0; }
+.parking-page .parking-lookup .field { flex: 1; }
+.parking-page .parking-confirmation { border: 1px solid var(--color-border); border-radius: var(--radius-card); padding: 20px; margin: 20px 0; background: var(--color-bg); }
+.parking-page .parking-confirmation .button { margin: 4px 8px 4px 0; }
+.parking-page .parking-charge-link { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 14px; }
+.parking-page .parking-ticket-lookup { margin-top: 20px; }
+@media (max-width: 720px) {
+  .parking-page .page-header { flex-wrap: wrap; }
+  .parking-page .parking-visit-fields { grid-template-columns: 1fr; }
+  .parking-page .parking-booking, .parking-page .parking-lookup { flex-direction: column; align-items: stretch; }
+  .parking-page .parking-booking-actions { justify-content: space-between; }
+  .parking-page .parking-tabs { gap: 16px; }
+}
