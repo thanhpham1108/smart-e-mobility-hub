@@ -1,5 +1,6 @@
 import { badge, pageHeader } from "../../../shared/components.js";
 import { e } from "../../../shared/records.js";
+import { vehiclePhoto } from "../../../shared/vehicle-photo.js";
 
 const base = "#/student/rental";
 
@@ -22,7 +23,7 @@ export function hubName(hubs, id) {
 }
 
 export function vehicleType(type) {
-  return type === "ELECTRIC_BICYCLE" ? "E-bike" : type === "ELECTRIC_MOTORCYCLE" ? "E-scooter" : type;
+  return { ELECTRIC_BICYCLE: "E-bike", ELECTRIC_MOTORCYCLE: "E-scooter", CAR: "Electric car" }[type] ?? type;
 }
 
 export function bookable(vehicle, hubs) {
@@ -55,14 +56,20 @@ export function facts(items) {
     `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>`;
 }
 
-export function vehicleCard(vehicle, hubs) {
-  return `<article class="card rental-vehicle">
-    <div class="rental-card-top"><h3>${e(vehicle.name)}</h3>${vehicleStatus(vehicle, hubs)}</div>
-    <p class="records-meta">${e(vehicleType(vehicle.vehicleType))} · ${e(vehicle.vehicleId)}</p>
-    <p><strong>${e(vehicle.batteryLevel)}%</strong> battery</p>
-    <p class="records-meta">${e(hubName(hubs, vehicle.currentHubId))}</p>
-    ${link("View vehicle", rentalUrl("vehicles", vehicle.vehicleId), bookable(vehicle, hubs))}
-  </article>`;
+export function vehicleRow(vehicle, hubs) {
+  return `<li class="rental-vehicle">
+    ${vehiclePhoto(vehicle, "rental-row-photo")}
+    <div class="rental-vehicle-identity">
+      <h3>${e(vehicle.name)}</h3>
+      <p class="records-meta">${e(vehicleType(vehicle.vehicleType))} · ${e(vehicle.vehicleId)}</p>
+      <p>${e(hubName(hubs, vehicle.currentHubId))}</p>
+    </div>
+    <div class="rental-vehicle-status">
+      ${vehicleStatus(vehicle, hubs)}
+      <p><strong>${e(vehicle.batteryLevel)}%</strong> battery</p>
+    </div>
+    ${link("View vehicle", rentalUrl("vehicles", vehicle.vehicleId))}
+  </li>`;
 }
 
 export function missing(title, description) {

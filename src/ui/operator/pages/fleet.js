@@ -1,7 +1,13 @@
 import { pageHeader, statCard } from "../../shared/components.js";
+import { vehiclePhoto, vehiclePhotoCredits } from "../../shared/vehicle-photo.js";
 import { e, status, empty, panel, act, select, options, note, history, mountFleetView } from "../fleet-components.js";
 import { isTransferOpen, outstanding, vehicleEligible } from "../../../modules/fleet-incident/service.js";
 export { mountIncidents } from "./incidents.js";
+
+function vehicleIdentity(vehicle, id, detail) {
+  return `<span class="fi-vehicle-identity">${vehiclePhoto(vehicle, "fi-vehicle-photo")}
+    <span><strong>${e(vehicle?.name ?? id)}</strong><small>${e(id)} · ${e(detail)}</small></span></span>`;
+}
 
 export function mountFleet(root, context) {
   return mountFleetView(root, context, { source: "ktx-a", selected: null, review: null }, (data, ui) => {
@@ -16,7 +22,7 @@ export function mountFleet(root, context) {
         <form data-action="review" data-draft="transfer-${e(ui.source)}" class="fi-form">
           <input type="hidden" name="sourceHubId" value="${e(ui.source)}">
           ${select("destinationHubId", "Destination Hub", options(data.hubs.filter(h => h.id !== ui.source && h.status === "Operational"), "id", "name", "hcmut"))}
-          <fieldset><legend>Select vehicles</legend>${candidates.length ? candidates.map(v => `<label class="fi-check fi-vehicle-choice"><input type="checkbox" name="vehicleIds" value="${e(v.vehicleId)}"><span><strong>${e(v.name)}</strong><small>${e(v.vehicleId)} · ${v.batteryLevel}% battery</small></span>${status(v.condition)}</label>`).join("") : empty("No eligible vehicles", "Choose another source Hub or resolve existing commitments.")}</fieldset>
+          <fieldset><legend>Select vehicles</legend>${candidates.length ? candidates.map(v => `<label class="fi-check fi-vehicle-choice"><input type="checkbox" name="vehicleIds" value="${e(v.vehicleId)}">${vehicleIdentity(v, v.vehicleId, v.batteryLevel + "% battery")}${status(v.condition)}</label>`).join("") : empty("No eligible vehicles", "Choose another source Hub or resolve existing commitments.")}</fieldset>
           <button class="button button--primary" ${candidates.length ? "" : "disabled"}>Review feasibility</button>
         </form>
         ${ui.review ? `<div class="fi-review"><strong>${ui.review.feasible ? "Ready for confirmation" : "Transfer needs attention"}</strong><p>${e(hubName(ui.draft.sourceHubId))} → ${e(hubName(ui.draft.destinationHubId))}</p><p>${ui.review.vehicleCount} selected · ${ui.review.availableCapacity} spaces available</p><p>${ui.draft.vehicleIds.map(e).join(", ")}</p>${ui.review.reasons.map(r => `<p>${e(r)}</p>`).join("")}<small>This reviewed selection is committed on confirmation. Destination capacity is not reserved.</small>${ui.review.feasible ? act("Confirm reviewed transfer", "create", "", true) : ""}</div>` : ""}
@@ -24,11 +30,16 @@ export function mountFleet(root, context) {
       ${order ? panel("Order progress", `<div class="fi-detail-heading"><div><h3>${e(hubName(order.sourceHubId))} → ${e(hubName(order.destinationHubId))}</h3><p>${e(order.orderId)} · Version ${order.version}</p></div>${status(order.status)}</div>
         ${order.riskReason ? `<div class="fi-callout">${e(order.riskReason)}</div>` : ""}
         <form data-action="arrive" data-draft="arrivals-${e(order.orderId)}-${order.version}" class="fi-form"><input type="hidden" name="orderId" value="${e(order.orderId)}"><input type="hidden" name="expectedVersion" value="${order.version}">
-          <div class="fi-resource-list">${order.vehicles.map(ov => { const v = data.vehicles.find(v => v.vehicleId === ov.vehicleId); return `<label class="fi-check"><input type="checkbox" name="vehicleIds" value="${e(ov.vehicleId)}" ${ov.arrivedAt || !["Dispatched", "Partial"].includes(order.status) ? "disabled" : ""}><span><strong>${e(v?.name ?? ov.vehicleId)}</strong><small>${e(ov.vehicleId)} · ${ov.arrivedAt ? "Arrival confirmed" : order.status === "Cancelled" ? "Remaining work cancelled; verified at source" : "Awaiting arrival confirmation"}</small></span>${status(ov.arrivedAt ? "Completed" : v?.condition)}</label>`; }).join("")}</div>
+          <div class="fi-resource-list">${order.vehicles.map(ov => {
+            const v = data.vehicles.find(v => v.vehicleId === ov.vehicleId);
+            const arrival = ov.arrivedAt ? "Arrival confirmed" : order.status === "Cancelled" ? "Remaining work cancelled; verified at source" : "Awaiting arrival confirmation";
+            return `<label class="fi-check"><input type="checkbox" name="vehicleIds" value="${e(ov.vehicleId)}" ${ov.arrivedAt || !["Dispatched", "Partial"].includes(order.status) ? "disabled" : ""}>${vehicleIdentity(v, ov.vehicleId, arrival)}${status(ov.arrivedAt ? "Completed" : v?.condition)}</label>`;
+          }).join("")}</div>
           ${["Dispatched", "Partial"].includes(order.status) ? '<button class="button button--primary">Confirm selected arrivals</button><small>Confirm only vehicles physically received. All selected arrivals succeed together or none move.</small>' : ""}
         </form><div class="fi-actions">${order.status === "Planned" ? act("Dispatch vehicles", "dispatch", attrs, true) : ""}${order.status === "AtRisk" ? act("Revalidate order", "revalidate", attrs, true) : ""}${order.status === "Planned" || (order.status === "AtRisk" && order.resumeStatus === "Planned") ? act("Cancel transfer", "cancel", attrs) : ""}</div>
         ${order.status === "AtRisk" && order.resumeStatus !== "Planned" ? `<details><summary>Cancel remaining work after verified return</summary><form class="fi-form" data-action="cancel" data-draft="disposition-${e(order.orderId)}-${order.version}"><input type="hidden" name="orderId" value="${e(order.orderId)}"><input type="hidden" name="expectedVersion" value="${order.version}"><p>Confirm all outstanding vehicles have physically returned to ${e(hubName(order.sourceHubId))}. Source parking capacity is checked again. Vehicles already received at the destination stay there.</p>${note("note", "Disposition evidence", "Who verified the return, which vehicles and where they are parked")}<label class="fi-check"><input type="checkbox" name="sourceDispositionVerified" value="true" required><span>All outstanding vehicles are physically at the source Hub</span></label><button class="button button--secondary">Confirm return and cancel remaining work</button></form></details>` : ""}
-        <details><summary>Transfer history</summary>${history(data.transferHistory.filter(h => h.orderId === order.orderId))}</details>`) : ""}`;
+        <details><summary>Transfer history</summary>${history(data.transferHistory.filter(h => h.orderId === order.orderId))}</details>`) : ""}
+      ${data.vehicles.some(vehicle => vehicle.photoKey) ? vehiclePhotoCredits() : ""}`;
   }, {
     source(values, { state }) { state.source = values.source; state.review = null; },
     select(values, { state }) { state.selected = values.id; },

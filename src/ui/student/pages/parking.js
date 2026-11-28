@@ -1,5 +1,6 @@
 import { badge, pageHeader, escapeHtml as e } from "../../shared/components.js";
 import { timeLabel } from "../../shared/records.js";
+import { vehiclePhoto, vehiclePhotoCredits } from "../../shared/vehicle-photo.js";
 import { createParkingService, defaultDraft, parkingInput, validateDraft } from "../../../modules/parking/service.js";
 import { mountStudentChargingStatus } from "../components/charging-status.js";
 
@@ -40,6 +41,8 @@ export function mount(root, { store, api, viewer }) {
   }
   function reserveContent(state) {
     const hub = state.hubs.find(item => item.id === draft.hubId);
+    const selectedVehicle = state.privateVehicles.find(vehicle => vehicle.vehicleId === draft.vehicleId);
+    const photo = vehiclePhoto(selectedVehicle, "parking-vehicle-photo");
     const summary = review;
     return `<div class="parking-layout">
       <form class="card parking-form" data-form="review" novalidate>
@@ -51,7 +54,11 @@ export function mount(root, { store, api, viewer }) {
         <div class="parking-visit-fields">${timeField("arrivalTime", "Arrival (ICT)")}${timeField("departureTime", "Departure (ICT)")}</div>
         <hr class="section-divider">
         <h2>Your vehicle</h2>
-        ${field("vehicleId", "Private electric vehicle", `<select name="vehicleId" required aria-describedby="parking-error-vehicleId">${state.privateVehicles.map(vehicle => `<option value="${e(vehicle.vehicleId)}" ${draft.vehicleId === vehicle.vehicleId ? "selected" : ""}>${e(vehicle.name)} · ${vehicle.batteryLevel}% battery</option>`).join("")}</select>`)}
+        <div class="parking-vehicle-field">
+          ${photo}
+          ${field("vehicleId", "Private electric vehicle", `<select name="vehicleId" required aria-describedby="parking-error-vehicleId">${state.privateVehicles.map(vehicle => `<option value="${e(vehicle.vehicleId)}" ${draft.vehicleId === vehicle.vehicleId ? "selected" : ""}>${e(vehicle.name)} · ${vehicle.batteryLevel}% battery</option>`).join("")}</select>`)}
+        </div>
+        ${photo ? vehiclePhotoCredits() : ""}
         <div class="parking-actions"><button class="button button--primary" ${busy ? "disabled" : ""} type="submit">${busy ? "Checking…" : "Review availability"}</button></div>
       </form>
       <aside class="card parking-summary" aria-label="Reservation summary">

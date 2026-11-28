@@ -37,3 +37,16 @@
 .placeholder-page { max-width: 680px; padding: 28px; border: 1px dashed #cbd5e1; border-radius: var(--radius-card); background: #fff; }
 .placeholder-page h1 { margin-bottom: 9px; }
 .placeholder-page p:last-child { margin: 0; color: var(--color-muted); }
+.vehicle-photo {
+  display: block;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: var(--color-bg);
+  border-radius: var(--radius-control);
+}
+.vehicle-photo-credits {
+  display: inline-block;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  text-decoration: underline;
+}

@@ -28,7 +28,7 @@ const mockClient = `function createClient() { return {
   auth: { async getSession() { return {data:{session:{user:{is_anonymous:true}}}}; } },
   async rpc(name,args) { const response=await fetch('/__local_rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,args})}); return response.json(); }
 }; }`;
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".ico": "image/x-icon" };
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://127.0.0.1");
@@ -46,10 +46,10 @@ const server = createServer(async (req, res) => {
       return;
     }
     const path = resolve(root, "." + decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname));
-    if (!path.startsWith(root + sep) || ![".html", ".js", ".css", ".svg", ".png", ".ico"].includes(extname(path))) { res.writeHead(404).end(); return; }
+    if (!path.startsWith(root + sep) || !Object.hasOwn(types, extname(path))) { res.writeHead(404).end(); return; }
     let content = await readFile(path);
     if (path === resolve(root, "src/app/backend.js")) content = content.toString().replace(/^import \{ createClient \}[^\n]+/, mockClient);
-    res.writeHead(200, { "Content-Type": types[extname(path)] ?? "application/octet-stream", "Cache-Control": "no-store" }).end(content);
+    res.writeHead(200, { "Content-Type": types[extname(path)], "Cache-Control": "no-store" }).end(content);
   } catch (error) { console.error(error.message); res.writeHead(500).end("Local preview error"); }
 });
 server.on("error", async error => {

@@ -26,9 +26,20 @@ declare
   selected_space text;
   ticket text;
   original_space text;
+  rental_vehicles jsonb;
+  fleet_vehicles jsonb;
 begin
   perform app.need((select provolatile='v' from pg_proc where oid='public.demo_view(text,text,jsonb)'::regprocedure),
     'DEMO_VIEW_MUST_ALLOW_PARKING_AND_FLEET_RECONCILIATION');
+  rental_vehicles:=public.demo_view('student','rental')#>'{data,vehicles}';
+  fleet_vehicles:=public.demo_view('operator','fleet')#>'{data,vehicles}';
+  perform app.need((select count(*)=3 from jsonb_array_elements(rental_vehicles) v
+    where v->>'vehicle_type'='CAR' and v->>'status'='AVAILABLE' and v->>'photo_key' is not null
+      and fleet_vehicles @> jsonb_build_array(jsonb_build_object(
+        'vehicle_id',v->>'vehicle_id','photo_key',v->>'photo_key','current_hub_id',v->>'current_hub_id'))),
+    'DEMO_CARS_AND_PHOTOS_MUST_BE_SHARED_ACROSS_RENTAL_AND_FLEET');
+  perform app.need((select count(*)=10 and count(distinct photo_key)=10 from app.vehicles),
+    'DEMO_RESET_MUST_RESTORE_VEHICLE_PHOTOS');
   select parking_space_id into original_space from app.vehicles where vehicle_id='rental-a-01';
   reserved:=public.demo_command('student','rental.reserve',reserve_input,receipt);
   perform app.need(reserved->>'ok'='true',reserved::text);

@@ -31,6 +31,10 @@
 .fi-check input { flex: 0 0 18px; width: 18px; height: 18px; accent-color: var(--color-primary); }
 .fi-check > span:nth-child(2) { flex: 1; min-width: 0; }
 .fi-check strong, .fi-check small { display: block; }
+.fi-vehicle-identity { display: flex; align-items: center; gap: 0.75rem; }
+.fi-vehicle-identity > span { min-width: 0; overflow-wrap: anywhere; }
+.fi-vehicle-photo { width: 4.5rem; flex: none; }
+.fi-page > .vehicle-photo-credits { justify-self: start; }
 .fi-review { display: grid; gap: 8px; border: 1px solid #a7f3d0; border-radius: 10px; background: #f0fdf7; padding: 18px; margin-top: 18px; }
 .fi-review p { margin: 0; }
 .fi-review .button { justify-self: start; margin-top: 8px; }
