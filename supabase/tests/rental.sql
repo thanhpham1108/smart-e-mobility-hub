@@ -27,6 +27,8 @@ declare
   ticket text;
   original_space text;
 begin
+  perform app.need((select provolatile='v' from pg_proc where oid='public.demo_view(text,text,jsonb)'::regprocedure),
+    'DEMO_VIEW_MUST_ALLOW_PARKING_AND_FLEET_RECONCILIATION');
   select parking_space_id into original_space from app.vehicles where vehicle_id='rental-a-01';
   reserved:=public.demo_command('student','rental.reserve',reserve_input,receipt);
   perform app.need(reserved->>'ok'='true',reserved::text);

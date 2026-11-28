@@ -1,6 +1,17 @@
 import { readdir, readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 
+const migrations = (await readdir("supabase/migrations")).filter(name => name.endsWith(".sql")).sort();
+const versions = new Map();
+for (const file of migrations) {
+  const version = /^(\d{14})_/.exec(file)?.[1];
+  if (!version) throw new Error(`Invalid Supabase migration filename: ${file}`);
+  if (versions.has(version)) {
+    throw new Error(`Supabase migration version ${version} is shared by ${versions.get(version)} and ${file}.`);
+  }
+  versions.set(version, file);
+}
+
 const db = await PGlite.create();
 try {
   // Mimic Supabase PostgREST identity claims for PostgreSQL-level integration checks.
@@ -10,7 +21,7 @@ try {
     as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     create function auth.jwt() returns jsonb language sql stable
     as $$ select nullif(current_setting('request.jwt.claims',true),'')::jsonb $$;`);
-  for (const file of (await readdir("supabase/migrations")).sort().filter(name => name.endsWith(".sql"))) {
+  for (const file of migrations) {
     await db.exec(await readFile("supabase/migrations/" + file, "utf8"));
     console.log("Applied", file);
   }

@@ -97,7 +97,7 @@ end $$;
 
 alter function app.view_for_profile(app.profiles,text,jsonb) rename to view_before_rental;
 create function app.view_for_profile(p app.profiles,p_view text,p_filter jsonb default '{}')
-returns jsonb language plpgsql stable set search_path='' as $$
+returns jsonb language plpgsql volatile set search_path='' as $$
 declare
   t app.demo_state;
   hub text:=p_filter->>'hubId';
@@ -118,8 +118,10 @@ begin
 exception when raise_exception then return jsonb_build_object('ok',false,'code',sqlerrm);
 end $$;
 
+-- Parking and Fleet views reconcile state while reading. PostgREST must run
+-- these RPC calls in a read/write transaction.
 create or replace function public.demo_view(p_role text,p_view text,p_filter jsonb default '{}')
-returns jsonb language sql stable security definer set search_path='' as $$
+returns jsonb language sql volatile security definer set search_path='' as $$
   select app.view_for_profile(app.demo_actor(p_role),p_view,p_filter)
 $$;
 
