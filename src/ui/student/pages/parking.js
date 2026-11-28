@@ -1,6 +1,7 @@
 import { badge, pageHeader, escapeHtml as e } from "../../shared/components.js";
 import { timeLabel } from "../../shared/records.js";
 import { vehiclePhoto, vehiclePhotoCredits } from "../../shared/vehicle-photo.js";
+import { findAlternativeHubs, getHubStatus } from "../../../modules/hub-identity/hub-service.js";
 import { createParkingService, defaultDraft, parkingInput, validateDraft } from "../../../modules/parking/service.js";
 import { mountStudentChargingStatus } from "../components/charging-status.js";
 
@@ -8,14 +9,19 @@ const tone = status => ({ Confirmed: "info", "Checked In": "info", Completed: "p
 const shortTime = value => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 const detailRows = rows => `<dl class="parking-details">${rows.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>`;
 const action = (name, label, primary = false, extra = "") => `<button type="button" class="button button--${primary ? "primary" : "secondary"}" data-action="${name}" ${extra}>${e(label)}</button>`;
+const capacityErrors = new Set(["PARKING_FULL", "HUB_UNAVAILABLE", "PARKING_RECONCILIATION_REQUIRED"]);
 
-export function mount(root, { store, api, viewer }) {
+export function mount(root, { store, api, viewer, query }) {
   const service = createParkingService(api, viewer.userId);
   const draftKey = "smarthub-parking-draft-" + viewer.userId;
   let draft = defaultDraft(store.readSnapshot());
   try { draft = { ...draft, ...JSON.parse(sessionStorage.getItem(draftKey) ?? "{}") }; } catch { /* Use the default visit. */ }
+  const linkedHub = getHubStatus(store.readSnapshot().hubs, query?.get("hub"));
+  if (linkedHub?.status === "Operational") draft.hubId = linkedHub.id;
   let tab = "reserve";
   let review = null;
+  let canSuggest = false;
+  let alternatives = null;
   let selectedId = null;
   let details = null;
   let intent = null;
@@ -31,6 +37,14 @@ export function mount(root, { store, api, viewer }) {
   const page = root.querySelector("[data-parking]");
   const chargingRoot = root.querySelector("[data-charging-status]");
   function feedback(text, error = false) { message = text; failed = error; }
+  function saveDraft() {
+    try { sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* Keep the draft in memory. */ }
+  }
+  function clearReview() {
+    review = null;
+    canSuggest = false;
+    alternatives = null;
+  }
   function hubName(state, id) { return state.hubs.find(hub => hub.id === id)?.name ?? id; }
   function vehicleName(state, id) { return state.privateVehicles.find(vehicle => vehicle.vehicleId === id)?.name ?? id; }
   function field(name, label, control) {
@@ -70,6 +84,15 @@ export function mount(root, { store, api, viewer }) {
             <p class="parking-deadline">Check in before <strong>${e(timeLabel(summary.expiresAt))}</strong></p>
             ${summary.available ? action("confirm", "Confirm booking", true, busy || service.pending() ? "disabled" : "") : ""}
           ` : '<p class="records-meta">Review to see whole-interval availability and your exact check-in deadline.</p>'}
+          ${canSuggest ? action("find-alternatives", "Find another Hub") : ""}
+          ${alternatives ? `<section class="parking-alternatives" aria-label="Alternative Hubs">
+            <h3>Alternative Hubs for this visit</h3>
+            ${alternatives.hubs.length ? `<ul>${alternatives.hubs.map(other =>
+              `<li><span><strong>${e(other.name)}</strong><small>${e(other.area)}</small></span>
+                ${action("review-alternative", "Review Hub", false, `data-id="${e(other.id)}" aria-label="Review ${e(other.name)}"`)}</li>`).join("")}</ul>`
+              : '<p>No alternative Hub is confirmed available for this interval.</p>'}
+            ${alternatives.incomplete ? '<p class="records-meta">Some Hubs could not be checked. Try again for current results.</p>' : ""}
+          </section>` : ""}
           <p class="parking-summary__caption">Your space is held after confirmation. Charging is requested separately.</p>
         </div>
       </aside>
@@ -126,7 +149,8 @@ export function mount(root, { store, api, viewer }) {
       <p class="parking-feedback ${failed ? "parking-feedback--error" : ""}" role="${failed ? "alert" : "status"}">${e(message)}</p>
       ${service.pending() ? `<div class="parking-notice parking-notice--warning"><p>A submission still needs confirmation from the database.</p>${action("resolve", "Resolve previous submission", false, busy ? "disabled" : "")}</div>` : ""}
       ${tab === "reserve" ? reserveContent(state) : tab === "bookings" ? bookingList(state) : ticketContent(state)}`;
-    if (busy) page.querySelectorAll("button").forEach(button => { button.disabled = true; });
+    if (busy) page.querySelectorAll("button, [data-form=review] input, [data-form=review] select")
+      .forEach(control => { control.disabled = true; });
     chargingRoot.hidden = tab !== "ticket" && tab !== "bookings";
   }
   async function loadDetails(id) {
@@ -146,6 +170,10 @@ export function mount(root, { store, api, viewer }) {
     if (!active) return;
     if (!result.ok) {
       feedback(result.message, true);
+      if (operation === "parking.reserve") {
+        clearReview();
+        canSuggest = capacityErrors.has(result.code);
+      }
       if (["PARKING_SUMMARY_CHANGED", "CHECK_IN_WINDOW_CLOSED", "INVALID_BOOKING_TRANSITION"].includes(result.code)) intent = null;
       await store.refresh();
       if (selectedId) await loadDetails(selectedId);
@@ -156,7 +184,7 @@ export function mount(root, { store, api, viewer }) {
       operation === "parking.cancel" ? "Booking and unused charging requests cancelled." : "Checkout completed. Your parking space is released.");
     intent = null;
     selectedId = result.data.reservationId ?? selectedId;
-    review = null;
+    clearReview();
     tab = "ticket";
     const refreshed = await store.refresh();
     if (!refreshed) feedback("The action succeeded. Current booking data is unavailable. Refresh to reload.", true);
@@ -170,16 +198,41 @@ export function mount(root, { store, api, viewer }) {
     catch { feedback("Unable to complete this action. Check your connection and retry.", true); }
     finally { busy = false; render(); }
   }
+  async function reviewVisit() {
+    clearReview();
+    const result = await service.read("parking.review", parkingInput(draft));
+    if (result.ok) {
+      review = result.data;
+      canSuggest = !review.available;
+      feedback(review.available ? "Availability reviewed. Confirm the summary to reserve your visit."
+        : "The whole interval is unavailable.", !review.available);
+    } else {
+      canSuggest = capacityErrors.has(result.code);
+      feedback(result.message, true);
+    }
+  }
+  async function checkAlternativeHubs() {
+    const input = parkingInput(draft);
+    const candidates = findAlternativeHubs(store.readSnapshot().hubs, draft.hubId, () => true);
+    const results = await Promise.all(candidates.map(async hub => ({
+      hub, review: await service.read("parking.review", { ...input, hubId: hub.id })
+    })));
+    alternatives = {
+      hubs: results.filter(item => item.review.ok && item.review.data.available).map(item => item.hub),
+      incomplete: results.some(item => !item.review.ok && !capacityErrors.has(item.review.code))
+    };
+  }
   function change(event) {
     const { name, value } = event.target;
     if (Object.hasOwn(draft, name)) {
       draft[name] = value;
-      review = null;
+      clearReview();
       errors = {};
-      try { sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* Keep the current draft in memory. */ }
+      saveDraft();
       // Leave the field mounted while typing. Its summary refreshes on change.
       if (event.type === "change") render();
-      else page.querySelector('[data-action="confirm"]')?.setAttribute("disabled", "");
+      else page.querySelectorAll('[data-action="confirm"], [data-action="find-alternatives"], [data-action="review-alternative"]')
+        .forEach(control => { control.disabled = true; });
     } else if (name === "filter") { filter = value; render(); }
   }
   function onClick(event) {
@@ -188,8 +241,9 @@ export function mount(root, { store, api, viewer }) {
     const name = button.dataset.action;
     if (name === "tab") { tab = button.dataset.tab; intent = null; render(); return; }
     if (name === "hub") {
-      draft.hubId = button.dataset.id; review = null;
-      try { sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* Retain the draft in memory. */ }
+      draft.hubId = button.dataset.id;
+      clearReview();
+      saveDraft();
       render(); return;
     }
     if (name === "dismiss") { intent = null; render(); return; }
@@ -197,6 +251,12 @@ export function mount(root, { store, api, viewer }) {
       if (name === "confirm") {
         if (!review?.available) return;
         await write("parking.reserve", { ...parkingInput(draft), expectedExpiresAt: review.expiresAt });
+      } else if (name === "find-alternatives" && canSuggest) {
+        await checkAlternativeHubs();
+      } else if (name === "review-alternative" && alternatives?.hubs.some(hub => hub.id === button.dataset.id)) {
+        draft.hubId = button.dataset.id;
+        saveDraft();
+        await reviewVisit();
       } else if (name === "resolve") {
         const pending = service.pending();
         if (pending) await write(pending.operation, pending.input);
@@ -225,13 +285,8 @@ export function mount(root, { store, api, viewer }) {
     }
     draft = { ...draft, ...data };
     errors = validateDraft(draft);
-    if (Object.keys(errors).length) { review = null; feedback("Correct the highlighted fields.", true); render(); return; }
-    run(async () => {
-      review = null;
-      const result = await service.read("parking.review", parkingInput(draft));
-      if (result.ok) { review = result.data; feedback(result.data.available ? "Availability reviewed. Confirm the summary to reserve your visit." : "The whole interval is unavailable.", !result.data.available); }
-      else feedback(result.message, true);
-    });
+    if (Object.keys(errors).length) { clearReview(); feedback("Correct the highlighted fields.", true); render(); return; }
+    run(reviewVisit);
   }
   const unsubscribe = store.subscribe(async () => {
     if (selectedId) await loadDetails(selectedId);

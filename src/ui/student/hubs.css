@@ -1,0 +1,89 @@
+.hub-filters, .hub-detail, .hub-map-card { padding: 1.125rem; box-shadow: none; }
+.hub-filter-form, .hub-results { display: grid; gap: 1rem; min-width: 0; }
+.hub-filter-fields { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(8rem, 1fr); gap: 0.75rem; }
+.hub-filter-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 0.75rem; }
+.hub-service-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; border: 0; }
+.hub-service-filters legend { margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 650; }
+.hub-service-filters label {
+  display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.65rem;
+  border: 1px solid var(--color-border); border-radius: var(--radius-control); cursor: pointer;
+}
+.hub-service-filters input { accent-color: var(--color-primary); }
+.hub-service-filters label:has(input:checked) { background: var(--color-primary-soft); border-color: var(--color-primary); }
+.hub-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.hub-filter-note { margin: 0; color: var(--color-muted); }
+.hub-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(23rem, 0.92fr); gap: 1rem; align-items: start; }
+.hub-results-card { min-width: 0; box-shadow: none; }
+.hub-results-card > header, .hub-map-card > header {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+}
+.hub-results-card > header { padding: 0.875rem 1.125rem; border-bottom: 1px solid var(--color-border); }
+.hub-results-card h2, .hub-map-card h2, .hub-detail h2 { margin: 0; font-size: 1.125rem; }
+.hub-results-card > ul, .hub-batteries ul { list-style: none; margin: 0; padding: 0; }
+.hub-results-card li + li, .hub-batteries li + li { border-top: 1px solid var(--color-border); }
+.hub-result-row {
+  display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.75rem;
+  padding: 0.75rem 1.125rem; text-align: left; background: var(--color-surface);
+  border: 0; border-inline-start: 3px solid transparent;
+}
+.hub-results-card li:last-child .hub-result-row { border-end-end-radius: var(--radius-card); border-end-start-radius: var(--radius-card); }
+.hub-result-row:hover { background: var(--color-bg); }
+.hub-result-row[aria-pressed="true"] { background: var(--color-primary-soft); border-inline-start-color: var(--color-primary); }
+.hub-result-row:focus-visible { outline-offset: -3px; }
+.hub-result-name, .hub-result-meta { display: grid; gap: 0.25rem; }
+.hub-result-name { min-width: 0; overflow-wrap: anywhere; }
+.hub-result-name > span, .hub-result-meta small { color: var(--color-muted); font-size: 0.813rem; }
+.hub-result-meta { flex: none; justify-items: end; }
+.hub-empty { margin: 0; padding: 1.125rem; color: var(--color-muted); }
+.hub-detail { display: grid; gap: 0.875rem; }
+.hub-detail-head { display: flex; justify-content: space-between; align-items: start; gap: 0.65rem; }
+.hub-detail-head h2 { font-size: 1.4rem; line-height: 1.2; }
+.hub-detail-head .eyebrow { margin: 0 0 0.375rem; }
+.hub-detail > p { margin: 0; }
+.hub-address { color: var(--color-muted); }
+.hub-freshness { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: 0.813rem; }
+.hub-stale { padding: 0.6rem 0.75rem; background: var(--color-bg); border-inline-start: 3px solid var(--color-warning); }
+.hub-capacity {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; overflow: hidden;
+  border: 1px solid var(--color-border); border-radius: var(--radius-control);
+}
+.hub-capacity > div { min-width: 0; padding: 0.75rem; }
+.hub-capacity > div + div { border-left: 1px solid var(--color-border); }
+.hub-capacity dt, .hub-capacity small { color: var(--color-muted); font-size: 0.75rem; }
+.hub-capacity dd { margin: 0.25rem 0 0; font-size: 1.24rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.hub-capacity small { display: block; font-weight: 400; }
+.hub-batteries { border-top: 1px solid var(--color-border); padding-top: 0.875rem; }
+.hub-batteries h3 { margin: 0 0 0.5rem; font-size: 0.938rem; }
+.hub-batteries li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.43rem 0; }
+.hub-batteries small { display: block; color: var(--color-muted); }
+.hub-batteries p { margin: 0; }
+.hub-map-card > header span { font-size: 0.813rem; color: var(--color-muted); }
+.hub-map-grid {
+  position: relative; height: 12rem; margin-top: 0.75rem; border: 1px solid var(--color-border);
+  border-radius: var(--radius-control); background-color: var(--color-bg);
+  background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+}
+.hub-map-north { position: absolute; top: 0.5rem; right: 0.65rem; color: var(--color-muted); font-size: 0.813rem; }
+.hub-map-pin {
+  position: absolute; top: var(--hub-y); left: var(--hub-x); transform: translate(-50%, -50%);
+  width: 2rem; aspect-ratio: 1; border: 1px solid var(--color-border); border-radius: 50%;
+  background: var(--color-surface); color: var(--color-text); font-size: 0.875rem; font-weight: 700;
+}
+.hub-map-pin[aria-pressed="true"] { background: var(--color-primary-dark); color: var(--color-surface); z-index: 1; }
+.hub-profile { display: grid; grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); gap: 1rem; max-width: 58rem; }
+.hub-profile .records-form { display: grid; gap: 0.75rem; max-width: 28rem; }
+.hub-profile .records-form .field { max-width: none; }
+.hub-profile .records-form button { justify-self: start; }
+.hub-identity { display: grid; margin: 0; gap: 0.75rem; }
+.hub-identity dt { color: var(--color-muted); font-size: 0.813rem; }
+.hub-identity dd { margin: 0.25rem 0 0; font-weight: 650; }
+
+@media (max-width: 52rem) {
+  .hub-workspace, .hub-profile { grid-template-columns: minmax(0, 1fr); }
+  .hub-detail { grid-row: 1; }
+}
+@media (max-width: 36rem) {
+  .hub-filter-fields { grid-template-columns: minmax(0, 1fr); }
+  .hub-capacity > div { padding: 0.5rem; }
+}

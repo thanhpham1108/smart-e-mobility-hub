@@ -43,3 +43,9 @@
 .parking-vehicle-field { display: flex; align-items: center; gap: 0.75rem; }
 .parking-vehicle-field > .field { flex: 1; min-width: 0; }
 .parking-vehicle-photo { width: 5rem; flex: none; }
+.parking-alternatives { display: grid; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
+.parking-alternatives h3, .parking-alternatives p { margin: 0; }
+.parking-alternatives ul { margin: 0; padding: 0; list-style: none; }
+.parking-alternatives li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.6rem 0; }
+.parking-alternatives li + li { border-top: 1px solid var(--color-border); }
+.parking-alternatives li small { display: block; color: var(--color-muted); }

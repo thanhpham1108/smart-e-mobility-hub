@@ -9,18 +9,30 @@ import { rentalUrl } from "./rental/components.js";
 const screens = { catalog, vehicle: vehicleDetails, reservation, trip, history };
 
 export function mount(root, context) {
-  const { screen = "catalog", recordId } = context;
+  const { screen = "catalog", recordId, query } = context;
+  const initialFilters = {
+    hubId: query?.get("hub") ?? "",
+    vehicleType: query?.get("type") ?? "",
+    minBattery: Math.max(0, Math.min(100, Number(query?.get("battery")) || 0))
+  };
   let active = true;
   const navigate = (kind, id) => {
     if (active) location.hash = rentalUrl(kind, id);
   };
-  const cleanup = mountRecords(root, context, (data, viewer, memory) =>
-    screens[screen](data, recordId, memory), {
+  const cleanup = mountRecords(root, context, (data, viewer, memory) => {
+    memory.filters ??= {
+      ...initialFilters,
+      hubId: data.hubs.some(hub => hub.id === initialFilters.hubId) ? initialFilters.hubId : "",
+      vehicleType: ["ELECTRIC_BICYCLE", "ELECTRIC_MOTORCYCLE", "CAR"].includes(initialFilters.vehicleType) ? initialFilters.vehicleType : ""
+    };
+    return screens[screen](data, recordId, memory);
+  }, {
     "rental.filter": filterCatalog,
     "rental.clearFilters": clearFilters,
-    "rental.reserve": async (input, { api }) => {
+    "rental.reserve": async (input, { api, memory }) => {
       const result = await api.command("rental.reserve", input);
       if (result.ok) navigate("reservations", result.data.reservationId);
+      memory.reservationUnavailable = ["VEHICLE_UNAVAILABLE", "HUB_UNAVAILABLE", "VEHICLE_NOT_FOUND"].includes(result.code);
       return { ...result, refresh: true };
     },
     "rental.pickup": async (input, { api }) => {

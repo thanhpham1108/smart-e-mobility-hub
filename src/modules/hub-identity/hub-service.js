@@ -1,127 +1,49 @@
-const failure = (code, message) => ({
-  ok: false,
-  code,
-  message
-});
+const serviceTests = {
+  bikes: hub => hub.vehicleBatteries?.some(vehicle => vehicle.vehicleType === "ELECTRIC_BICYCLE"),
+  scooters: hub => hub.vehicleBatteries?.some(vehicle => vehicle.vehicleType === "ELECTRIC_MOTORCYCLE"),
+  cars: hub => hub.vehicleBatteries?.some(vehicle => vehicle.vehicleType === "CAR"),
+  parking: hub => hub.parkingFree > 0 && !hub.parkingDiscrepancy,
+  charging: hub => hub.chargingFree > 0
+};
 
-const success = data => ({
-  ok: true,
-  data
-});
+export function hasCoordinates(location) {
+  return Number.isFinite(location?.latitude) && Math.abs(location.latitude) <= 90
+    && Number.isFinite(location?.longitude) && Math.abs(location.longitude) <= 180;
+}
 
-export function createHubService({ store, clock }) {
+export function distanceKm(from, to) {
+  if (!hasCoordinates(from) || !hasCoordinates(to)) return null;
+  const radians = Math.PI / 180;
+  const lat = (to.latitude - from.latitude) * radians;
+  const lon = (to.longitude - from.longitude) * radians;
+  const a = Math.sin(lat / 2) ** 2 + Math.cos(from.latitude * radians)
+    * Math.cos(to.latitude * radians) * Math.sin(lon / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
+}
 
-  function getHubStatus(hubId) {
-    const state = store.readSnapshot();
+function searchText(value) {
+  return value.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").replaceAll("đ", "d");
+}
 
-    const hub = state.hubs.find(
-      item => item.id === hubId
-    );
+export function findHubs(hubs, { query = "", origin, radiusKm, services = [] } = {}) {
+  const text = searchText(query.trim());
+  return hubs.map(hub => ({ ...hub, distance: distanceKm(origin, hub) }))
+    .filter(hub => {
+      const matchesText = searchText([hub.name, hub.area, hub.address, hub.id].join(" ")).includes(text);
+      const matchesRadius = !radiusKm || (hub.distance !== null && hub.distance <= radiusKm);
+      const matchesServices = !services.length || (hub.status === "Operational" && hub.freshness === "Live"
+        && services.every(service => serviceTests[service]?.(hub)));
+      return matchesText && matchesRadius && matchesServices;
+    })
+    .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity) || a.name.localeCompare(b.name));
+}
 
-    if (!hub) {
-      return failure(
-        "HUB_NOT_FOUND",
-        "Hub not found."
-      );
-    }
+export function getHubStatus(hubs, hubId) {
+  return hubs.find(hub => hub.id === hubId) ?? null;
+}
 
-    const now = Date.parse(clock.now());
-
-    const live = hub.freshness === "Live";
-    const stale = hub.freshness === "Stale";
-
-    return success({
-      hubId: hub.id,
-      name: hub.name,
-      area: hub.area,
-
-      freshness: stale
-        ? "Stale data"
-        : "Live data",
-
-      isAvailable: live,
-
-      lastUpdated: new Date(
-        now - (stale ? 18 : 2) * 60_000
-      ).toISOString(),
-
-      vehicleAvailability:
-        live ? "Available" : "Unknown",
-
-      batteryAvailability:
-        live ? "Available" : "Unknown"
-    });
-  }
-
-  function findHubs(criteria = {}) {
-    const state = store.readSnapshot();
-
-    const query =
-      String(criteria.query ?? "")
-        .trim()
-        .toLowerCase();
-
-    const area =
-      String(criteria.area ?? "")
-        .trim()
-        .toLowerCase();
-
-    const hubs = state.hubs.filter(hub => {
-      const text =
-        `${hub.name} ${hub.area} ${hub.id}`
-          .toLowerCase();
-
-      return (
-        (!query || text.includes(query)) &&
-        (!area || hub.area.toLowerCase().includes(area))
-      );
-    });
-
-    return success(
-      hubs.map(hub => ({
-        ...hub,
-        status: getHubStatus(hub.id).data
-      }))
-    );
-  }
-
-  function findAlternativeHubs(criteria = {}) {
-    const excludedId = criteria.excludeHubId;
-
-    const preferredArea =
-      String(criteria.area ?? "")
-        .trim()
-        .toLowerCase();
-
-    const result = findHubs({})
-      .data
-      .filter(hub => hub.id !== excludedId)
-      .sort((a, b) => {
-        const aSame =
-          preferredArea &&
-          a.area.toLowerCase().includes(preferredArea)
-            ? 0
-            : 1;
-
-        const bSame =
-          preferredArea &&
-          b.area.toLowerCase().includes(preferredArea)
-            ? 0
-            : 1;
-
-        return (
-          aSame - bSame ||
-          Number(b.status.isAvailable) -
-          Number(a.status.isAvailable)
-        );
-      });
-
-    return success(result);
-  }
-
-  return {
-    findHubs,
-    getHubStatus,
-    findAlternativeHubs
-  };
+export function findAlternativeHubs(hubs, excludedHubId, qualifies) {
+  const origin = getHubStatus(hubs, excludedHubId);
+  return findHubs(hubs, { origin }).filter(hub =>
+    hub.id !== excludedHubId && hub.status === "Operational" && qualifies(hub));
 }

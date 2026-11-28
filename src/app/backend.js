@@ -9,6 +9,7 @@ const client = createClient(url, key, { auth: { storageKey: "smarthub-demo-sessi
 
 const errorMessages = {
   AUTH_REQUIRED: "SmartHub demo access is unavailable.",
+  INVALID_PROFILE: "Enter a valid email and phone number, or leave the optional fields blank.",
   FORBIDDEN: "This action is unavailable in the current portal.",
   PARKING_FULL: "No parking capacity is available for this window.",
   STOP_CHARGING_FIRST: "Stop the active charging session before checking out.",

@@ -1,4 +1,5 @@
 import { mount as mountHubs } from "../ui/student/pages/hubs.js";
+import { mount as mountProfile } from "../ui/student/pages/profile.js";
 import { mount as mountRentals } from "../ui/student/pages/rental.js";
 import { mount as mountParking } from "../ui/student/pages/parking.js";
 import { mount as mountNetwork } from "../ui/operator/pages/network.js";
@@ -12,6 +13,7 @@ import { routeData } from "./backend.js";
 
 const routes = {
   "/student/hubs": { role: "student", title: "Hubs", view: "hubs", mount: mountHubs },
+  "/student/profile": { role: "student", title: "Profile", view: "bootstrap", mount: mountProfile },
   "/student/rental": { role: "student", title: "Rentals", view: "rental", mount: mountRentals },
   "/student/parking": { role: "student", title: "Parking & Charging", view: "parking", mount: mountParking },
   "/operator/network": { role: "operator", title: "Network Overview", view: "network", mount: mountNetwork },
@@ -47,7 +49,7 @@ export function startRouter(root, createDemoApi) {
   async function route() {
     const current = ++generation;
     clean();
-    let path = location.hash.slice(1);
+    let [path, search = ""] = location.hash.slice(1).split("?");
     let selected = matchRoute(path);
     if (!selected) {
       path = "/student/parking";
@@ -55,6 +57,7 @@ export function startRouter(root, createDemoApi) {
       selected = routes[path];
     }
     const { role, title, view, mount, screen, recordId } = selected;
+    const query = new URLSearchParams(search);
     root.innerHTML = role === "operator" ? operatorShell(path, title) : studentShell(path);
     const page = root.querySelector("#page-root");
     const feedback = root.querySelector("[data-demo-feedback]");
@@ -91,7 +94,7 @@ export function startRouter(root, createDemoApi) {
         timeElement.dateTime = state.demoTime;
         timeElement.textContent = dateTime.format(new Date(state.demoTime));
       }
-      if (!mounted) { mounted = true; unmount = mount(page, { store, api, viewer, screen, recordId }) ?? unmount; }
+      if (!mounted) { mounted = true; unmount = mount(page, { store, api, viewer, screen, recordId, query }) ?? unmount; }
     });
     clean = () => { stop(); unmount(); store.dispose(); };
     controls.forEach(button => { button.disabled = false; });

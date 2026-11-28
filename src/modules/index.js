@@ -1,8 +1,8 @@
 export { createAuthService }
-  from "./auth-service.js";
+  from "./hub-identity/auth-service.js";
 
-export { createHubService }
-  from "./hub-service.js";
+export { findHubs, getHubStatus, findAlternativeHubs }
+  from "./hub-identity/hub-service.js";
 
 export { createProfileService }
-  from "./profile-service.js";
+  from "./hub-identity/profile-service.js";

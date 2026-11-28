@@ -4,8 +4,12 @@ import { vehiclePhoto } from "../../../shared/vehicle-photo.js";
 
 const base = "#/student/rental";
 
-export function rentalUrl(section, id) {
-  return base + (section ? "/" + section : "") + (id ? "/" + encodeURIComponent(id) : "");
+export function rentalUrl(section, id, filters = {}) {
+  const query = new URLSearchParams();
+  if (filters.hubId) query.set("hub", filters.hubId);
+  if (filters.vehicleType) query.set("type", filters.vehicleType);
+  if (Number(filters.minBattery) > 0) query.set("battery", filters.minBattery);
+  return base + (section ? "/" + section : "") + (id ? "/" + encodeURIComponent(id) : "") + (query.size ? "?" + query : "");
 }
 
 export function link(label, href, primary = false) {
@@ -56,7 +60,7 @@ export function facts(items) {
     `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl>`;
 }
 
-export function vehicleRow(vehicle, hubs) {
+export function vehicleRow(vehicle, hubs, filters) {
   return `<li class="rental-vehicle">
     ${vehiclePhoto(vehicle, "rental-row-photo")}
     <div class="rental-vehicle-identity">
@@ -68,7 +72,7 @@ export function vehicleRow(vehicle, hubs) {
       ${vehicleStatus(vehicle, hubs)}
       <p><strong>${e(vehicle.batteryLevel)}%</strong> battery</p>
     </div>
-    ${link("View vehicle", rentalUrl("vehicles", vehicle.vehicleId))}
+    ${link("View vehicle", rentalUrl("vehicles", vehicle.vehicleId, filters))}
   </li>`;
 }
 

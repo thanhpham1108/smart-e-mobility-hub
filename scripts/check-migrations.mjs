@@ -34,6 +34,8 @@ try {
   console.log("Passed: Fleet/Incident validation, atomic arrivals, risk recovery, restrictions, telemetry ordering/deduplication, occupancy reconciliation and reset.");
   await db.exec(await readFile("supabase/tests/rental.sql", "utf8"));
   console.log("Passed: Rental holds, pickup verification, simulated lock failures, return-slot revalidation and faulted returns.");
+  await db.exec(await readFile("supabase/tests/hub_identity.sql", "utf8"));
+  console.log("Passed: Hub telemetry freshness, shared vehicle readings and profile validation.");
 } catch (error) {
   console.error(error.message);
   if (error.where) console.error(error.where);

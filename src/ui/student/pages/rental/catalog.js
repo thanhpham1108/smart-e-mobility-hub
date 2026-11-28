@@ -1,5 +1,6 @@
 import { button, e, input, panel, select } from "../../../shared/records.js";
 import { vehiclePhotoCredits } from "../../../shared/vehicle-photo.js";
+import { findAlternativeHubs } from "../../../../modules/hub-identity/hub-service.js";
 import { bookable, heading, link, vehicleRow, vehicleType } from "./components.js";
 
 export function filterCatalog(input, { memory }) {
@@ -8,7 +9,7 @@ export function filterCatalog(input, { memory }) {
 }
 
 export function clearFilters(input, { memory }) {
-  delete memory.filters;
+  memory.filters = {};
   return { ok: true, readOnly: true, message: "" };
 }
 
@@ -30,7 +31,7 @@ export function catalog({ hubs, vehicles }, id, { filters = {} }) {
     (!filters.hubId || vehicle.currentHubId === filters.hubId) &&
     (!filters.vehicleType || vehicle.vehicleType === filters.vehicleType) &&
     vehicle.batteryLevel >= Number(filters.minBattery || 0));
-  const alternatives = hubs.filter(hub => hub.id !== filters.hubId && vehicles.some(vehicle =>
+  const alternatives = findAlternativeHubs(hubs, filters.hubId, hub => vehicles.some(vehicle =>
     bookable(vehicle, hubs) && vehicle.currentHubId === hub.id &&
     (!filters.vehicleType || vehicle.vehicleType === filters.vehicleType) &&
     vehicle.batteryLevel >= Number(filters.minBattery || 0)));
@@ -40,7 +41,7 @@ export function catalog({ hubs, vehicles }, id, { filters = {} }) {
       <div class="rental-stack">
         ${panel("Filter vehicles", filter)}
         <h2 class="rental-results" id="rental-results">${matches.length} ${matches.length === 1 ? "vehicle" : "vehicles"} found</h2>
-        ${matches.length ? `<ul class="rental-vehicles" aria-labelledby="rental-results">${matches.map(vehicle => vehicleRow(vehicle, hubs)).join("")}</ul>`
+        ${matches.length ? `<ul class="rental-vehicles" aria-labelledby="rental-results">${matches.map(vehicle => vehicleRow(vehicle, hubs, filters)).join("")}</ul>`
           : panel("No matching vehicles", "<p>Try another Hub, type, or battery level.</p>")}
         ${matches.some(vehicle => vehicle.photoKey) ? vehiclePhotoCredits() : ""}
         ${!matches.some(vehicle => bookable(vehicle, hubs)) && alternatives.length ? panel("Try another Hub", alternativeLinks) : ""}
